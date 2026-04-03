@@ -64,3 +64,8 @@ class TimelineTests(TestCase):
         self.assertGreaterEqual(len(output["frames"]), 1)
         self.assertEqual(output["events"][0]["type"], "ARM")
         self.assertEqual(output["events"][1]["type"], "DISARM")
+        self.assertIn("parsing", output["meta"])
+        self.assertIn("maxHorizontalSpeed", output["metrics"])
+        self.assertIn("maxVerticalSpeed", output["metrics"])
+        self.assertIn("maxAcceleration", output["metrics"])
+        self.assertIn("maxClimbRate", output["metrics"])

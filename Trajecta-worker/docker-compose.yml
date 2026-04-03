@@ -13,10 +13,11 @@ services:
       RESULTS_EXCHANGE: ${RESULTS_EXCHANGE:-telemetry.exchange}
       RESULTS_ROUTING_KEY: ${RESULTS_ROUTING_KEY:-telemetry.results}
       RESULTS_QUEUE: ${RESULTS_QUEUE:-telemetry.results}
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-admin}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-password123}
-      MINIO_SECURE: ${MINIO_SECURE:-false}
+      API_BASE_URL: ${API_BASE_URL:-http://backend:8080}
+      INTERNAL_WORKER_TOKEN: ${INTERNAL_WORKER_TOKEN:-super-secret-1488-worker-token}
+      WORKER_TOKEN_HEADER: ${WORKER_TOKEN_HEADER:-X-Worker-Token}
+      INTERNAL_RAW_PATH_TEMPLATE: ${INTERNAL_RAW_PATH_TEMPLATE:-/api/internal/v1/tasks/{taskId}/raw}
+      HTTP_TIMEOUT_SECONDS: ${HTTP_TIMEOUT_SECONDS:-30}
     networks:
       - telemetry-network
 

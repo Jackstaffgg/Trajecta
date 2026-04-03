@@ -14,7 +14,6 @@ from .config import (
 )
 from .models import AnalysisRequest, AnalysisResult, AnalysisStatus
 from .service import build_result_payload, process_request_message
-from .storage import get_minio_client
 
 
 def load_json_message(body: bytes | str) -> dict[str, Any]:
@@ -50,10 +49,9 @@ def start_worker(dt: float) -> None:
     request_routing_key = os.getenv("REQUEST_ROUTING_KEY", DEFAULT_REQUEST_ROUTING_KEY)
     results_exchange = os.getenv("RESULTS_EXCHANGE", DEFAULT_RESULTS_EXCHANGE)
     results_routing_key = os.getenv("RESULTS_ROUTING_KEY", DEFAULT_RESULTS_ROUTING_KEY)
-    minio_client = get_minio_client()
 
-    channel.exchange_declare(exchange=request_exchange, exchange_type="topic", durable=True)
-    channel.exchange_declare(exchange=results_exchange, exchange_type="topic", durable=True)
+    channel.exchange_declare(exchange=request_exchange, exchange_type="direct", durable=True)
+    channel.exchange_declare(exchange=results_exchange, exchange_type="direct", durable=True)
     channel.queue_declare(queue=request_queue, durable=True)
     channel.queue_declare(queue=results_queue, durable=True)
     channel.queue_bind(queue=request_queue, exchange=request_exchange, routing_key=request_routing_key)
@@ -64,16 +62,22 @@ def start_worker(dt: float) -> None:
             message = load_json_message(body)
             request = AnalysisRequest(
                 taskId=int(message["taskId"]),
-                bucket=str(message["bucket"]),
-                objectKey=str(message["objectKey"]),
             )
-            result = process_request_message(request, dt=dt, client=minio_client)
+            result = process_request_message(request, dt=dt)
             publish_result(ch, result)
             ch.basic_ack(delivery_tag=method.delivery_tag)
         except Exception as exc:
-            fallback = AnalysisResult(taskId=-1, status=AnalysisStatus.FAILED, errorMessage=str(exc))
+            task_id = -1
             try:
-                publish_result(ch, fallback)
+                message = load_json_message(body)
+                task_id = int(message.get("taskId", -1))
+            except Exception:
+                pass
+
+            fallback = AnalysisResult(taskId=task_id, status=AnalysisStatus.FAILED, errorMessage=str(exc))
+            try:
+                if fallback.taskId >= 0:
+                    publish_result(ch, fallback)
             finally:
                 ch.basic_ack(delivery_tag=method.delivery_tag)
 

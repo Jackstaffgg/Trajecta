@@ -9,6 +9,109 @@ import pandas as pd
 from .models import AnalysisMetrics
 
 
+def estimate_sampling_hz(timestamps: list[float]) -> float | None:
+    if len(timestamps) < 2:
+        return None
+    arr = np.array(timestamps, dtype=float)
+    diffs = np.diff(arr)
+    diffs = diffs[diffs > 0]
+    if diffs.size == 0:
+        return None
+    median_dt = float(np.median(diffs))
+    if median_dt <= 0:
+        return None
+    return float(1.0 / median_dt)
+
+
+def summarize_parsing(data: dict[str, Any]) -> dict[str, Any]:
+    gps_hz = estimate_sampling_hz(data.get("gps", {}).get("t", []))
+    imu_hz = estimate_sampling_hz(data.get("imu", {}).get("t", []))
+
+    return {
+        "messages": {
+            "gps": {
+                "samplingHz": gps_hz,
+                "units": {
+                    "lat": "deg",
+                    "lon": "deg",
+                    "alt": "m",
+                    "speed": "m/s",
+                },
+            },
+            "imu": {
+                "samplingHz": imu_hz,
+                "units": {
+                    "accx": "m/s^2",
+                    "accy": "m/s^2",
+                    "accz": "m/s^2",
+                    "gyrx": "rad/s",
+                    "gyry": "rad/s",
+                    "gyrz": "rad/s",
+                },
+            },
+        },
+        "analysisDataFrame": {
+            "gps": {
+                "columns": ["t", "lat", "lon", "alt", "speed"],
+                "rows": len(data.get("gps", {}).get("t", [])),
+            },
+            "imu": {
+                "columns": ["t", "accx", "accy", "accz", "gyrx", "gyry", "gyrz"],
+                "rows": len(data.get("imu", {}).get("t", [])),
+            },
+        },
+    }
+
+
+def integrate_velocity_trapezoidal(frames: list[dict[str, Any]]) -> dict[str, np.ndarray]:
+    n = len(frames)
+    if n == 0:
+        empty = np.array([], dtype=float)
+        return {"vx": empty, "vy": empty, "vz": empty, "horizontal": empty, "total": empty}
+
+    t = np.array([float(frame.get("t", 0.0)) for frame in frames], dtype=float)
+    ax = np.array([maybe_float(frame.get("imu", {}).get("accel", [None, None, None])[0]) for frame in frames], dtype=float)
+    ay = np.array([maybe_float(frame.get("imu", {}).get("accel", [None, None, None])[1]) for frame in frames], dtype=float)
+    az = np.array([maybe_float(frame.get("imu", {}).get("accel", [None, None, None])[2]) for frame in frames], dtype=float)
+
+    def remove_bias(arr: np.ndarray) -> np.ndarray:
+        valid = arr[~np.isnan(arr)]
+        if valid.size == 0:
+            return arr
+        return arr - float(np.median(valid))
+
+    ax = remove_bias(ax)
+    ay = remove_bias(ay)
+    az = remove_bias(az)
+
+    vx = np.zeros(n, dtype=float)
+    vy = np.zeros(n, dtype=float)
+    vz = np.zeros(n, dtype=float)
+
+    for i in range(1, n):
+        dt = t[i] - t[i - 1]
+        if not np.isfinite(dt) or dt <= 0:
+            dt = 0.0
+
+        a_prev = np.array([ax[i - 1], ay[i - 1], az[i - 1]], dtype=float)
+        a_curr = np.array([ax[i], ay[i], az[i]], dtype=float)
+        if np.isnan(a_prev).any() or np.isnan(a_curr).any():
+            vx[i] = vx[i - 1]
+            vy[i] = vy[i - 1]
+            vz[i] = vz[i - 1]
+            continue
+
+        # Trapezoidal integration for velocity from acceleration arrays.
+        v_step = 0.5 * (a_prev + a_curr) * dt
+        vx[i] = vx[i - 1] + v_step[0]
+        vy[i] = vy[i - 1] + v_step[1]
+        vz[i] = vz[i - 1] + v_step[2]
+
+    horizontal = np.sqrt(vx * vx + vy * vy)
+    total = np.sqrt(horizontal * horizontal + vz * vz)
+    return {"vx": vx, "vy": vy, "vz": vz, "horizontal": horizontal, "total": total}
+
+
 def as_dataframe(topic_data: dict[str, list[Any]]) -> pd.DataFrame:
     if not topic_data["t"]:
         return pd.DataFrame(columns=list(topic_data.keys()))
@@ -178,12 +281,16 @@ def compute_metrics(frames: list[dict[str, Any]]) -> AnalysisMetrics:
         return AnalysisMetrics()
 
     altitudes = [frame["pos"]["alt"] for frame in frames if frame.get("pos", {}).get("alt") is not None]
-    speeds = [frame.get("vel") for frame in frames if frame.get("vel") is not None]
-    accel_magnitudes = []
-    for frame in frames:
-        accel = frame.get("imu", {}).get("accel", [])
-        if len(accel) == 3 and all(value is not None for value in accel):
-            accel_magnitudes.append(float(np.linalg.norm(np.array(accel, dtype=float))))
+    velocity = integrate_velocity_trapezoidal(frames)
+    horizontal_speed = velocity["horizontal"]
+    gps_speed = np.array(
+        [
+            float(frame.get("vel"))
+            for frame in frames
+            if frame.get("vel") is not None
+        ],
+        dtype=float,
+    )
 
     distance = 0.0
     prev_lat = prev_lon = None
@@ -195,23 +302,72 @@ def compute_metrics(frames: list[dict[str, Any]]) -> AnalysisMetrics:
             distance += segment
         prev_lat, prev_lon = lat, lon
 
-    climb_rate = None
-    if len(frames) >= 2:
-        first_alt = frames[0].get("pos", {}).get("alt")
-        last_alt = frames[-1].get("pos", {}).get("alt")
-        first_t = frames[0].get("t")
-        last_t = frames[-1].get("t")
-        if None not in (first_alt, last_alt, first_t, last_t) and last_t != first_t:
-            climb_rate = (last_alt - first_alt) / (last_t - first_t)
+    integrated_max = float(np.nanmax(horizontal_speed)) if horizontal_speed.size else None
+    gps_max = float(np.nanmax(gps_speed)) if gps_speed.size else None
+    max_speed = integrated_max
+    if max_speed is None or max_speed <= 0:
+        max_speed = gps_max
 
     return AnalysisMetrics(
         maxAltitude=float(np.nanmax(altitudes)) if altitudes else None,
-        maxSpeed=float(np.nanmax(speeds)) if speeds else None,
+        maxSpeed=max_speed,
         flightDuration=float(frames[-1]["t"] - frames[0]["t"]) if len(frames) >= 2 else 0.0,
         distance=float(distance) if distance else 0.0,
-        climbRate=float(climb_rate) if climb_rate is not None else None,
-        accelMagnitudeMax=float(np.nanmax(accel_magnitudes)) if accel_magnitudes else None,
     )
+
+
+def compute_extended_metrics(frames: list[dict[str, Any]]) -> dict[str, float | None]:
+    if not frames:
+        return {
+            "maxHorizontalSpeed": None,
+            "maxVerticalSpeed": None,
+            "maxAcceleration": None,
+            "maxClimbRate": None,
+            "totalFlightDuration": 0.0,
+            "totalDistance": 0.0,
+        }
+
+    velocity = integrate_velocity_trapezoidal(frames)
+
+    accel_norm: list[float] = []
+    for frame in frames:
+        accel = frame.get("imu", {}).get("accel", [])
+        if len(accel) == 3 and all(value is not None for value in accel):
+            accel_norm.append(float(np.linalg.norm(np.array(accel, dtype=float))))
+
+    distance = 0.0
+    prev_lat = prev_lon = None
+    for frame in frames:
+        lat = frame.get("pos", {}).get("lat")
+        lon = frame.get("pos", {}).get("lon")
+        segment = haversine_m(prev_lat, prev_lon, lat, lon)
+        if segment is not None:
+            distance += segment
+        prev_lat, prev_lon = lat, lon
+
+    vz = velocity["vz"] if velocity["vz"].size else np.array([0.0], dtype=float)
+    horizontal = velocity["horizontal"] if velocity["horizontal"].size else np.array([0.0], dtype=float)
+    gps_speed = np.array(
+        [
+            float(frame.get("vel"))
+            for frame in frames
+            if frame.get("vel") is not None
+        ],
+        dtype=float,
+    )
+
+    max_horizontal = float(np.nanmax(horizontal)) if horizontal.size else None
+    if (max_horizontal is None or max_horizontal <= 0) and gps_speed.size:
+        max_horizontal = float(np.nanmax(gps_speed))
+
+    return {
+        "maxHorizontalSpeed": max_horizontal,
+        "maxVerticalSpeed": float(np.nanmax(np.abs(vz))) if vz.size else None,
+        "maxAcceleration": float(np.nanmax(accel_norm)) if accel_norm else None,
+        "maxClimbRate": float(np.nanmax(vz)) if vz.size else None,
+        "totalFlightDuration": float(frames[-1]["t"] - frames[0]["t"]) if len(frames) >= 2 else 0.0,
+        "totalDistance": float(distance),
+    }
 
 
 def build_frames(data: dict[str, Any], timeline: np.ndarray) -> list[dict[str, Any]]:
@@ -289,12 +445,15 @@ def build_output(data: dict[str, Any], dt: float) -> dict[str, Any]:
     start_time = float(timeline[0])
     end_time = float(timeline[-1])
     metrics = compute_metrics(frames)
+    extended_metrics = compute_extended_metrics(frames)
+    parsing = summarize_parsing(data)
 
     return {
         "meta": {
             "start_time": start_time,
             "duration": float(max(0.0, end_time - start_time)),
             "dt": float(dt),
+            "parsing": parsing,
         },
         "frames": frames,
         "events": sorted(
@@ -310,7 +469,11 @@ def build_output(data: dict[str, Any], dt: float) -> dict[str, Any]:
             "maxSpeed": metrics.maxSpeed,
             "flightDuration": metrics.flightDuration,
             "distance": metrics.distance,
-            "climbRate": metrics.climbRate,
-            "accelMagnitudeMax": metrics.accelMagnitudeMax,
+            "maxHorizontalSpeed": extended_metrics["maxHorizontalSpeed"],
+            "maxVerticalSpeed": extended_metrics["maxVerticalSpeed"],
+            "maxAcceleration": extended_metrics["maxAcceleration"],
+            "maxClimbRate": extended_metrics["maxClimbRate"],
+            "totalFlightDuration": extended_metrics["totalFlightDuration"],
+            "totalDistance": extended_metrics["totalDistance"],
         },
     }

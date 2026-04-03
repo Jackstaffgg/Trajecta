@@ -22,7 +22,13 @@ def main() -> None:
     args = build_parser().parse_args()
 
     if args.input and args.output:
-        run_local_convert(args.input, args.output, dt=args.dt, pretty=args.pretty, compress_gzip=args.gzip)
+        run_local_convert(
+            args.input,
+            args.output,
+            dt=args.dt,
+            pretty=args.pretty,
+            compress_gzip=args.gzip,
+        )
         return
 
     if args.worker or not args.input:

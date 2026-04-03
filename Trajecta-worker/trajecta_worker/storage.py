@@ -1,56 +1,45 @@
 from __future__ import annotations
 
 import gzip
-import io
 import json
 import os
 import tempfile
 from pathlib import Path
-from typing import Any
+from urllib.parse import urljoin
+from urllib.request import Request, urlopen
 
-from minio import Minio
-
-from .config import DEFAULT_MINIO_SECURE
+from .config import (
+    DEFAULT_API_BASE_URL,
+    DEFAULT_HTTP_TIMEOUT_SECONDS,
+    DEFAULT_INTERNAL_RAW_PATH_TEMPLATE,
+    DEFAULT_WORKER_TOKEN_HEADER,
+)
 from .models import WorkerError
 
 
-def get_minio_client() -> Minio:
-    endpoint = os.getenv("MINIO_ENDPOINT")
-    access_key = os.getenv("MINIO_ACCESS_KEY")
-    secret_key = os.getenv("MINIO_SECRET_KEY")
+def download_raw_for_task(task_id: int) -> tuple[str, bool]:
+    base_url = os.getenv("API_BASE_URL", DEFAULT_API_BASE_URL).rstrip("/") + "/"
+    path_template = os.getenv("INTERNAL_RAW_PATH_TEMPLATE", DEFAULT_INTERNAL_RAW_PATH_TEMPLATE)
+    worker_token_header = os.getenv("WORKER_TOKEN_HEADER", DEFAULT_WORKER_TOKEN_HEADER)
+    worker_token = os.getenv("INTERNAL_WORKER_TOKEN")
 
-    if not endpoint or not access_key or not secret_key:
-        raise WorkerError("MINIO_ENDPOINT, MINIO_ACCESS_KEY and MINIO_SECRET_KEY must be set for worker mode.")
+    if not worker_token:
+        raise WorkerError("INTERNAL_WORKER_TOKEN must be set for worker mode.")
 
-    secure_value = os.getenv("MINIO_SECURE")
-    secure = DEFAULT_MINIO_SECURE if secure_value is None else secure_value.lower() in ("1", "true", "yes", "y", "on")
-    return Minio(endpoint, access_key=access_key, secret_key=secret_key, secure=secure)
+    raw_path = path_template.format(taskId=task_id)
+    raw_url = urljoin(base_url, raw_path.lstrip("/"))
 
-
-def ensure_bucket_exists(client: Minio, bucket_name: str) -> None:
-    if not client.bucket_exists(bucket_name):
-        client.make_bucket(bucket_name)
-
-
-def download_source_object(client: Minio, bucket: str, object_key: str) -> tuple[str, bool]:
-    suffix = Path(object_key).suffix or ".bin"
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".bin")
     tmp.close()
-    client.fget_object(bucket, object_key, tmp.name)
+
+    req = Request(raw_url, method="GET")
+    req.add_header(worker_token_header, worker_token)
+
+    timeout = int(os.getenv("HTTP_TIMEOUT_SECONDS", str(DEFAULT_HTTP_TIMEOUT_SECONDS)))
+    with urlopen(req, timeout=timeout) as response, open(tmp.name, "wb") as out:
+        out.write(response.read())
+
     return tmp.name, True
-
-
-def upload_result_object(client: Minio, bucket: str, object_key: str, payload: dict[str, Any]) -> str:
-    data = json.dumps(payload, ensure_ascii=False, indent=None).encode("utf-8")
-    ensure_bucket_exists(client, bucket)
-    client.put_object(
-        bucket_name=bucket,
-        object_name=object_key,
-        data=io.BytesIO(data),
-        length=len(data),
-        content_type="application/json",
-    )
-    return object_key
 
 
 def write_json(payload: dict[str, Any], output_path: str, pretty: bool = False, compress_gzip: bool = False) -> None:
@@ -64,8 +53,3 @@ def write_json(payload: dict[str, Any], output_path: str, pretty: bool = False, 
             json.dump(payload, gz_file, ensure_ascii=False, indent=None)
 
 
-def result_key_for_input(object_key: str, task_id: int) -> str:
-    base = Path(object_key).with_suffix(".json").as_posix()
-    if base == object_key:
-        base = f"{object_key}.json"
-    return f"analysis/{task_id}/{base}".replace("//", "/")
