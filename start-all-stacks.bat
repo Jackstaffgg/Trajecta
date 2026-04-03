@@ -5,10 +5,12 @@ set "SCRIPT_DIR=%~dp0"
 set "ROOT_DIR=%SCRIPT_DIR%"
 set "API_DIR=%ROOT_DIR%\Trajecta-api"
 set "WORKER_DIR=%ROOT_DIR%\Trajecta-worker"
+set "FRONTEND_DIR=%ROOT_DIR%\Trajecta-frontend"
 
 set "GRADLEW=%API_DIR%\gradlew.bat"
 set "API_COMPOSE_FILE=%API_DIR%\compose.yaml"
 set "WORKER_COMPOSE_FILE=%WORKER_DIR%\docker-compose.yml"
+set "FRONTEND_COMPOSE_FILE=%FRONTEND_DIR%\docker-compose.yml"
 
 if not exist "%GRADLEW%" (
   echo [ERROR] Gradle wrapper not found: "%GRADLEW%"
@@ -22,6 +24,11 @@ if not exist "%API_COMPOSE_FILE%" (
 
 if not exist "%WORKER_COMPOSE_FILE%" (
   echo [ERROR] Worker compose file not found: "%WORKER_COMPOSE_FILE%"
+  exit /b 1
+)
+
+if not exist "%FRONTEND_COMPOSE_FILE%" (
+  echo [ERROR] Frontend compose file not found: "%FRONTEND_COMPOSE_FILE%"
   exit /b 1
 )
 
@@ -112,6 +119,14 @@ if "%RUN_COMPOSE%"=="1" (
     popd
     exit /b 1
   )
+
+  echo Running: docker compose -f "%FRONTEND_COMPOSE_FILE%" up --build --force-recreate --remove-orphans -d
+  docker compose -f "%FRONTEND_COMPOSE_FILE%" up --build --force-recreate --remove-orphans -d
+  if errorlevel 1 (
+    echo [ERROR] Frontend Docker Compose failed.
+    popd
+    exit /b 1
+  )
 ) else (
   echo Compose step skipped.
 )
@@ -126,6 +141,9 @@ if "%RUN_LOGS%"=="1" (
 
   echo Opening worker logs in a new terminal window...
   start "Trajecta Worker Logs" cmd /k docker compose -f "%WORKER_COMPOSE_FILE%" logs -f --tail=200
+
+  echo Opening frontend logs in a new terminal window...
+  start "Trajecta Frontend Logs" cmd /k docker compose -f "%FRONTEND_COMPOSE_FILE%" logs -f --tail=200
 )
 
 echo Done.

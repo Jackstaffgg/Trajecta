@@ -33,6 +33,29 @@ export type FlightMetrics = {
   imuRateHz?: number;
 };
 
+export type AuthUser = {
+  id: number;
+  name: string;
+  username: string;
+  email: string;
+  role: string;
+};
+
+export type AuthState = {
+  isAuthenticated: boolean;
+  token: string;
+  user: AuthUser | null;
+};
+
+export type TaskStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED" | "CANCELLED";
+
+export type TaskInfo = {
+  id: number;
+  title: string;
+  status: TaskStatus;
+  errorMessage?: string | null;
+};
+
 export type FlightMetadata = {
   logName?: string;
   vehicleType?: string;
@@ -48,6 +71,7 @@ export type FlightLogData = {
   events: FlightEvent[];
   params: Record<string, string | number | boolean | null>;
   metrics: FlightMetrics;
+  aiConclusion?: string;
 };
 
 export type ReplayCameraMode = "chase" | "fpv" | "free";

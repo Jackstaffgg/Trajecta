@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { LayoutDashboard, Orbit, Activity, SlidersHorizontal, Bot } from "lucide-react";
+import { LayoutDashboard, Orbit, Activity, SlidersHorizontal, Bot, LogOut } from "lucide-react";
 import { useFlightStore } from "@/store/flight-store";
 import type { AnalysisMode } from "@/types/flight";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,8 @@ const items: Array<{ mode: AnalysisMode; label: string; icon: ComponentType<{ cl
 export function Sidebar() {
   const mode = useFlightStore((s) => s.mode);
   const setMode = useFlightStore((s) => s.setMode);
+  const auth = useFlightStore((s) => s.auth);
+  const logout = useFlightStore((s) => s.logout);
 
   return (
     <aside className="panel-grid w-full border-b border-border/70 bg-slate-950/60 p-3 backdrop-blur md:h-screen md:w-64 md:border-b-0 md:border-r">
@@ -44,6 +46,17 @@ export function Sidebar() {
           );
         })}
       </nav>
+      <div className="mt-4 rounded-lg border border-border bg-card/60 p-2 text-xs">
+        <p className="font-semibold text-cyan-200">{auth.user?.name ?? "Unknown user"}</p>
+        <p className="text-muted-foreground">@{auth.user?.username ?? "unknown"}</p>
+        <button
+          className="mt-2 flex w-full items-center justify-center gap-1 rounded-md border border-border bg-background/50 px-2 py-1.5 text-muted-foreground transition hover:text-foreground"
+          onClick={logout}
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          Logout
+        </button>
+      </div>
     </aside>
   );
 }

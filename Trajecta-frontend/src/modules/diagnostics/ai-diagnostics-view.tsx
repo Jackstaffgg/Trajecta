@@ -3,6 +3,7 @@ import { Sparkles, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useFlightStore } from "@/store/flight-store";
+import { useFlightData } from "@/hooks/useFlightData";
 
 type AiReport = {
   summary: string;
@@ -14,28 +15,39 @@ export function AiDiagnosticsView() {
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<AiReport | null>(null);
   const data = useFlightStore((s) => s.data);
+  const currentTask = useFlightStore((s) => s.currentTask);
+  const error = useFlightStore((s) => s.error);
+  const { requestAiConclusion } = useFlightData();
 
   async function requestAnalysis() {
-    if (!data) {
+    if (!data || !currentTask) {
       return;
     }
+
     setLoading(true);
     try {
-      const response = await fetch("/api/diagnostics/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ metrics: data.metrics, events: data.events, frames: data.frames.slice(0, 4000) })
-      });
-      if (!response.ok) {
-        throw new Error("Failed to request AI diagnostics");
+      const ok = await requestAiConclusion();
+      if (!ok) {
+        setReport({
+          summary: "Failed to append AI conclusion to trajectory.",
+          anomalies: ["Task or trajectory endpoint returned an error"],
+          probableCause: "See backend error details"
+        });
+        return;
       }
-      const payload = (await response.json()) as AiReport;
-      setReport(payload);
+      const latest = useFlightStore.getState().data;
+      setReport({
+        summary:
+          latest?.aiConclusion ??
+          "AI conclusion was appended to trajectory. Re-open this screen after load to see details.",
+        anomalies: ["Conclusion attached to trajectory JSON"],
+        probableCause: "Static backend conclusion"
+      });
     } catch {
       setReport({
-        summary: "Backend diagnostics endpoint unavailable. Fallback summary generated on client.",
-        anomalies: ["Unexpected vibration spikes", "Battery sag near final segment"],
-        probableCause: "Potential propulsion stress with low-voltage descent phase"
+        summary: "Failed to append AI conclusion to trajectory.",
+        anomalies: ["Task or trajectory endpoint returned an error"],
+        probableCause: "See backend error details"
       });
     } finally {
       setLoading(false);
@@ -49,11 +61,13 @@ export function AiDiagnosticsView() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Send flight telemetry to LLM service for anomaly and failure cause analysis.
+          Trigger backend AI conclusion append on current task trajectory output.
         </p>
-        <Button onClick={() => void requestAnalysis()} disabled={loading}>
+        {currentTask ? <p className="text-xs text-muted-foreground">Task #{currentTask.id}</p> : null}
+        {error ? <p className="text-xs text-rose-300">{error}</p> : null}
+        <Button onClick={() => void requestAnalysis()} disabled={loading || !currentTask || !data}>
           <Sparkles className="h-4 w-4" />
-          {loading ? "Request in progress..." : "Request AI Analysis"}
+          {loading ? "Request in progress..." : "Append AI Conclusion"}
         </Button>
 
         {report ? (

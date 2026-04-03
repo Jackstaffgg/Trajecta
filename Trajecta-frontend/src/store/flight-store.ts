@@ -1,11 +1,14 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import type { AnalysisMode, FlightLogData, ReplayCameraMode } from "@/types/flight";
-
-type AuthState = {
-  isAuthenticated: boolean;
-  email: string;
-};
+import type {
+  AnalysisMode,
+  AuthState,
+  AuthUser,
+  FlightLogData,
+  ReplayCameraMode,
+  TaskInfo,
+  TaskStatus
+} from "@/types/flight";
 
 type ReplayState = {
   timeSec: number;
@@ -19,11 +22,17 @@ type FlightState = {
   mode: AnalysisMode;
   loading: boolean;
   data: FlightLogData | null;
+  currentTask: TaskInfo | null;
+  error: string | null;
   replay: ReplayState;
-  setAuth: (next: AuthState) => void;
+  setAuthenticated: (token: string, user: AuthUser) => void;
+  logout: () => void;
   setMode: (mode: AnalysisMode) => void;
   setLoading: (loading: boolean) => void;
   setData: (data: FlightLogData | null) => void;
+  setCurrentTask: (task: TaskInfo | null) => void;
+  setTaskStatus: (status: TaskStatus, errorMessage?: string | null) => void;
+  setError: (error: string | null) => void;
   setReplayTime: (timeSec: number) => void;
   setReplayPlaying: (isPlaying: boolean) => void;
   setReplaySpeed: (speed: number) => void;
@@ -38,10 +47,45 @@ const replayInitial: ReplayState = {
   camera: "chase"
 };
 
-const authInitial: AuthState = {
-  isAuthenticated: false,
-  email: ""
-};
+const SESSION_STORAGE_KEY = "trajecta.session";
+
+function loadAuthState(): AuthState {
+  if (typeof window === "undefined") {
+    return { isAuthenticated: false, token: "", user: null };
+  }
+
+  try {
+    const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
+    if (!raw) {
+      return { isAuthenticated: false, token: "", user: null };
+    }
+    const parsed = JSON.parse(raw) as { token?: string; user?: AuthUser };
+    if (!parsed.token || !parsed.user) {
+      return { isAuthenticated: false, token: "", user: null };
+    }
+    return { isAuthenticated: true, token: parsed.token, user: parsed.user };
+  } catch {
+    return { isAuthenticated: false, token: "", user: null };
+  }
+}
+
+function persistAuthState(auth: AuthState) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (!auth.isAuthenticated || !auth.token || !auth.user) {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    return;
+  }
+
+  window.localStorage.setItem(
+    SESSION_STORAGE_KEY,
+    JSON.stringify({ token: auth.token, user: auth.user })
+  );
+}
+
+const authInitial: AuthState = loadAuthState();
 
 export const useFlightStore = create<FlightState>()(
   devtools((set) => ({
@@ -49,16 +93,50 @@ export const useFlightStore = create<FlightState>()(
     mode: "dashboard",
     loading: false,
     data: null,
+    currentTask: null,
+    error: null,
     replay: replayInitial,
-    setAuth: (auth) => set({ auth }),
+    setAuthenticated: (token, user) => {
+      const auth = { isAuthenticated: true, token, user } as AuthState;
+      persistAuthState(auth);
+      set({ auth, error: null });
+    },
+    logout: () => {
+      persistAuthState({ isAuthenticated: false, token: "", user: null });
+      set({
+        auth: { isAuthenticated: false, token: "", user: null },
+        mode: "dashboard",
+        loading: false,
+        data: null,
+        currentTask: null,
+        error: null,
+        replay: replayInitial
+      });
+    },
     setMode: (mode) => set({ mode }),
     setLoading: (loading) => set({ loading }),
     setData: (data) =>
       set({
         data,
+        error: null,
         mode: data ? "dashboard" : "dashboard",
         replay: { ...replayInitial }
       }),
+    setCurrentTask: (currentTask) => set({ currentTask }),
+    setTaskStatus: (status, errorMessage) =>
+      set((state) => {
+        if (!state.currentTask) {
+          return {};
+        }
+        return {
+          currentTask: {
+            ...state.currentTask,
+            status,
+            errorMessage: errorMessage ?? null
+          }
+        };
+      }),
+    setError: (error) => set({ error }),
     setReplayTime: (timeSec) =>
       set((state) => ({ replay: { ...state.replay, timeSec } })),
     setReplayPlaying: (isPlaying) =>
@@ -69,10 +147,12 @@ export const useFlightStore = create<FlightState>()(
       set((state) => ({ replay: { ...state.replay, camera } })),
     reset: () =>
       set({
-        auth: authInitial,
+        auth: loadAuthState(),
         mode: "dashboard",
         loading: false,
         data: null,
+        currentTask: null,
+        error: null,
         replay: replayInitial
       })
   }))
