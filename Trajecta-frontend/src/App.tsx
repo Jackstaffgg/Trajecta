@@ -1,4 +1,4 @@
-import { Sidebar } from "@/components/layout/sidebar";
+import { AppShell } from "@/components/layout/app-shell";
 import { AuthScreen } from "@/components/layout/auth-screen";
 import { StartScreen } from "@/components/layout/start-screen";
 import { ProcessingScreen } from "@/components/layout/processing-screen";
@@ -36,20 +36,9 @@ export default function App() {
     return <AuthScreen />;
   }
 
-  if (loading) {
-    return <ProcessingScreen />;
-  }
-
-  if (!data) {
-    return <StartScreen />;
-  }
-
   return (
-    <div className="md:flex">
-      <Sidebar />
-      <main className="min-h-screen flex-1 p-4 md:p-6">
-        <MainContent />
-      </main>
-    </div>
+    <AppShell>
+      {loading ? <ProcessingScreen /> : !data ? <StartScreen /> : <MainContent />}
+    </AppShell>
   );
 }

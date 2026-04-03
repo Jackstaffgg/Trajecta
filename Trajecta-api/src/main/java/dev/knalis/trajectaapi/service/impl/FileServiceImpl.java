@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class FileServiceImpl implements FileService {
     
-    private static final long MAX_UPLOAD_SIZE_BYTES = 50L * 1024L * 1024L;
+    private static final long MAX_UPLOAD_SIZE_BYTES = 500L * 1024L * 1024L;
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of(".bin");
     private static final Pattern OBJECT_KEY_PATTERN = Pattern.compile("^[a-zA-Z0-9/_\\-.]+$");
     

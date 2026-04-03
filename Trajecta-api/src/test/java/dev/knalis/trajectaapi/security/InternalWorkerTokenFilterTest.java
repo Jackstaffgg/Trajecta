@@ -1,5 +1,6 @@
 package dev.knalis.trajectaapi.security;
 
+import jakarta.servlet.DispatcherType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,6 +70,22 @@ class InternalWorkerTokenFilterTest {
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(chain.getRequest()).isNotNull();
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    void doFilter_appliesToAsyncDispatchForInternalEndpoints() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/internal/v1/tasks/42/raw");
+        request.setDispatcherType(DispatcherType.ASYNC);
+        request.addHeader("X-Worker-Token", "secret-token");
+
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(chain.getRequest()).isNotNull();
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
     }
 }
 

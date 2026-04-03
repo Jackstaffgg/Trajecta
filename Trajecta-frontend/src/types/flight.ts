@@ -56,6 +56,16 @@ export type TaskInfo = {
   errorMessage?: string | null;
 };
 
+export type NotificationInfo = {
+  id: number;
+  type: string;
+  content: string;
+  senderName?: string | null;
+  referenceId?: number | null;
+  isRead: boolean;
+  createdAt: string;
+};
+
 export type FlightMetadata = {
   logName?: string;
   vehicleType?: string;

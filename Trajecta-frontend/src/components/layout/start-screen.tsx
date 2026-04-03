@@ -14,6 +14,12 @@ export function StartScreen() {
   const error = useFlightStore((s) => s.error);
   const setError = useFlightStore((s) => s.setError);
 
+  function safeText(value: unknown, fallback = "") {
+    if (typeof value === "string") return value;
+    if (typeof value === "number" || typeof value === "boolean") return String(value);
+    return fallback;
+  }
+
   async function handleFile(file: File) {
     if (!file.name.toLowerCase().endsWith(".bin")) {
       setError("Only .bin telemetry files are supported");
@@ -24,7 +30,7 @@ export function StartScreen() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="flex min-h-[60vh] items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader>
           <CardTitle className="text-xl">Start Flight Analysis</CardTitle>
@@ -73,10 +79,10 @@ export function StartScreen() {
           {currentTask ? (
             <p className="mt-3 text-xs text-muted-foreground">
               Task #{currentTask.id}: {currentTask.status}
-              {currentTask.errorMessage ? ` - ${currentTask.errorMessage}` : ""}
+              {currentTask.errorMessage ? ` - ${safeText(currentTask.errorMessage, "Unknown error")}` : ""}
             </p>
           ) : null}
-          {error ? <p className="mt-2 text-xs text-rose-300">{error}</p> : null}
+          {error ? <p className="mt-2 text-xs text-rose-300">{safeText(error, "Unknown error")}</p> : null}
           <input
             ref={inputRef}
             type="file"

@@ -19,6 +19,12 @@ export function AiDiagnosticsView() {
   const error = useFlightStore((s) => s.error);
   const { requestAiConclusion } = useFlightData();
 
+  function safeText(value: unknown, fallback = "") {
+    if (typeof value === "string") return value;
+    if (typeof value === "number" || typeof value === "boolean") return String(value);
+    return fallback;
+  }
+
   async function requestAnalysis() {
     if (!data || !currentTask) {
       return;
@@ -72,21 +78,21 @@ export function AiDiagnosticsView() {
 
         {report ? (
           <div className="space-y-3 rounded-lg border border-border bg-background/50 p-4">
-            <p className="text-sm text-cyan-100">{report.summary}</p>
+            <p className="text-sm text-cyan-100">{safeText(report.summary, "No summary")}</p>
             <div>
               <p className="mb-1 text-xs uppercase text-muted-foreground">Anomalies</p>
               <ul className="space-y-1 text-sm">
                 {report.anomalies.map((a) => (
-                  <li key={a} className="flex items-center gap-2">
+                  <li key={safeText(a, "anomaly")} className="flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4 text-amber-400" />
-                    {a}
+                    {safeText(a, "Unknown anomaly")}
                   </li>
                 ))}
               </ul>
             </div>
             <div>
               <p className="mb-1 text-xs uppercase text-muted-foreground">Probable Cause</p>
-              <p className="text-sm">{report.probableCause}</p>
+              <p className="text-sm">{safeText(report.probableCause, "N/A")}</p>
             </div>
           </div>
         ) : null}

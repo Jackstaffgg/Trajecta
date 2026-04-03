@@ -130,9 +130,9 @@ public class FlightTaskServiceImpl implements FlightTaskService {
     @Transactional
     @Override
     @Caching(evict = {
-            @CacheEvict(cacheNames = "tasksById", key = "#result.taskId"),
-            @CacheEvict(cacheNames = "taskRawKey", key = "#result.taskId"),
-            @CacheEvict(cacheNames = "taskTrajectoryKey", key = "#result.taskId"),
+            @CacheEvict(cacheNames = "tasksById", key = "#p0.taskId"),
+            @CacheEvict(cacheNames = "taskRawKey", key = "#p0.taskId"),
+            @CacheEvict(cacheNames = "taskTrajectoryKey", key = "#p0.taskId"),
             @CacheEvict(cacheNames = "tasksByUserPage", allEntries = true)
     })
     public FlightTask completeTask(AnalysisResult result) {

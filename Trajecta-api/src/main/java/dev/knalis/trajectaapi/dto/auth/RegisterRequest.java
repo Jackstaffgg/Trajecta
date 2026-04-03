@@ -13,7 +13,7 @@ public class RegisterRequest {
     
     @Schema(description = "Display name.", example = "John Pilot")
     @NotBlank(message = "Name must not be blank")
-    @Size(min = 4, max = 16, message = "Name must be between 4 and 16 characters")
+    @Size(min = 4, max = 40, message = "Name must be between 4 and 16 characters")
     private String name;
     
     @Schema(description = "Unique username.", example = "pilot_01")

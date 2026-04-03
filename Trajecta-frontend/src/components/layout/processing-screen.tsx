@@ -5,7 +5,7 @@ export function ProcessingScreen() {
   const task = useFlightStore((s) => s.currentTask);
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
+    <div className="flex min-h-[60vh] items-center justify-center">
       <div className="rounded-xl border border-cyan-500/20 bg-card/90 px-8 py-6 text-center">
         <LoaderCircle className="mx-auto mb-3 h-8 w-8 animate-spin text-cyan-300" />
         <p className="text-sm font-medium">Processing flight log...</p>
