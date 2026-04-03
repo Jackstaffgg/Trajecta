@@ -1,0 +1,26 @@
+services:
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trajecta_worker
+    restart: unless-stopped
+    environment:
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672/%2F}
+      REQUEST_EXCHANGE: ${REQUEST_EXCHANGE:-telemetry.exchange}
+      REQUEST_ROUTING_KEY: ${REQUEST_ROUTING_KEY:-telemetry.parse}
+      REQUEST_QUEUE: ${REQUEST_QUEUE:-telemetry.parse}
+      RESULTS_EXCHANGE: ${RESULTS_EXCHANGE:-telemetry.exchange}
+      RESULTS_ROUTING_KEY: ${RESULTS_ROUTING_KEY:-telemetry.results}
+      RESULTS_QUEUE: ${RESULTS_QUEUE:-telemetry.results}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-admin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-password123}
+      MINIO_SECURE: ${MINIO_SECURE:-false}
+    networks:
+      - telemetry-network
+
+networks:
+  telemetry-network:
+    external: true
+    name: telemetry-network

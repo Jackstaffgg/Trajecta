@@ -1,0 +1,9 @@
+TIME_FIELDS = ("TimeUS", "TimeMS", "TimeS", "T")
+DEFAULT_DT = 0.1
+DEFAULT_REQUEST_EXCHANGE = "telemetry.exchange"
+DEFAULT_REQUEST_ROUTING_KEY = "telemetry.parse"
+DEFAULT_RESULTS_EXCHANGE = "telemetry.exchange"
+DEFAULT_RESULTS_ROUTING_KEY = "telemetry.results"
+DEFAULT_REQUEST_QUEUE = "telemetry.parse"
+DEFAULT_RESULTS_QUEUE = "telemetry.results"
+DEFAULT_MINIO_SECURE = False

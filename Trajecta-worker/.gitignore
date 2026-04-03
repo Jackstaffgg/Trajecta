@@ -1,0 +1,33 @@
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Build / cache
+dist/
+build/
+out/
+coverage/
+.cache/
+.tmp/
+temp/
+tmp/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Misc
+*.pid
+*.seed
+data/
