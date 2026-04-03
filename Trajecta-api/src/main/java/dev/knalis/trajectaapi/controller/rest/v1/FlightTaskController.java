@@ -1,0 +1,128 @@
+package dev.knalis.trajectaapi.controller.rest.v1;
+
+import dev.knalis.trajectaapi.dto.task.TaskCreateRequest;
+import dev.knalis.trajectaapi.dto.task.TaskCreateResponse;
+import dev.knalis.trajectaapi.dto.common.ApiResponse;
+import dev.knalis.trajectaapi.dto.task.TaskResponse;
+import dev.knalis.trajectaapi.controller.rest.v1.support.CurrentUserResolver;
+import dev.knalis.trajectaapi.mapper.task.TaskResponseMapper;
+import dev.knalis.trajectaapi.service.intrf.FileService;
+import dev.knalis.trajectaapi.service.intrf.FlightTaskService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/v1/tasks")
+@RequiredArgsConstructor
+@Tag(name = "Tasks", description = "Telemetry task operations.")
+@SecurityRequirement(name = "bearerAuth")
+public class FlightTaskController {
+    
+    private final FlightTaskService flightTaskService;
+    private final TaskResponseMapper taskResponseMapper;
+    private final FileService fileService;
+    private final CurrentUserResolver currentUserResolver;
+    
+    @Operation(summary = "Create a telemetry analysis task", description = "Uploads a BIN file and starts asynchronous trajectory analysis.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Task created and started"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid title or file"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "429", description = "Rate limit exceeded")
+    })
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<TaskCreateResponse>> createTask(@Valid @ModelAttribute TaskCreateRequest request, Authentication auth) {
+        var currentUser = currentUserResolver.requireUser(auth);
+        
+        var task = flightTaskService.createAndStartAnalysis(
+                request.getTitle(),
+                request.getFile(),
+                currentUser.getId()
+        );
+        
+        final var response = taskResponseMapper.toCreateResponse(task);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
+    }
+    
+    @Operation(summary = "Get task by id", description = "Returns a task if it belongs to the current user or the caller is admin.")
+    @GetMapping("/{taskId}")
+    public ResponseEntity<ApiResponse<TaskResponse>> getTask(@Parameter(description = "Task identifier", example = "42") @PathVariable Long taskId, Authentication auth) {
+        var task = flightTaskService.getTask(taskId, auth);
+        return ResponseEntity.ok(ApiResponse.success(taskResponseMapper.toDto(task)));
+    }
+
+    @Operation(summary = "Append AI conclusion", description = "Appends a static AI conclusion to trajectory content and marks the task as concluded.")
+    @PostMapping("/{taskId}/ai-conclusion")
+    public ResponseEntity<ApiResponse<TaskResponse>> addAiConclusion(@Parameter(description = "Task identifier", example = "42") @PathVariable Long taskId, Authentication auth) {
+        var task = flightTaskService.addAiConclusion(taskId, auth);
+        return ResponseEntity.ok(ApiResponse.success(taskResponseMapper.toDto(task)));
+    }
+    
+    @Operation(summary = "List current user tasks", description = "Returns paged tasks ordered by creation time descending.")
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<TaskResponse>>> getMyTasks(
+            @Parameter(description = "Offset, must be divisible by limit", example = "0")
+            @RequestParam(defaultValue = "0") int offset,
+            @Parameter(description = "Page size in range 1..100", example = "20")
+            @RequestParam(defaultValue = "20") int limit,
+            Authentication auth
+    ) {
+        var tasks = flightTaskService.getMyTasks(auth, offset, limit);
+        return ResponseEntity.ok(ApiResponse.success(taskResponseMapper.toDtoList(tasks)));
+    }
+    
+    @Operation(summary = "Download raw BIN file", description = "Streams the original uploaded BIN telemetry file.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Binary stream", content = @Content(mediaType = "application/octet-stream"))
+    @GetMapping(value = "/{taskId}/raw", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public ResponseEntity<StreamingResponseBody> downloadRaw(@Parameter(description = "Task identifier", example = "42") @PathVariable Long taskId, Authentication auth) {
+        final var rawKey = flightTaskService.getTaskRawKey(taskId, auth);
+        
+        StreamingResponseBody stream = outputStream -> {
+            try (var inputStream = fileService.getObjectStream(rawKey)) {
+                inputStream.transferTo(outputStream);
+            }
+        };
+        
+        return buildDownloadResponse(stream, "source.bin");
+    }
+    
+    @Operation(summary = "Download trajectory JSON file", description = "Streams trajectory analysis output as a JSON file.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Binary stream", content = @Content(mediaType = "application/octet-stream"))
+    @GetMapping(value = "/{taskId}/trajectory", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public ResponseEntity<StreamingResponseBody> downloadTrajectory(@Parameter(description = "Task identifier", example = "42") @PathVariable Long taskId, Authentication auth) {
+        final var trajectoryKey = flightTaskService.getTaskTrajectoryKey(taskId, auth);
+        
+        StreamingResponseBody stream = outputStream -> {
+            try (var inputStream = fileService.getObjectStream(trajectoryKey)) {
+                inputStream.transferTo(outputStream);
+            }
+        };
+        
+        return buildDownloadResponse(stream, "trajectory.json");
+    }
+
+    private ResponseEntity<StreamingResponseBody> buildDownloadResponse(StreamingResponseBody stream, String filename) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .header("X-Content-Type-Options", "nosniff")
+                .header("X-Frame-Options", "DENY")
+                .header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; sandbox")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(stream);
+    }
+}

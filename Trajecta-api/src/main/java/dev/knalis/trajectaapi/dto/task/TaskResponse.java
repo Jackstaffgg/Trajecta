@@ -1,0 +1,38 @@
+package dev.knalis.trajectaapi.dto.task;
+
+import dev.knalis.trajectaapi.model.task.TaskStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.Instant;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Schema(description = "Telemetry task details.")
+public class TaskResponse {
+    @Schema(description = "Task identifier.", example = "42")
+    private Long id;
+
+    @Schema(description = "Task title.", example = "Flight #102 telemetry")
+    private String title;
+
+    @Schema(description = "Current task status.", example = "COMPLETED")
+    private TaskStatus status;
+
+    @Schema(description = "Failure details when status is FAILED.", example = "Trajectory file is missing in analysis result")
+    private String errorMessage;
+
+    @Schema(description = "Creation timestamp.", example = "2026-04-03T18:00:00Z")
+    private Instant createdAt;
+
+    @Schema(description = "Completion timestamp for terminal states.", example = "2026-04-03T18:01:23Z")
+    private Instant finishedAt;
+}
+
+
+
