@@ -22,13 +22,13 @@ def load_json_message(body: bytes | str) -> dict[str, Any]:
     return json.loads(body)
 
 
-def publish_result(channel: Any, result: AnalysisResult) -> None:
+def publish_result(channel: Any, result: AnalysisResult, properties: Any | None = None) -> None:
     body = json.dumps(build_result_payload(result), ensure_ascii=False).encode("utf-8")
     channel.basic_publish(
         exchange=os.getenv("RESULTS_EXCHANGE", DEFAULT_RESULTS_EXCHANGE),
         routing_key=os.getenv("RESULTS_ROUTING_KEY", DEFAULT_RESULTS_ROUTING_KEY),
         body=body,
-        properties=None,
+        properties=properties,
     )
 
 
@@ -57,6 +57,8 @@ def start_worker(dt: float) -> None:
     channel.queue_bind(queue=request_queue, exchange=request_exchange, routing_key=request_routing_key)
     channel.queue_bind(queue=results_queue, exchange=results_exchange, routing_key=results_routing_key)
 
+    json_properties = pika.BasicProperties(content_type="application/json", delivery_mode=2)
+
     def on_message(ch: Any, method: Any, properties: Any, body: bytes) -> None:
         try:
             message = load_json_message(body)
@@ -64,7 +66,7 @@ def start_worker(dt: float) -> None:
                 taskId=int(message["taskId"]),
             )
             result = process_request_message(request, dt=dt)
-            publish_result(ch, result)
+            publish_result(ch, result, properties=json_properties)
             ch.basic_ack(delivery_tag=method.delivery_tag)
         except Exception as exc:
             task_id = -1
@@ -77,7 +79,7 @@ def start_worker(dt: float) -> None:
             fallback = AnalysisResult(taskId=task_id, status=AnalysisStatus.FAILED, errorMessage=str(exc))
             try:
                 if fallback.taskId >= 0:
-                    publish_result(ch, fallback)
+                    publish_result(ch, fallback, properties=json_properties)
             finally:
                 ch.basic_ack(delivery_tag=method.delivery_tag)
 

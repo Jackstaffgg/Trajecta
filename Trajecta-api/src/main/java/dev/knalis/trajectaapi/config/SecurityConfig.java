@@ -1,5 +1,6 @@
 package dev.knalis.trajectaapi.config;
 
+import dev.knalis.trajectaapi.security.InternalWorkerTokenFilter;
 import dev.knalis.trajectaapi.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -27,6 +28,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
     
+    private final InternalWorkerTokenFilter internalWorkerTokenFilter;
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserDetailsService userDetailsService;
     
@@ -39,7 +41,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/swagger-ui", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api-docs", "/api-docs/**").permitAll()
-                        .requestMatchers("/api/internal/**").permitAll()
+                        .requestMatchers("/api/internal/**").hasRole("INTERNAL_WORKER")
                         .requestMatchers("/api/v1/users/**").authenticated()
                         .requestMatchers("/api/v1/notifications/**").authenticated()
                         .requestMatchers("/api/v1/tasks/**").authenticated()
@@ -55,6 +57,7 @@ public class SecurityConfig {
                 .authenticationProvider(
                         authenticationProvider()
                 )
+                .addFilterBefore(internalWorkerTokenFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         
         return http.build();
