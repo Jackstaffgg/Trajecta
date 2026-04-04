@@ -88,8 +88,8 @@ if "%RUN_BUILD%"=="1" (
 )
 
 if "%RUN_COMPOSE%"=="1" (
-  echo Running: docker compose -f "%COMPOSE_FILE%" up --build --force-recreate --remove-orphans -d
-  docker compose -f "%COMPOSE_FILE%" up --build --force-recreate --remove-orphans -d
+  echo Running: docker compose -f "%COMPOSE_FILE%" up --build -d backend
+  docker compose -f "%COMPOSE_FILE%" up --build -d backend
   if errorlevel 1 (
     echo [ERROR] Docker Compose failed.
     popd

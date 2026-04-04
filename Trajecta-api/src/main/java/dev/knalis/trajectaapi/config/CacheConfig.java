@@ -23,21 +23,16 @@ public class CacheConfig {
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(
                         GenericJacksonJsonRedisSerializer.builder().build()))
+                .prefixCacheNameWith("v2::")
                 .disableCachingNullValues()
                 .entryTtl(Duration.ofMinutes(10));
 
         Map<String, RedisCacheConfiguration> cacheConfigs = new HashMap<>();
-        cacheConfigs.put("usersById", defaultConfig.entryTtl(Duration.ofMinutes(30)));
-        cacheConfigs.put("usersByUsername", defaultConfig.entryTtl(Duration.ofMinutes(30)));
-        cacheConfigs.put("usersAll", defaultConfig.entryTtl(Duration.ofMinutes(10)));
-        cacheConfigs.put("usersSearch", defaultConfig.entryTtl(Duration.ofMinutes(10)));
-
-        cacheConfigs.put("notificationsByRecipient", defaultConfig.entryTtl(Duration.ofMinutes(5)));
-
-        cacheConfigs.put("tasksById", defaultConfig.entryTtl(Duration.ofMinutes(5)));
-        cacheConfigs.put("tasksByUserPage", defaultConfig.entryTtl(Duration.ofMinutes(2)));
+        cacheConfigs.put("notificationDtoByUser", defaultConfig.entryTtl(Duration.ofMinutes(5)));
         cacheConfigs.put("taskRawKey", defaultConfig.entryTtl(Duration.ofMinutes(10)));
         cacheConfigs.put("taskTrajectoryKey", defaultConfig.entryTtl(Duration.ofMinutes(10)));
+        cacheConfigs.put("taskDtoByIdAndUserV2", defaultConfig.entryTtl(Duration.ofMinutes(2)));
+        cacheConfigs.put("taskDtoByUserPageV2", defaultConfig.entryTtl(Duration.ofMinutes(1)));
 
         return RedisCacheManager.builder(redisConnectionFactory)
                 .cacheDefaults(defaultConfig)

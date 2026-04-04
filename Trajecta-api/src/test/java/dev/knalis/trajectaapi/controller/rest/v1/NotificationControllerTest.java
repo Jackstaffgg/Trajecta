@@ -2,8 +2,8 @@ package dev.knalis.trajectaapi.controller.rest.v1;
 
 import dev.knalis.trajectaapi.controller.rest.v1.support.CurrentUserResolver;
 import dev.knalis.trajectaapi.dto.notification.NotificationResponse;
-import dev.knalis.trajectaapi.mapper.NotificationMapper;
 import dev.knalis.trajectaapi.model.User;
+import dev.knalis.trajectaapi.service.impl.NotificationDtoCacheService;
 import dev.knalis.trajectaapi.service.intrf.NotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,9 +24,9 @@ class NotificationControllerTest {
     @Mock
     private NotificationService notificationService;
     @Mock
-    private NotificationMapper notificationMapper;
-    @Mock
     private CurrentUserResolver currentUserResolver;
+    @Mock
+    private NotificationDtoCacheService notificationDtoCacheService;
     @Mock
     private Authentication authentication;
 
@@ -34,7 +34,7 @@ class NotificationControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new NotificationController(notificationService, notificationMapper, currentUserResolver);
+        controller = new NotificationController(notificationService, currentUserResolver, notificationDtoCacheService);
     }
 
     @Test
@@ -42,8 +42,8 @@ class NotificationControllerTest {
         User user = new User();
         user.setId(10L);
         when(currentUserResolver.requireUser(authentication)).thenReturn(user);
-        when(notificationService.getUserNotifications(10L)).thenReturn(List.of());
-        when(notificationMapper.toDtoList(List.of())).thenReturn(List.of(new NotificationResponse()));
+        when(authentication.getName()).thenReturn("alice");
+        when(notificationDtoCacheService.getForUser("alice", 10L)).thenReturn(List.of(new NotificationResponse()));
 
         var response = controller.getMyNotifications(authentication);
 
@@ -56,10 +56,12 @@ class NotificationControllerTest {
         User user = new User();
         user.setId(10L);
         when(currentUserResolver.requireUser(authentication)).thenReturn(user);
+        when(authentication.getName()).thenReturn("alice");
 
         var response = controller.markAsRead(5L, authentication);
 
         verify(notificationService).markAsRead(5L, 10L);
+        verify(notificationDtoCacheService).evictForUser("alice");
         assertThat(response.getBody().isSuccess()).isTrue();
     }
 
@@ -68,10 +70,12 @@ class NotificationControllerTest {
         User user = new User();
         user.setId(11L);
         when(currentUserResolver.requireUser(authentication)).thenReturn(user);
+        when(authentication.getName()).thenReturn("bob");
 
         var response = controller.markAllAsRead(authentication);
 
         verify(notificationService).markAllAsRead(11L);
+        verify(notificationDtoCacheService).evictForUser("bob");
         assertThat(response.getBody().isSuccess()).isTrue();
     }
 
@@ -80,10 +84,12 @@ class NotificationControllerTest {
         User user = new User();
         user.setId(12L);
         when(currentUserResolver.requireUser(authentication)).thenReturn(user);
+        when(authentication.getName()).thenReturn("charlie");
 
         var response = controller.deleteNotification(9L, authentication);
 
         verify(notificationService).deleteNotification(9L, 12L);
+        verify(notificationDtoCacheService).evictForUser("charlie");
         assertThat(response.getBody().isSuccess()).isTrue();
     }
 }

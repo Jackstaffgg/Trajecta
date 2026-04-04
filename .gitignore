@@ -2,3 +2,4 @@
 .env.vps.*
 !.env.vps.example
 data/
+.idea/

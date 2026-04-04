@@ -3,7 +3,7 @@ package dev.knalis.trajectaapi.controller.rest.v1;
 import dev.knalis.trajectaapi.controller.rest.v1.support.CurrentUserResolver;
 import dev.knalis.trajectaapi.dto.common.ApiResponse;
 import dev.knalis.trajectaapi.dto.notification.NotificationResponse;
-import dev.knalis.trajectaapi.mapper.NotificationMapper;
+import dev.knalis.trajectaapi.service.impl.NotificationDtoCacheService;
 import dev.knalis.trajectaapi.service.intrf.NotificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,16 +24,16 @@ import java.util.List;
 public class NotificationController {
     
     private final NotificationService notificationService;
-    private final NotificationMapper notificationMapper;
     private final CurrentUserResolver currentUserResolver;
+    private final NotificationDtoCacheService notificationDtoCacheService;
     
     @Operation(summary = "Get current user notifications", description = "Returns all notifications for the authenticated user.")
     @GetMapping
     public ResponseEntity<ApiResponse<List<NotificationResponse>>> getMyNotifications(Authentication auth) {
         var currentUser = currentUserResolver.requireUser(auth);
-        
-        List<NotificationResponse> notifications = notificationMapper.toDtoList(notificationService.getUserNotifications(currentUser.getId()));
-        
+
+        List<NotificationResponse> notifications = notificationDtoCacheService.getForUser(auth.getName(), currentUser.getId());
+
         return ResponseEntity.ok(ApiResponse.success(notifications));
     }
     
@@ -42,6 +42,7 @@ public class NotificationController {
     public ResponseEntity<ApiResponse<Void>> markAsRead(@Parameter(description = "Notification identifier", example = "17") @PathVariable Long id, Authentication auth) {
         var currentUser = currentUserResolver.requireUser(auth);
         notificationService.markAsRead(id, currentUser.getId());
+        notificationDtoCacheService.evictForUser(auth.getName());
         return ResponseEntity.ok(ApiResponse.success(null));
     }
     
@@ -50,6 +51,7 @@ public class NotificationController {
     public ResponseEntity<ApiResponse<Void>> markAllAsRead(Authentication auth) {
         var currentUser = currentUserResolver.requireUser(auth);
         notificationService.markAllAsRead(currentUser.getId());
+        notificationDtoCacheService.evictForUser(auth.getName());
         return ResponseEntity.ok(ApiResponse.success(null));
     }
     
@@ -58,6 +60,7 @@ public class NotificationController {
     public ResponseEntity<ApiResponse<Void>> deleteNotification(@Parameter(description = "Notification identifier", example = "17") @PathVariable Long id, Authentication auth) {
         var currentUser = currentUserResolver.requireUser(auth);
         notificationService.deleteNotification(id, currentUser.getId());
+        notificationDtoCacheService.evictForUser(auth.getName());
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 }

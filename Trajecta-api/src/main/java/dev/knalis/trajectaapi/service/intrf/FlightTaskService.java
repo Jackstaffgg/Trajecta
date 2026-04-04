@@ -1,6 +1,7 @@
 package dev.knalis.trajectaapi.service.intrf;
 
 import dev.knalis.trajectaapi.dto.messaging.AnalysisResult;
+import dev.knalis.trajectaapi.dto.task.TaskBulkDeleteResponse;
 import dev.knalis.trajectaapi.model.task.FlightTask;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,6 +35,12 @@ public interface FlightTaskService {
 
     /** Appends AI conclusion to trajectory output if not already added. */
     FlightTask addAiConclusion(Long taskId, Authentication auth);
+
+    /** Forces AI conclusion regeneration for a task. */
+    FlightTask regenerateAiConclusion(Long taskId, Authentication auth);
+
+    /** Deletes tasks available to current user in a single request. */
+    TaskBulkDeleteResponse deleteTasks(List<Long> taskIds, Authentication auth);
 }
 
 

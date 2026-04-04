@@ -32,6 +32,12 @@ public class TaskResponse {
 
     @Schema(description = "Completion timestamp for terminal states.", example = "2026-04-03T18:01:23Z")
     private Instant finishedAt;
+
+    @Schema(description = "AI-generated trajectory conclusion when available.", example = "Stable climb profile with minor heading oscillation.")
+    private String aiConclusion;
+
+    @Schema(description = "AI model that generated the conclusion.", example = "GPT_4O_MINI")
+    private String aiModel;
 }
 
 

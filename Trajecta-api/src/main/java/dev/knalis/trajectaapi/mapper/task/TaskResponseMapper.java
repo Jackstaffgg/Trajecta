@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.knalis.trajectaapi.dto.task.TaskCreateResponse;
 import dev.knalis.trajectaapi.dto.task.TaskResponse;
 import dev.knalis.trajectaapi.model.task.FlightTask;
+import dev.knalis.trajectaapi.model.task.ai.AiConclusion;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +25,25 @@ public abstract class TaskResponseMapper {
     @Mapping(target = "errorMessage", source = "errorMessage")
     @Mapping(target = "createdAt", source = "createdAt")
     @Mapping(target = "finishedAt", source = "finishedAt")
+    @Mapping(target = "aiConclusion", expression = "java(extractAiConclusion(task))")
+    @Mapping(target = "aiModel", expression = "java(extractAiModel(task))")
     public abstract TaskResponse toDto(FlightTask task);
+
+    protected String extractAiConclusion(FlightTask task) {
+        if (task == null) {
+            return null;
+        }
+
+        AiConclusion aiConclusion = task.getAiConclusion();
+        return aiConclusion != null ? aiConclusion.getConclusion() : null;
+    }
+
+    protected String extractAiModel(FlightTask task) {
+        if (task == null || task.getAiConclusion() == null || task.getAiConclusion().getAiModel() == null) {
+            return null;
+        }
+        return task.getAiConclusion().getAiModel().name();
+    }
 
     public List<TaskResponse> toDtoList(List<?> tasks) {
         if (tasks == null) {

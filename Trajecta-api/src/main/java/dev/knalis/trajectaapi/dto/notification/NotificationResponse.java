@@ -22,6 +22,9 @@ public class NotificationResponse {
     @Schema(description = "Sender user id.", example = "-1488")
     private Long senderId;
 
+    @Schema(description = "Recipient user id.", example = "12")
+    private Long recipientId;
+
     @Schema(description = "Sender display name.", example = "System")
     private String senderName;
     

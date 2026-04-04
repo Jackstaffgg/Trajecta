@@ -1,5 +1,6 @@
 package dev.knalis.trajectaapi.model.task;
 
+import dev.knalis.trajectaapi.model.task.ai.AiConclusion;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -25,8 +26,13 @@ public class FlightTask {
     
     private String rawLogObjectKey;
     private String trajectoryObjectKey;
+
+    @Column(nullable = false)
+    private boolean hasAiConclusion = false;
     
-    private boolean hasAiConclusion;
+    @OneToOne(mappedBy = "flightTask")
+    private AiConclusion aiConclusion;
+
     private String errorMessage;
     
     private Instant createdAt = Instant.now();
@@ -42,6 +48,7 @@ public class FlightTask {
         this.status = TaskStatus.FAILED;
         this.errorMessage = errorMessage;
     }
+    
 }
 
 

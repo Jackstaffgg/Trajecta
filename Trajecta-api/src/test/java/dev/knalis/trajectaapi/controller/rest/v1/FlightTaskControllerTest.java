@@ -3,10 +3,13 @@ package dev.knalis.trajectaapi.controller.rest.v1;
 import dev.knalis.trajectaapi.controller.rest.v1.support.CurrentUserResolver;
 import dev.knalis.trajectaapi.dto.task.TaskCreateRequest;
 import dev.knalis.trajectaapi.dto.task.TaskCreateResponse;
+import dev.knalis.trajectaapi.dto.task.TaskBulkDeleteRequest;
+import dev.knalis.trajectaapi.dto.task.TaskBulkDeleteResponse;
 import dev.knalis.trajectaapi.dto.task.TaskResponse;
 import dev.knalis.trajectaapi.mapper.task.TaskResponseMapper;
 import dev.knalis.trajectaapi.model.User;
 import dev.knalis.trajectaapi.model.task.FlightTask;
+import dev.knalis.trajectaapi.service.impl.FlightTaskDtoCacheService;
 import dev.knalis.trajectaapi.service.intrf.FileService;
 import dev.knalis.trajectaapi.service.intrf.FlightTaskService;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +25,6 @@ import java.io.ByteArrayOutputStream;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -34,6 +36,8 @@ class FlightTaskControllerTest {
     @Mock
     private TaskResponseMapper taskResponseMapper;
     @Mock
+    private FlightTaskDtoCacheService flightTaskDtoCacheService;
+    @Mock
     private FileService fileService;
     @Mock
     private CurrentUserResolver currentUserResolver;
@@ -44,7 +48,7 @@ class FlightTaskControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new FlightTaskController(flightTaskService, taskResponseMapper, fileService, currentUserResolver);
+        controller = new FlightTaskController(flightTaskService, taskResponseMapper, flightTaskDtoCacheService, fileService, currentUserResolver);
     }
 
     @Test
@@ -71,11 +75,10 @@ class FlightTaskControllerTest {
 
     @Test
     void getTask_returnsDto() {
-        FlightTask task = new FlightTask();
         TaskResponse dto = TaskResponse.builder().id(5L).build();
 
-        when(flightTaskService.getTask(5L, authentication)).thenReturn(task);
-        when(taskResponseMapper.toDto(task)).thenReturn(dto);
+        when(authentication.getName()).thenReturn("alice");
+        when(flightTaskDtoCacheService.getTaskDto(5L, "alice", authentication)).thenReturn(dto);
 
         var response = controller.getTask(5L, authentication);
 
@@ -110,12 +113,43 @@ class FlightTaskControllerTest {
     }
 
     @Test
-    void getMyTasks_returnsMappedList() {
+    void regenerateAiConclusion_returnsMappedTask() {
         FlightTask task = new FlightTask();
+        TaskResponse dto = TaskResponse.builder().id(23L).build();
+
+        when(flightTaskService.regenerateAiConclusion(23L, authentication)).thenReturn(task);
+        when(taskResponseMapper.toDto(task)).thenReturn(dto);
+
+        var response = controller.regenerateAiConclusion(23L, authentication);
+
+        assertThat(response.getBody().getData().getId()).isEqualTo(23L);
+    }
+
+    @Test
+    void deleteTasks_returnsDeleteResult() {
+        TaskBulkDeleteRequest request = new TaskBulkDeleteRequest();
+        request.setTaskIds(List.of(1L, 2L));
+
+        TaskBulkDeleteResponse result = TaskBulkDeleteResponse.builder()
+                .deletedTaskIds(List.of(1L))
+                .skippedTaskIds(List.of(2L))
+                .build();
+
+        when(flightTaskService.deleteTasks(List.of(1L, 2L), authentication)).thenReturn(result);
+
+        var response = controller.deleteTasks(request, authentication);
+
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getData().getDeletedTaskIds()).containsExactly(1L);
+        assertThat(response.getBody().getData().getSkippedTaskIds()).containsExactly(2L);
+    }
+
+    @Test
+    void getMyTasks_returnsMappedList() {
         TaskResponse dto = TaskResponse.builder().id(7L).build();
 
-        when(flightTaskService.getMyTasks(authentication, 0, 20)).thenReturn(List.of(task));
-        when(taskResponseMapper.toDtoList(List.of(task))).thenReturn(List.of(dto));
+        when(authentication.getName()).thenReturn("alice");
+        when(flightTaskDtoCacheService.getMyTaskDtos("alice", 0, 20, authentication)).thenReturn(List.of(dto));
 
         var response = controller.getMyTasks(0, 20, authentication);
 

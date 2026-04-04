@@ -2,6 +2,7 @@ package dev.knalis.trajectaapi.service.impl;
 
 import dev.knalis.trajectaapi.dto.auth.RegisterRequest;
 import dev.knalis.trajectaapi.dto.user.UserCreateRequest;
+import dev.knalis.trajectaapi.dto.user.UserResponse;
 import dev.knalis.trajectaapi.dto.user.UserUpdateRequest;
 import dev.knalis.trajectaapi.exception.BadRequestException;
 import dev.knalis.trajectaapi.exception.FieldAlreadyExistException;
@@ -14,10 +15,6 @@ import dev.knalis.trajectaapi.repo.UserRepository;
 import dev.knalis.trajectaapi.service.intrf.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -38,16 +35,6 @@ public class UserServiceImpl implements UserService {
     
     @Override
     @Transactional
-    @Caching(
-            put = {
-                    @CachePut(cacheNames = "usersById", key = "#result.id"),
-                    @CachePut(cacheNames = "usersByUsername", key = "#result.username.toLowerCase()")
-            },
-            evict = {
-                    @CacheEvict(cacheNames = "usersAll", allEntries = true),
-                    @CacheEvict(cacheNames = "usersSearch", allEntries = true)
-            }
-    )
     public User register(RegisterRequest request) {
         final var user = new User();
         
@@ -65,16 +52,6 @@ public class UserServiceImpl implements UserService {
     
     @Override
     @Transactional
-    @Caching(
-            put = {
-                    @CachePut(cacheNames = "usersById", key = "#result.id"),
-                    @CachePut(cacheNames = "usersByUsername", key = "#result.username.toLowerCase()")
-            },
-            evict = {
-                    @CacheEvict(cacheNames = "usersAll", allEntries = true),
-                    @CacheEvict(cacheNames = "usersSearch", allEntries = true)
-            }
-    )
     public User create(UserCreateRequest request, Authentication auth) {
         User creator = (User) auth.getPrincipal();
         if (creator.getRole() != Role.ADMIN) {
@@ -108,33 +85,34 @@ public class UserServiceImpl implements UserService {
     }
     
     @Override
-    @Cacheable(cacheNames = "usersByUsername", key = "#username.toLowerCase()")
     public User findByUsername(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new NotFoundException("User not found with username: " + username));
     }
     
     @Override
-    @Cacheable(cacheNames = "usersById", key = "#id")
     public User findById(long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
     }
+
+    @Override
+    public UserResponse findResponseById(long id) {
+        return userMapper.toDto(findById(id));
+    }
     
     @Override
-    @Cacheable(cacheNames = "usersAll")
     public List<User> findAll() {
         return userRepository.findAll();
+    }
+
+    @Override
+    public List<UserResponse> findAllResponses() {
+        return userMapper.toDtoList(findAll());
     }
     
     @Override
     @Transactional
-    @Caching(evict = {
-            @CacheEvict(cacheNames = "usersById", key = "#id"),
-            @CacheEvict(cacheNames = "usersByUsername", allEntries = true),
-            @CacheEvict(cacheNames = "usersAll", allEntries = true),
-            @CacheEvict(cacheNames = "usersSearch", allEntries = true)
-    })
     public void delete(long id) {
 
         userRepository.deleteById(id);
@@ -142,17 +120,6 @@ public class UserServiceImpl implements UserService {
     
     @Override
     @Transactional
-    @Caching(
-            put = {
-                    @CachePut(cacheNames = "usersById", key = "#result.id"),
-                    @CachePut(cacheNames = "usersByUsername", key = "#result.username.toLowerCase()")
-            },
-            evict = {
-                    @CacheEvict(cacheNames = "usersAll", allEntries = true),
-                    @CacheEvict(cacheNames = "usersSearch", allEntries = true),
-                    @CacheEvict(cacheNames = "usersByUsername", allEntries = true)
-            }
-    )
     public User update(long id, UserUpdateRequest userUpdateRequest) {
         final var user = findById(id);
         
@@ -168,7 +135,6 @@ public class UserServiceImpl implements UserService {
     }
     
     @Override
-    @Cacheable(cacheNames = "usersSearch", key = "#username.toLowerCase()")
     public List<User> findByUsernameContaining(String username) {
         return userRepository.findByUsernameContainingIgnoreCase(username);
     }

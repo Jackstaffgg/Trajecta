@@ -35,6 +35,15 @@ spring:
         enabled: true
         initial-interval: 1s
 
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        url: ${OPENAI_CHAT_URL:https://api.openai.com/v1/chat/completions}
+        timeout-seconds: ${OPENAI_CHAT_TIMEOUT_SECONDS:15}
+        options:
+          model: ${OPENAI_MODEL:gpt-4o-mini}
+
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -59,6 +68,15 @@ application:
     jwt:
       secret-key: ${JWT_SECRET:very_long_secret_key_for_trajecta_api_2026}
       expiration: 86400000
+  logging:
+    http:
+      slow-threshold-ms: ${HTTP_LOG_SLOW_THRESHOLD_MS:1000}
+      success-log-level: ${HTTP_LOG_SUCCESS_LEVEL:INFO}
+      exclude-path-prefixes:
+        - /actuator
+        - /api-docs
+        - /swagger-ui
+        - /ws
   internal:
     worker-token: ${INTERNAL_WORKER_TOKEN:super-secret-1488-worker-token}
   rate-limit:
@@ -70,6 +88,10 @@ application:
       max-attempts: ${TASK_CREATE_RATE_LIMIT_MAX_ATTEMPTS:10}
       window-seconds: ${TASK_CREATE_RATE_LIMIT_WINDOW_SECONDS:60}
       key-prefix: ${TASK_CREATE_RATE_LIMIT_KEY_PREFIX:rate_limit:task_create:}
+    ai-conclusion:
+      max-attempts: ${AI_CONCLUSION_RATE_LIMIT_MAX_ATTEMPTS:5}
+      window-seconds: ${AI_CONCLUSION_RATE_LIMIT_WINDOW_SECONDS:60}
+      key-prefix: ${AI_CONCLUSION_RATE_LIMIT_KEY_PREFIX:rate_limit:ai_conclusion:}
 
 minio:
   endpoint: ${MINIO_URL:http://localhost:9000}

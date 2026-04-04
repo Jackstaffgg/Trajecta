@@ -16,9 +16,15 @@ import dev.knalis.trajectaapi.model.User;
 import dev.knalis.trajectaapi.model.task.FlightMetrics;
 import dev.knalis.trajectaapi.model.task.FlightTask;
 import dev.knalis.trajectaapi.model.task.TaskStatus;
+import dev.knalis.trajectaapi.model.task.ai.AiConclusion;
+import dev.knalis.trajectaapi.model.task.ai.AiModel;
+import dev.knalis.trajectaapi.repo.AiConclusionRepository;
 import dev.knalis.trajectaapi.repo.FlightMetricsRepository;
 import dev.knalis.trajectaapi.repo.FlightTaskRepository;
+import dev.knalis.trajectaapi.security.AiConclusionRateLimiter;
 import dev.knalis.trajectaapi.security.TaskCreationRateLimiter;
+import dev.knalis.trajectaapi.service.intrf.AiConclusionGenerationResult;
+import dev.knalis.trajectaapi.service.intrf.AiConclusionService;
 import dev.knalis.trajectaapi.service.intrf.FileService;
 import dev.knalis.trajectaapi.storage.ObjectKeyBuilder;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,6 +58,10 @@ class FlightTaskServiceImplTest {
     @Mock
     private FlightMetricsRepository metricsRepository;
     @Mock
+    private AiConclusionRepository aiConclusionRepository;
+    @Mock
+    private AiConclusionRateLimiter aiConclusionRateLimiter;
+    @Mock
     private TaskCreationRateLimiter taskCreationRateLimiter;
     @Mock
     private FlightMetricMapper flightMetricMapper;
@@ -61,6 +71,8 @@ class FlightTaskServiceImplTest {
     private EventPublisher eventPublisher;
     @Mock
     private ObjectKeyBuilder objectKeyBuilder;
+    @Mock
+    private AiConclusionService aiConclusionService;
     @Mock
     private Authentication authentication;
 
@@ -72,12 +84,15 @@ class FlightTaskServiceImplTest {
                 taskRepository,
                 fileService,
                 metricsRepository,
+                aiConclusionRepository,
+                aiConclusionRateLimiter,
                 taskCreationRateLimiter,
                 flightMetricMapper,
                 taskFactory,
                 eventPublisher,
                 objectKeyBuilder,
-                new ObjectMapper()
+                new ObjectMapper(),
+                aiConclusionService
         );
     }
 
@@ -243,13 +258,19 @@ class FlightTaskServiceImplTest {
 
         when(authentication.getPrincipal()).thenReturn(current);
         when(taskRepository.findById(5L)).thenReturn(Optional.of(task));
+        when(aiConclusionRateLimiter.isAllowed(1L)).thenReturn(true);
         when(fileService.getObjectStream(task.getTrajectoryObjectKey()))
                 .thenReturn(new ByteArrayInputStream("{\"a\":1}".getBytes(StandardCharsets.UTF_8)));
+        when(aiConclusionService.generateConclusion("{\"a\":1}"))
+                .thenReturn(new AiConclusionGenerationResult("Detected stable flight profile", AiModel.GPT_4O_MINI, null));
+        when(aiConclusionRepository.save(any(AiConclusion.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(taskRepository.save(task)).thenReturn(task);
 
         FlightTask saved = service.addAiConclusion(5L, authentication);
 
-        assertThat(saved.isHasAiConclusion()).isTrue();
+        assertThat(saved.getAiConclusion()).isNotNull();
+        assertThat(saved.getAiConclusion().getConclusion()).isEqualTo("Detected stable flight profile");
+        assertThat(saved.getAiConclusion().getAiModel()).isEqualTo(AiModel.GPT_4O_MINI);
         verify(fileService).uploadJson(eq("tasks/1/5/result/trajectory.json"), contains("aiConclusion"));
     }
 
@@ -265,6 +286,7 @@ class FlightTaskServiceImplTest {
 
         when(authentication.getPrincipal()).thenReturn(current);
         when(taskRepository.findById(6L)).thenReturn(Optional.of(task));
+        when(aiConclusionRateLimiter.isAllowed(2L)).thenReturn(true);
         when(fileService.getObjectStream(task.getTrajectoryObjectKey())).thenThrow(new RuntimeException("boom"));
 
         assertThatThrownBy(() -> service.addAiConclusion(6L, authentication))
@@ -474,7 +496,9 @@ class FlightTaskServiceImplTest {
         FlightTask task = new FlightTask();
         task.setId(70L);
         task.setUserId(1L);
-        task.setHasAiConclusion(true);
+        AiConclusion existingConclusion = new AiConclusion();
+        existingConclusion.setConclusion("Already generated");
+        task.setAiConclusion(existingConclusion);
 
         when(authentication.getPrincipal()).thenReturn(current);
         when(taskRepository.findById(70L)).thenReturn(Optional.of(task));
@@ -497,6 +521,7 @@ class FlightTaskServiceImplTest {
 
         when(authentication.getPrincipal()).thenReturn(current);
         when(taskRepository.findById(71L)).thenReturn(Optional.of(task));
+        when(aiConclusionRateLimiter.isAllowed(1L)).thenReturn(true);
 
         assertThatThrownBy(() -> service.addAiConclusion(71L, authentication)).isInstanceOf(NotFoundException.class);
     }
@@ -514,8 +539,12 @@ class FlightTaskServiceImplTest {
 
         when(authentication.getPrincipal()).thenReturn(current);
         when(taskRepository.findById(72L)).thenReturn(Optional.of(task));
+        when(aiConclusionRateLimiter.isAllowed(1L)).thenReturn(true);
         when(fileService.getObjectStream("tasks/1/72/result/trajectory.json"))
                 .thenReturn(new ByteArrayInputStream("not-json".getBytes(StandardCharsets.UTF_8)));
+        when(aiConclusionService.generateConclusion("not-json"))
+                .thenReturn(new AiConclusionGenerationResult("text conclusion", AiModel.CUSTOM, null));
+        when(aiConclusionRepository.save(any(AiConclusion.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(taskRepository.save(task)).thenReturn(task);
 
         service.addAiConclusion(72L, authentication);
@@ -536,8 +565,12 @@ class FlightTaskServiceImplTest {
 
         when(authentication.getPrincipal()).thenReturn(current);
         when(taskRepository.findById(74L)).thenReturn(Optional.of(task));
+        when(aiConclusionRateLimiter.isAllowed(1L)).thenReturn(true);
         when(fileService.getObjectStream("tasks/1/74/result/trajectory.json"))
                 .thenReturn(new ByteArrayInputStream("[1,2,3]".getBytes(StandardCharsets.UTF_8)));
+        when(aiConclusionService.generateConclusion("[1,2,3]"))
+                .thenReturn(new AiConclusionGenerationResult("array conclusion", AiModel.GPT_4O, null));
+        when(aiConclusionRepository.save(any(AiConclusion.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(taskRepository.save(task)).thenReturn(task);
 
         service.addAiConclusion(74L, authentication);
@@ -565,6 +598,7 @@ class FlightTaskServiceImplTest {
 
         when(authentication.getPrincipal()).thenReturn(current);
         when(taskRepository.findById(73L)).thenReturn(Optional.of(task));
+        when(aiConclusionRateLimiter.isAllowed(1L)).thenReturn(true);
         when(fileService.getObjectStream("tasks/1/73/result/trajectory.json")).thenReturn(broken);
 
         assertThatThrownBy(() -> service.addAiConclusion(73L, authentication)).isInstanceOf(BadRequestException.class);
@@ -573,6 +607,56 @@ class FlightTaskServiceImplTest {
     @Test
     void addAiConclusion_throwsWhenUnauthenticated() {
         assertThatThrownBy(() -> service.addAiConclusion(1L, null)).isInstanceOf(PermissionDeniedException.class);
+    }
+
+    @Test
+    void addAiConclusion_throwsWhenRateLimitExceeded() {
+        User current = new User();
+        current.setId(1L);
+        current.setRole(Role.USER);
+
+        FlightTask task = new FlightTask();
+        task.setId(75L);
+        task.setUserId(1L);
+        task.setTrajectoryObjectKey("tasks/1/75/result/trajectory.json");
+
+        when(authentication.getPrincipal()).thenReturn(current);
+        when(taskRepository.findById(75L)).thenReturn(Optional.of(task));
+        when(aiConclusionRateLimiter.isAllowed(1L)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.addAiConclusion(75L, authentication)).isInstanceOf(RateLimitException.class);
+    }
+
+    @Test
+    void regenerateAiConclusion_overwritesExistingConclusion() {
+        User current = new User();
+        current.setId(1L);
+        current.setRole(Role.USER);
+
+        FlightTask task = new FlightTask();
+        task.setId(76L);
+        task.setUserId(1L);
+        task.setTrajectoryObjectKey("tasks/1/76/result/trajectory.json");
+
+        AiConclusion existing = new AiConclusion();
+        existing.setConclusion("old conclusion");
+        existing.setAiModel(AiModel.GPT_3_5);
+        task.setAiConclusion(existing);
+
+        when(authentication.getPrincipal()).thenReturn(current);
+        when(taskRepository.findById(76L)).thenReturn(Optional.of(task));
+        when(aiConclusionRateLimiter.isAllowed(1L)).thenReturn(true);
+        when(fileService.getObjectStream("tasks/1/76/result/trajectory.json"))
+                .thenReturn(new ByteArrayInputStream("{\"p\":1}".getBytes(StandardCharsets.UTF_8)));
+        when(aiConclusionService.generateConclusion("{\"p\":1}"))
+                .thenReturn(new AiConclusionGenerationResult("new conclusion", AiModel.GPT_4O_MINI, null));
+        when(aiConclusionRepository.save(any(AiConclusion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(taskRepository.save(task)).thenReturn(task);
+
+        FlightTask saved = service.regenerateAiConclusion(76L, authentication);
+
+        assertThat(saved.getAiConclusion().getConclusion()).isEqualTo("new conclusion");
+        assertThat(saved.getAiConclusion().getAiModel()).isEqualTo(AiModel.GPT_4O_MINI);
     }
 
     @Test
@@ -612,6 +696,45 @@ class FlightTaskServiceImplTest {
 
         verify(metricsRepository, never()).save(any());
         assertThat(task.getStatus()).isEqualTo(TaskStatus.COMPLETED);
+    }
+
+    @Test
+    void deleteTasks_deletesOwnTasksAndSkipsForeign() {
+        User current = new User();
+        current.setId(5L);
+        current.setRole(Role.USER);
+
+        FlightTask own = new FlightTask();
+        own.setId(10L);
+        own.setUserId(5L);
+        own.setRawLogObjectKey("tasks/5/10/raw/source.bin");
+        own.setTrajectoryObjectKey("tasks/5/10/result/trajectory.json");
+        AiConclusion ownConclusion = new AiConclusion();
+        ownConclusion.setFlightTask(own);
+        own.setAiConclusion(ownConclusion);
+
+        FlightTask foreign = new FlightTask();
+        foreign.setId(11L);
+        foreign.setUserId(77L);
+
+        when(authentication.getPrincipal()).thenReturn(current);
+        when(taskRepository.findById(10L)).thenReturn(Optional.of(own));
+        when(taskRepository.findById(11L)).thenReturn(Optional.of(foreign));
+
+        var result = service.deleteTasks(List.of(10L, 11L, 404L), authentication);
+
+        assertThat(result.getDeletedTaskIds()).containsExactly(10L);
+        assertThat(result.getSkippedTaskIds()).containsExactlyInAnyOrder(11L, 404L);
+        verify(fileService).delete("tasks/5/10/raw/source.bin");
+        verify(fileService).delete("tasks/5/10/result/trajectory.json");
+        verify(metricsRepository).deleteByTaskId(10L);
+        verify(aiConclusionRepository).delete(ownConclusion);
+        verify(taskRepository).delete(own);
+    }
+
+    @Test
+    void deleteTasks_throwsWhenIdsEmpty() {
+        assertThatThrownBy(() -> service.deleteTasks(List.of(), authentication)).isInstanceOf(BadRequestException.class);
     }
 }
 

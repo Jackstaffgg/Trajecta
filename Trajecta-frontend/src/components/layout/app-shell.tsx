@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
 import {
   ApiClientError,
+  deleteMyTasks,
   getApiBaseUrl,
   getMyTasks,
   getNotifications,
@@ -100,6 +101,9 @@ type WsState = "connecting" | "connected" | "reconnecting" | "offline";
 export function AppShell({ children }: AppShellProps) {
   const auth = useFlightStore((s) => s.auth);
   const currentTask = useFlightStore((s) => s.currentTask);
+  const setCurrentTask = useFlightStore((s) => s.setCurrentTask);
+  const setData = useFlightStore((s) => s.setData);
+  const setMode = useFlightStore((s) => s.setMode);
   const setTaskStatus = useFlightStore((s) => s.setTaskStatus);
   const setError = useFlightStore((s) => s.setError);
   const logout = useFlightStore((s) => s.logout);
@@ -109,6 +113,7 @@ export function AppShell({ children }: AppShellProps) {
   const [notifications, setNotifications] = useState<NotificationInfo[]>([]);
   const [openNotifications, setOpenNotifications] = useState(false);
   const [loadingPanel, setLoadingPanel] = useState(false);
+  const [deletingTasks, setDeletingTasks] = useState(false);
   const [wsState, setWsState] = useState<WsState>("connecting");
 
   const socketRef = useRef<WebSocket | null>(null);
@@ -305,6 +310,7 @@ export function AppShell({ children }: AppShellProps) {
               id: incoming.id,
               type: incoming.type,
               content: incoming.content,
+              recipientId: null,
               senderId: null,
               senderName: incoming.senderName ?? null,
               referenceId: incoming.referenceId ?? null,
@@ -373,6 +379,38 @@ export function AppShell({ children }: AppShellProps) {
 
   async function handleTaskSelect(task: TaskInfo) {
     await selectTask(task);
+  }
+
+  async function handleDeleteTasks(taskIds: number[]) {
+    if (!auth.token || taskIds.length === 0) {
+      return;
+    }
+
+    setDeletingTasks(true);
+    try {
+      const result = await deleteMyTasks({ token: auth.token, taskIds });
+      const deletedSet = new Set(result.deletedTaskIds);
+
+      setTasks((prev) => prev.filter((task) => !deletedSet.has(task.id)));
+
+      if (currentTaskRef.current && deletedSet.has(currentTaskRef.current.id)) {
+        setCurrentTask(null);
+        setData(null);
+        setMode("tasks");
+      }
+
+      if (result.skippedTaskIds.length > 0) {
+        setError(`Some tasks were skipped: ${result.skippedTaskIds.join(", ")}`);
+      }
+    } catch (error) {
+      if (error instanceof ApiClientError) {
+        setError(error.message);
+      } else {
+        setError("Failed to delete selected tasks");
+      }
+    } finally {
+      setDeletingTasks(false);
+    }
   }
 
   async function handleMarkAsRead(notification: NotificationInfo) {
@@ -473,7 +511,14 @@ export function AppShell({ children }: AppShellProps) {
       </header>
 
       <div className="mx-auto flex max-w-[1600px] flex-col md:flex-row">
-        <Sidebar tasks={tasks} activeTaskId={activeTaskId} loadingTasks={loadingPanel} onTaskSelect={handleTaskSelect} />
+        <Sidebar
+          tasks={tasks}
+          activeTaskId={activeTaskId}
+          loadingTasks={loadingPanel}
+          deletingTasks={deletingTasks}
+          onTaskSelect={handleTaskSelect}
+          onDeleteTasks={handleDeleteTasks}
+        />
         <main className="min-h-[calc(100vh-120px)] flex-1 p-4 md:p-6">{children}</main>
       </div>
 

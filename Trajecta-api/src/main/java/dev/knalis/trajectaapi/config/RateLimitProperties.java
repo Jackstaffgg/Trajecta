@@ -20,6 +20,9 @@ public class RateLimitProperties {
     @Valid
     private Rule taskCreate = new Rule(10, 60, "rate_limit:task_create:");
 
+    @Valid
+    private Rule aiConclusion = new Rule(5, 60, "rate_limit:ai_conclusion:");
+
     @Getter
     @Setter
     public static class Rule {

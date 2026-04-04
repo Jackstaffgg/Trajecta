@@ -4,6 +4,7 @@ import dev.knalis.trajectaapi.dto.auth.AuthResponse;
 import dev.knalis.trajectaapi.dto.auth.RegisterRequest;
 import dev.knalis.trajectaapi.exception.RateLimitException;
 import dev.knalis.trajectaapi.mapper.UserMapper;
+import dev.knalis.trajectaapi.model.User;
 import dev.knalis.trajectaapi.security.LoginRateLimiter;
 import dev.knalis.trajectaapi.service.intrf.UserService;
 import dev.knalis.trajectaapi.service.intrf.auth.AuthService;
@@ -57,9 +58,18 @@ public class AuthServiceImpl implements AuthService {
         
         rateLimiter.onSuccess(username);
         incrementCounter("auth.login.success");
-        UserDetails user = userDetailsService.loadUserByUsername(username);
-        final var token = jwtService.generateToken(user);
-        return new AuthResponse(token, userMapper.toDto(userService.findByUsername(username)));
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+        final var token = jwtService.generateToken(userDetails);
+
+        User responseUser;
+        if (userDetails instanceof User domainUser) {
+            responseUser = domainUser;
+        } else {
+
+            responseUser = userService.findByUsername(username);
+        }
+
+        return new AuthResponse(token, userMapper.toDto(responseUser));
     }
 
     private void incrementCounter(String name) {
