@@ -4,98 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3abe9520-d59b-4072-857a-c5d8aae515f3" name="Changes" comment="fix bugs with cache&#10;fix 3d render&#10;add profile-view and admin-dashboard">
-      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/RequestLoggingProperties.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/admin/AdminCacheController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/admin/AdminNotificationController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/admin/CacheClearResponse.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/admin/CacheHealthResponse.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/notification/NotificationAudiencePreviewResponse.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/notification/NotificationBroadcastRequest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/task/TaskBulkDeleteRequest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/task/TaskBulkDeleteResponse.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/model/task/ai/AiConclusion.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/model/task/ai/AiModel.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/repo/AiConclusionRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/security/AiConclusionRateLimiter.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/security/RequestLoggingFilter.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/AiConclusionServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/CacheAdminServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/FlightTaskDtoCacheService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/NotificationDtoCacheService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/intrf/AiConclusionGenerationResult.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/intrf/AiConclusionService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/intrf/CacheAdminService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/controller/rest/v1/admin/AdminCacheControllerTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/controller/rest/v1/admin/AdminNotificationControllerTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/event/task/TaskStatusChangedEventListenerTest.java" afterDir="false" />
+    <list default="true" id="7e60ac53-03c3-493b-aa67-b1ef6b2f0543" name="Changes" comment="add AI conclusion functionality and cache management endpoints">
+      <change afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/compose.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/compose.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/scripts/start-all.bat" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/scripts/start-all.bat" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/CacheConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/CacheConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/RateLimitProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/RateLimitProperties.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/SecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/FlightTaskController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/FlightTaskController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/NotificationController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/NotificationController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/user/AdminUserController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/user/AdminUserController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/notification/NotificationResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/notification/NotificationResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/task/TaskResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/task/TaskResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/event/task/TaskStatusChangedEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/event/task/TaskStatusChangedEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/mapper/task/FlightTaskMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/mapper/task/FlightTaskMapper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/mapper/task/TaskResponseMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/mapper/task/TaskResponseMapper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/model/notiffication/NotificationType.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/model/notiffication/NotificationType.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/model/task/FlightTask.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/model/task/FlightTask.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/repo/FlightMetricsRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/repo/FlightMetricsRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/repo/NotificationRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/repo/NotificationRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/FileServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/FileServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/FlightTaskServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/FlightTaskServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/NotificationServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/NotificationServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/UserServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/UserServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/auth/AuthServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/auth/AuthServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/intrf/FileService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/intrf/FileService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/intrf/FlightTaskService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/intrf/FlightTaskService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/intrf/NotificationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/intrf/NotificationService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/intrf/UserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/intrf/UserService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/controller/rest/v1/FlightTaskControllerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/controller/rest/v1/FlightTaskControllerTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/controller/rest/v1/NotificationControllerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/controller/rest/v1/NotificationControllerTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/controller/rest/v1/user/AdminUserControllerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/controller/rest/v1/user/AdminUserControllerTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/mapper/task/TaskResponseMapperTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/mapper/task/TaskResponseMapperTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/FileServiceImplTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/FileServiceImplTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/FlightTaskServiceImplTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/FlightTaskServiceImplTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/auth/AuthServiceImplTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/auth/AuthServiceImplTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/components/layout/app-shell.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/components/layout/app-shell.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/components/layout/sidebar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/components/layout/sidebar.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/hooks/useFlightData.ts" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/hooks/useFlightData.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/lib/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/lib/api.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/modules/admin/admin-dashboard-view.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/modules/admin/admin-dashboard-view.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/modules/diagnostics/ai-diagnostics-view.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/modules/diagnostics/ai-diagnostics-view.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/types/flight.ts" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/types/flight.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/start-all-stacks.bat" beforeDir="false" afterPath="$PROJECT_DIR$/start-all-stacks.bat" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
-  </component>
-  <component name="CopilotPersistence">
-    <persistenceIdMap>
-      <entry key="_Z:/Trajecta" value="3BrThBabdCmWA3xHf5iEqj7zVTq" />
-      <entry key="_Z:/Trajecta/Trajecta-api" value="3Bs5351bqIgbOG2iJaEmPhgS9Hm" />
-    </persistenceIdMap>
-  </component>
-  <component name="CopilotUserSelectedModel">
-    <selectedModels>
-      <entry key="chat-panel" value="GPT-5.3-Codex" />
-      <entry key="agent-panel" value="GPT-5.3-Codex" />
-    </selectedModels>
-  </component>
-  <component name="ExternalProjectsData">
-    <projectState path="$PROJECT_DIR$/Trajecta-api">
-      <ProjectState />
-    </projectState>
   </component>
   <component name="ExternalProjectsManager">
     <system id="GRADLE">
@@ -117,112 +33,15 @@
       </state>
     </system>
   </component>
-  <component name="FileTemplateManagerImpl">
-    <option name="RECENT_TEMPLATES">
-      <list>
-        <option value="Class" />
-        <option value="Enum" />
-      </list>
-    </option>
-  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
-    <option name="UPDATE_TYPE" value="REBASE" />
-  </component>
-  <component name="GitHubPullRequestSearchHistory">{
-  &quot;lastFilter&quot;: {
-    &quot;state&quot;: &quot;OPEN&quot;,
-    &quot;assignee&quot;: &quot;knliiss&quot;
-  }
-}</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/Jackstaffgg/Trajecta.git&quot;,
-    &quot;accountId&quot;: &quot;476a8ad0-c782-44ef-8ba1-a91d38e74431&quot;
-  }
-}</component>
-  <component name="ProjectColorInfo">{
-  &quot;associatedIndex&quot;: 3
-}</component>
-  <component name="ProjectId" id="3BrThBabdCmWA3xHf5iEqj7zVTq" />
-  <component name="ProjectViewState">
-    <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "Batch.start-all-stacks.executor": "Run",
-    "Batch.start-all.executor": "Run",
-    "Gradle.Build Trajecta-api.executor": "Run",
-    "Gradle.Download Sources.executor": "Run",
-    "Gradle.UserMapperTest.toDtoList_convertsMapEntriesWithSecurityFlags.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "main",
-    "ignore.virus.scanning.warn.message": "true",
-    "kotlin-language-version-configured": "true",
-    "node.js.detected.package.eslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Modules",
-    "project.structure.proportion": "0.15625",
-    "project.structure.side.proportion": "0.0",
-    "settings.editor.selected.configurable": "preferences.lookFeel",
-    "ts.external.directory.path": "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2024.3.1.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external"
+    "git-widget-placeholder": "main"
   }
 }]]></component>
-  <component name="RunManager" selected="Batch.start-all">
-    <configuration name="start-all-stacks" type="BatchConfigurationType" factoryName="Batch" temporary="true">
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="PARENT_ENVS" value="true" />
-      <module name="" />
-      <option name="SCRIPT_NAME" value="start-all-stacks.bat" />
-      <option name="PARAMETERS" value="" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="start-all" type="BatchConfigurationType" factoryName="Batch" temporary="true">
-      <module name="Trajecta-api" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="WORKING_DIRECTORY" value="./Trajecta-api/scripts" />
-      <option name="PARENT_ENVS" value="true" />
-      <option name="SCRIPT_NAME" value="start-all.bat" />
-      <option name="PARAMETERS" value="" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="UserMapperTest.toDtoList_convertsMapEntriesWithSecurityFlags" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
-      <ExternalSystemSettings>
-        <option name="executionName" />
-        <option name="externalProjectPath" value="$PROJECT_DIR$/Trajecta-api" />
-        <option name="externalSystemIdString" value="GRADLE" />
-        <option name="scriptParameters" value="" />
-        <option name="taskDescriptions">
-          <list />
-        </option>
-        <option name="taskNames">
-          <list>
-            <option value=":test" />
-            <option value="--tests" />
-            <option value="&quot;dev.knalis.trajectaapi.mapper.UserMapperTest.toDtoList_convertsMapEntriesWithSecurityFlags&quot;" />
-          </list>
-        </option>
-        <option name="vmOptions" />
-      </ExternalSystemSettings>
-      <ExternalSystemDebugServerProcess>false</ExternalSystemDebugServerProcess>
-      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
-      <ExternalSystemDebugDisabled>false</ExternalSystemDebugDisabled>
-      <DebugAllEnabled>false</DebugAllEnabled>
-      <RunAsTest>true</RunAsTest>
-      <GradleProfilingDisabled>false</GradleProfilingDisabled>
-      <GradleCoverageDisabled>false</GradleCoverageDisabled>
-      <method v="2" />
-    </configuration>
+  <component name="RunManager">
     <configuration default="true" type="JetRunConfigurationType">
       <module name="Trajecta-api" />
       <method v="2">
@@ -234,83 +53,8 @@
       <option name="filePath" />
       <method v="2" />
     </configuration>
-    <configuration name="TrajectaApiApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
-      <module name="Trajecta-api.main" />
-      <option name="SPRING_BOOT_MAIN_CLASS" value="dev.knalis.trajectaapi.TrajectaApiApplication" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <recent_temporary>
-      <list>
-        <item itemvalue="Batch.start-all" />
-        <item itemvalue="Batch.start-all-stacks" />
-        <item itemvalue="Gradle.UserMapperTest.toDtoList_convertsMapEntriesWithSecurityFlags" />
-      </list>
-    </recent_temporary>
-  </component>
-  <component name="SharedIndexes">
-    <attachedChunks>
-      <set>
-        <option value="bundled-jdk-30f59d01ecdd-2fc7cc6b9a17-intellij.indexing.shared.core-IU-253.31033.145" />
-        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-IU-253.31033.145" />
-      </set>
-    </attachedChunks>
   </component>
   <component name="TaskManager">
-    <task active="true" id="Default" summary="Default task">
-      <changelist id="3abe9520-d59b-4072-857a-c5d8aae515f3" name="Changes" comment="" />
-      <created>1775246305836</created>
-      <option name="number" value="Default" />
-      <option name="presentableId" value="Default" />
-      <updated>1775246305836</updated>
-      <workItem from="1775246306939" duration="3208000" />
-      <workItem from="1775249829889" duration="447000" />
-      <workItem from="1775264736591" duration="13219000" />
-    </task>
-    <task id="LOCAL-00001" summary="fix bugs with cache&#10;fix 3d render&#10;add profile-view and admin-dashboard">
-      <option name="closed" value="true" />
-      <created>1775267556145</created>
-      <option name="number" value="00001" />
-      <option name="presentableId" value="LOCAL-00001" />
-      <option name="project" value="LOCAL" />
-      <updated>1775267556145</updated>
-    </task>
-    <task id="LOCAL-00002" summary="fix bugs with cache&#10;fix 3d render&#10;add profile-view and admin-dashboard">
-      <option name="closed" value="true" />
-      <created>1775267646912</created>
-      <option name="number" value="00002" />
-      <option name="presentableId" value="LOCAL-00002" />
-      <option name="project" value="LOCAL" />
-      <updated>1775267646912</updated>
-    </task>
-    <option name="localTasksCounter" value="3" />
     <servers />
-  </component>
-  <component name="TypeScriptGeneratedFilesManager">
-    <option name="version" value="3" />
-  </component>
-  <component name="Vcs.Log.Tabs.Properties">
-    <option name="TAB_STATES">
-      <map>
-        <entry key="MAIN">
-          <value>
-            <State />
-          </value>
-        </entry>
-      </map>
-    </option>
-  </component>
-  <component name="VcsManagerConfiguration">
-    <MESSAGE value="fix bugs with cache&#10;fix 3d render&#10;add profile-view and admin-dashboard" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix bugs with cache&#10;fix 3d render&#10;add profile-view and admin-dashboard" />
-  </component>
-  <component name="github-copilot-workspace">
-    <instructionFileLocations>
-      <option value=".github/instructions" />
-    </instructionFileLocations>
-    <promptFileLocations>
-      <option value=".github/prompts" />
-    </promptFileLocations>
   </component>
 </project>
