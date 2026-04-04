@@ -76,3 +76,37 @@ class TimelineTests(TestCase):
         self.assertGreater(output["metrics"]["maxVerticalSpeed"] or 0.0, 0.0)
         self.assertIn("maxAcceleration", output["metrics"])
         self.assertIn("maxClimbRate", output["metrics"])
+
+    def test_build_output_sanitizes_gps_spikes(self) -> None:
+        data = {
+            "gps": {
+                "t": [0.0, 1.0, 2.0, 3.0],
+                "lat": [55.0, 75.0, 55.0001, 55.0002],
+                "lon": [37.0, 120.0, 37.0001, 37.0002],
+                "alt": [100.0, 105.0, 102.0, 103.0],
+                "speed": [6.0, 5000.0, 6.5, 7.0],
+                "vz": [0.2, 300.0, 0.3, 0.2],
+            },
+            "att": {"t": [0.0, 3.0], "roll": [0.0, 0.0], "pitch": [0.0, 0.0], "yaw": [0.0, 0.0]},
+            "ctun": {"t": [0.0, 3.0], "throttle": [0.4, 0.5], "alt": [100.0, 103.0], "dalt": [0.0, 0.0], "crt": [0.2, 0.2]},
+            "bat": {"t": [0.0, 3.0], "remainingPct": [90.0, 89.0]},
+            "imu": {"t": [0.0, 3.0], "accx": [0.0, 0.0], "accy": [0.0, 0.0], "accz": [1.0, 1.0], "gyrx": [0.0, 0.0], "gyry": [0.0, 0.0], "gyrz": [0.0, 0.0]},
+            "vibe": {"t": [0.0, 3.0], "x": [0.1, 0.1], "y": [0.1, 0.1], "z": [0.1, 0.1]},
+            "pid": {"t": [0.0, 3.0], "roll": [0.0, 0.0], "pitch": [0.0, 0.0], "yaw": [0.0, 0.0]},
+            "baro": {"t": [0.0, 3.0], "alt": [100.0, 103.0]},
+            "gpa": {"t": [0.0, 3.0], "acc": [0.0, 0.0]},
+            "mode": {"t": [0.0, 3.0], "mode": ["AUTO", "AUTO"]},
+            "stat_rows": [],
+            "pm_rows": [],
+            "events": [],
+            "params": {},
+        }
+
+        output = build_output(data, dt=0.5)
+        lats = [frame["pos"]["lat"] for frame in output["frames"] if frame["pos"]["lat"] is not None]
+        lons = [frame["pos"]["lon"] for frame in output["frames"] if frame["pos"]["lon"] is not None]
+
+        self.assertTrue(lats)
+        self.assertTrue(lons)
+        self.assertLess(max(lats), 56.0)
+        self.assertLess(max(lons), 38.0)

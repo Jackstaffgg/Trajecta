@@ -923,7 +923,7 @@ export function FlightReplayView() {
             <span className="text-[11px] text-rose-300">Critical</span>
             <span className="text-[11px] text-amber-200">Warning</span>
             <span className="text-[11px] text-sky-300">Info</span>
-            <span className="text-[11px] text-muted-foreground">Trace color: blue (slow) -> red (fast)</span>
+            <span className="text-[11px] text-muted-foreground">Trace color: blue (slow) to red (fast)</span>
             <span className="text-[11px] text-muted-foreground">Position mode: {positionMode === "absolute" ? "GPS absolute" : positionMode === "relative" ? "Relative INS from start" : "Hybrid GPS+INS"}</span>
             <span className="text-[11px] text-muted-foreground">Viz: {visualizationMode === "geo" ? "Geographic globe" : "Cartesian plane (ENU)"}</span>
             <span className="text-[11px] text-muted-foreground">Keys: Space, ←/→, Shift+←/→, 1/2/3, C, R</span>

@@ -9,6 +9,9 @@ import pandas as pd
 from .models import AnalysisMetrics
 
 
+MAX_REASONABLE_GPS_SPEED_MPS = 200.0
+
+
 def estimate_sampling_hz(timestamps: list[float]) -> float | None:
     if len(timestamps) < 2:
         return None
@@ -129,6 +132,43 @@ def as_dataframe(topic_data: dict[str, list[Any]]) -> pd.DataFrame:
         return pd.DataFrame(columns=list(topic_data.keys()))
     df = pd.DataFrame(topic_data)
     return df.sort_values("t").drop_duplicates(subset="t", keep="last")
+
+
+def sanitize_gps_dataframe(gps_df: pd.DataFrame) -> pd.DataFrame:
+    if gps_df.empty or len(gps_df.index) < 3:
+        return gps_df
+
+    sanitized = gps_df.copy().reset_index(drop=True)
+    for column in ("t", "lat", "lon", "alt", "speed", "vz"):
+        if column in sanitized:
+            sanitized[column] = pd.to_numeric(sanitized[column], errors="coerce")
+
+    prev_lat = maybe_float(sanitized.at[0, "lat"]) if "lat" in sanitized else None
+    prev_lon = maybe_float(sanitized.at[0, "lon"]) if "lon" in sanitized else None
+    prev_t = maybe_float(sanitized.at[0, "t"]) if "t" in sanitized else None
+
+    for i in range(1, len(sanitized.index)):
+        t = maybe_float(sanitized.at[i, "t"]) if "t" in sanitized else None
+        lat = maybe_float(sanitized.at[i, "lat"]) if "lat" in sanitized else None
+        lon = maybe_float(sanitized.at[i, "lon"]) if "lon" in sanitized else None
+
+        if None in (prev_t, prev_lat, prev_lon, t, lat, lon):
+            prev_t, prev_lat, prev_lon = t, lat, lon
+            continue
+
+        dt = max(1e-3, t - prev_t)
+        dist = haversine_m(prev_lat, prev_lon, lat, lon)
+        implied_speed = (dist / dt) if dist is not None else 0.0
+
+        # Remove single-point GPS teleports but keep future points recoverable.
+        if implied_speed > MAX_REASONABLE_GPS_SPEED_MPS:
+            for col in ("lat", "lon", "alt", "speed", "vz"):
+                if col in sanitized:
+                    sanitized.at[i, col] = np.nan
+
+        prev_t, prev_lat, prev_lon = t, lat, lon
+
+    return sanitized
 
 
 def build_uniform_timeline(data: dict[str, Any], dt: float) -> np.ndarray:
@@ -391,7 +431,7 @@ def compute_extended_metrics(frames: list[dict[str, Any]]) -> dict[str, float | 
 
 
 def build_frames(data: dict[str, Any], timeline: np.ndarray) -> list[dict[str, Any]]:
-    gps_df = as_dataframe(data["gps"])
+    gps_df = sanitize_gps_dataframe(as_dataframe(data["gps"]))
     att_df = as_dataframe(data["att"])
     ctun_df = as_dataframe(data["ctun"])
     imu_df = as_dataframe(data["imu"])
@@ -420,6 +460,9 @@ def build_frames(data: dict[str, Any], timeline: np.ndarray) -> list[dict[str, A
         pos_alt = maybe_float(gps["alt"][index])
         if pos_alt is None:
             pos_alt = maybe_float(ctun["alt"][index])
+        climb_rate = maybe_float(ctun["crt"][index])
+        if climb_rate is None:
+            climb_rate = maybe_float(gps["vz"][index])
 
         frames.append(
             {
@@ -435,7 +478,7 @@ def build_frames(data: dict[str, Any], timeline: np.ndarray) -> list[dict[str, A
                     "yaw": maybe_float(att["yaw"][index]),
                 },
                 "vel": maybe_float(gps["speed"][index]),
-                "climbRate": maybe_float(ctun["crt"][index]) if maybe_float(ctun["crt"][index]) is not None else maybe_float(gps["vz"][index]),
+                "climbRate": climb_rate,
                 "battery": maybe_float(bat["remainingPct"][index]),
                 "throttle": maybe_float(ctun["throttle"][index]),
                 "imu": {
