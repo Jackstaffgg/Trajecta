@@ -8,16 +8,15 @@ import {
   ConstantPositionProperty,
   HeadingPitchRoll,
   Ion,
-  Matrix4,
   Math as CesiumMath,
   Quaternion,
-  Transforms,
   createWorldTerrainAsync,
   Viewer as CesiumViewer
 } from "cesium";
 import { Pause, Play, Camera, Move3D, Rewind, FastForward, RotateCcw } from "lucide-react";
 import { useFlightStore } from "@/store/flight-store";
 import { buildHybridTrajectory, buildRelativeTrajectory, interpolateFrame, speedToColor } from "@/modules/replay/replay-utils";
+import { CartesianTraceView } from "@/modules/replay/cartesian-trace-view";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { FlightFrame } from "@/types/flight";
@@ -105,10 +104,6 @@ export function FlightReplayView() {
   const traceEntityIdsRef = useRef<string[]>([]);
   const droneEntityRef = useRef<ReturnType<CesiumViewer["entities"]["add"]> | null>(null);
   const terrainBiasRef = useRef<number | null>(null);
-  const cartesianGuideIdsRef = useRef<string[]>([]);
-  const cartesianFrameRef = useRef<{ startLat: number; startLon: number; startAlt: number; cosLat: number } | null>(null);
-  const cartesianTransformRef = useRef<Matrix4 | null>(null);
-  const [terrainRevision, setTerrainRevision] = useState(0);
   const [compactHud, setCompactHud] = useState(false);
   const [chaseStyle, setChaseStyle] = useState<"normal" | "cinematic">("normal");
   const [hoveredEventKey, setHoveredEventKey] = useState<string | null>(null);
@@ -232,7 +227,14 @@ export function FlightReplayView() {
     const sample = frames.slice(0, Math.min(40, frames.length));
     const deltas: number[] = [];
     for (const frame of sample) {
-      const terrain = viewer.scene.globe.getHeight(Cartographic.fromDegrees(frame.lon, frame.lat));
+      if (!Number.isFinite(frame.lat) || !Number.isFinite(frame.lon)) {
+        continue;
+      }
+      const globe = viewer.scene?.globe;
+      if (!globe || typeof globe.getHeight !== "function") {
+        continue;
+      }
+      const terrain = globe.getHeight(Cartographic.fromDegrees(frame.lon, frame.lat));
       if (terrain !== undefined && Number.isFinite(terrain)) {
         deltas.push(terrain - (frame.alt ?? 0));
       }
@@ -248,16 +250,13 @@ export function FlightReplayView() {
   }, [frames]);
 
   const alignedAltitudeFromFrame = useCallback((frame: { lat: number; lon: number; alt: number }) => {
-    if (visualizationMode === "cartesian") {
-      return Number.isFinite(frame.alt) ? frame.alt : 0;
-    }
-
     const srcAlt = Number.isFinite(frame.alt) ? frame.alt : 0;
     let alt = srcAlt + getTerrainBias();
 
     const viewer = viewerRef.current;
-    if (viewer) {
-      const terrain = viewer.scene.globe.getHeight(Cartographic.fromDegrees(frame.lon, frame.lat));
+    if (viewer && Number.isFinite(frame.lat) && Number.isFinite(frame.lon)) {
+      const globe = viewer.scene?.globe;
+      const terrain = globe?.getHeight(Cartographic.fromDegrees(frame.lon, frame.lat));
       if (terrain !== undefined && Number.isFinite(terrain)) {
         alt = Math.max(alt, terrain + 0.5);
       }
@@ -266,38 +265,12 @@ export function FlightReplayView() {
     return alt;
   }, [getTerrainBias, visualizationMode]);
 
-  const localCartesianOffset = useCallback((frame: { lat: number; lon: number; alt: number }) => {
-    const local = cartesianFrameRef.current;
-    if (!local) {
-      return new Cartesian3(0, 0, 0);
-    }
-
-    const metersPerDegLat = 111320;
-    const metersPerDegLon = 111320 * local.cosLat;
-    const east = ((frame.lon ?? local.startLon) - local.startLon) * metersPerDegLon;
-    const north = ((frame.lat ?? local.startLat) - local.startLat) * metersPerDegLat;
-    const up = (Number.isFinite(frame.alt) ? frame.alt : local.startAlt) - local.startAlt;
-    return new Cartesian3(Number.isFinite(east) ? east : 0, Number.isFinite(north) ? north : 0, Number.isFinite(up) ? up : 0);
-  }, []);
-
-  const localToWorld = useCallback((offset: Cartesian3) => {
-    const transform = cartesianTransformRef.current;
-    if (!transform) {
-      return offset;
-    }
-    return Matrix4.multiplyByPoint(transform, offset, new Cartesian3());
-  }, []);
-
   const positionFromFrameAligned = useCallback((frame: { lat: number; lon: number; alt: number }) => {
-    if (visualizationMode === "cartesian") {
-      return localToWorld(localCartesianOffset(frame));
-    }
-
     const lat = Number.isFinite(frame.lat) ? frame.lat : 0;
     const lon = Number.isFinite(frame.lon) ? frame.lon : 0;
     const alt = alignedAltitudeFromFrame({ lat, lon, alt: frame.alt });
     return Cartesian3.fromDegrees(lon, lat, alt);
-  }, [alignedAltitudeFromFrame, localCartesianOffset, localToWorld, visualizationMode]);
+  }, [alignedAltitudeFromFrame]);
 
   function formatReplayTime(sec: number) {
     const s = Math.max(0, Math.floor(sec));
@@ -404,7 +377,17 @@ export function FlightReplayView() {
     if (!viewer) {
       return undefined;
     }
-    const terrain = viewer.scene.globe.getHeight(Cartographic.fromDegrees(interpolated.lon, interpolated.lat));
+
+    if (
+      visualizationMode !== "geo" ||
+      !Number.isFinite(interpolated.lat) ||
+      !Number.isFinite(interpolated.lon)
+    ) {
+      return undefined;
+    }
+
+    const globe = viewer.scene?.globe;
+    const terrain = globe?.getHeight(Cartographic.fromDegrees(interpolated.lon, interpolated.lat));
     return terrain !== undefined && Number.isFinite(terrain) ? terrain : undefined;
   })();
   const alignedAltitude = alignedAltitudeFromFrame({ lat: interpolated.lat, lon: interpolated.lon, alt: interpolated.alt });
@@ -441,6 +424,10 @@ export function FlightReplayView() {
   );
 
   const traceSegments = useMemo(() => {
+    if (visualizationMode !== "geo") {
+      return [] as Array<{ id: string; color: Color; positions: Cartesian3[] }>;
+    }
+
     if (playbackFrames.length < 2) {
       return [] as Array<{ id: string; color: Color; positions: Cartesian3[] }>;
     }
@@ -510,7 +497,7 @@ export function FlightReplayView() {
     }
 
     return segments;
-  }, [playbackFrames, positionFromFrameAligned, terrainRevision]);
+  }, [playbackFrames, positionFromFrameAligned, visualizationMode]);
 
   useEffect(() => {
     if (!containerRef.current || viewerRef.current) {
@@ -533,7 +520,6 @@ export function FlightReplayView() {
         if (!viewer.isDestroyed()) {
           viewer.scene.terrainProvider = terrainProvider;
           terrainBiasRef.current = null;
-          setTerrainRevision((v) => v + 1);
         }
       })
       .catch(() => {
@@ -570,76 +556,6 @@ export function FlightReplayView() {
       viewer.destroy();
     };
   }, [positionFromFrameAligned]);
-
-  useEffect(() => {
-    const base = playbackFrames[0];
-    if (!base) {
-      cartesianFrameRef.current = null;
-      cartesianTransformRef.current = null;
-      return;
-    }
-
-    const startLat = Number.isFinite(base.lat) ? base.lat : 0;
-    const startLon = Number.isFinite(base.lon) ? base.lon : 0;
-    const startAlt = Number.isFinite(base.alt) ? base.alt : 0;
-    const cosLat = Math.max(1e-6, Math.cos((startLat * Math.PI) / 180));
-
-    cartesianFrameRef.current = { startLat, startLon, startAlt, cosLat };
-    const origin = Cartesian3.fromDegrees(startLon, startLat, startAlt);
-    cartesianTransformRef.current = Transforms.eastNorthUpToFixedFrame(origin);
-  }, [playbackFrames]);
-
-  useEffect(() => {
-    const viewer = viewerRef.current;
-    if (!viewer) {
-      return;
-    }
-
-    for (const id of cartesianGuideIdsRef.current) {
-      viewer.entities.removeById(id);
-    }
-    cartesianGuideIdsRef.current = [];
-
-    if (visualizationMode !== "cartesian") {
-      viewer.scene.globe.show = true;
-      return;
-    }
-
-    viewer.scene.globe.show = false;
-
-    const addGuide = (id: string, positions: Cartesian3[], color: Color, width = 1) => {
-      cartesianGuideIdsRef.current.push(id);
-      viewer.entities.add({
-        id,
-        polyline: {
-          positions,
-          width,
-          material: color
-        }
-      });
-    };
-
-    const size = 1200;
-    const step = 100;
-    for (let x = -size; x <= size; x += step) {
-      addGuide(
-        `cart-grid-x-${x}`,
-        [localToWorld(new Cartesian3(x, -size, 0)), localToWorld(new Cartesian3(x, size, 0))],
-        Color.fromCssColorString("#6b7280").withAlpha(x % 500 === 0 ? 0.5 : 0.2)
-      );
-    }
-    for (let y = -size; y <= size; y += step) {
-      addGuide(
-        `cart-grid-y-${y}`,
-        [localToWorld(new Cartesian3(-size, y, 0)), localToWorld(new Cartesian3(size, y, 0))],
-        Color.fromCssColorString("#6b7280").withAlpha(y % 500 === 0 ? 0.5 : 0.2)
-      );
-    }
-
-    addGuide("cart-axis-x", [localToWorld(new Cartesian3(0, 0, 0)), localToWorld(new Cartesian3(600, 0, 0))], Color.RED, 2);
-    addGuide("cart-axis-y", [localToWorld(new Cartesian3(0, 0, 0)), localToWorld(new Cartesian3(0, 600, 0))], Color.GREEN, 2);
-    addGuide("cart-axis-z", [localToWorld(new Cartesian3(0, 0, 0)), localToWorld(new Cartesian3(0, 0, 400))], Color.CYAN, 2);
-  }, [localToWorld, visualizationMode]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -698,7 +614,6 @@ export function FlightReplayView() {
   useEffect(() => {
     hasInitialFramingRef.current = false;
     terrainBiasRef.current = null;
-    setTerrainRevision((v) => v + 1);
   }, [playbackFrames, visualizationMode]);
 
   useEffect(() => {
@@ -730,7 +645,6 @@ export function FlightReplayView() {
 
     if (viewer.trackedEntity) {
       viewer.trackedEntity = undefined;
-      viewer.camera.lookAtTransform(Matrix4.IDENTITY);
     }
   }, [replay.camera, chaseViewFrom]);
 
@@ -778,7 +692,11 @@ export function FlightReplayView() {
   return (
     <div className="space-y-3">
       <div className="relative h-[62vh] overflow-hidden rounded-xl border border-border">
-        <div ref={containerRef} className="h-full w-full" />
+        {visualizationMode === "geo" ? (
+          <div ref={containerRef} className="h-full w-full" />
+        ) : (
+          <CartesianTraceView frames={playbackFrames} currentFrame={interpolated} />
+        )}
 
         <div className="absolute right-3 top-3">
           <Button variant="outline" size="sm" onClick={() => setCompactHud((v) => !v)}>
@@ -925,7 +843,7 @@ export function FlightReplayView() {
             <span className="text-[11px] text-sky-300">Info</span>
             <span className="text-[11px] text-muted-foreground">Trace color: blue (slow) to red (fast)</span>
             <span className="text-[11px] text-muted-foreground">Position mode: {positionMode === "absolute" ? "GPS absolute" : positionMode === "relative" ? "Relative INS from start" : "Hybrid GPS+INS"}</span>
-            <span className="text-[11px] text-muted-foreground">Viz: {visualizationMode === "geo" ? "Geographic globe" : "Cartesian plane (ENU)"}</span>
+            <span className="text-[11px] text-muted-foreground">Viz: {visualizationMode === "geo" ? "Geographic globe" : "Standalone Cartesian 3D"}</span>
             <span className="text-[11px] text-muted-foreground">Keys: Space, ←/→, Shift+←/→, 1/2/3, C, R</span>
           </div>
         </section>

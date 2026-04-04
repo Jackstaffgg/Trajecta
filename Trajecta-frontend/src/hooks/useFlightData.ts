@@ -96,20 +96,19 @@ function filterKinematicOutliers(
   }
 
   const out: Array<RawFrame & { lat: number; lon: number }> = [frames[0]];
-  let prevRaw = frames[0];
+  let prevAccepted = frames[0];
   for (let i = 1; i < frames.length; i += 1) {
     const current = frames[i];
-    const dt = Math.max(1e-3, (current.t ?? 0) - (prevRaw.t ?? 0));
-    const dist = haversineMeters(prevRaw.lat ?? 0, prevRaw.lon ?? 0, current.lat ?? 0, current.lon ?? 0);
+    const dt = Math.max(1e-3, (current.t ?? 0) - (prevAccepted.t ?? 0));
+    const dist = haversineMeters(prevAccepted.lat ?? 0, prevAccepted.lon ?? 0, current.lat ?? 0, current.lon ?? 0);
     const impliedSpeed = dist / dt;
-    prevRaw = current;
 
-    // Compare against consecutive raw GPS points; otherwise a single spike can
-    // cause all following samples to be rejected relative to an old anchor.
+    // Keep the last accepted anchor so a single spike does not poison all next points.
     if (impliedSpeed > MAX_REASONABLE_SPEED_MPS * 2.5) {
       continue;
     }
     out.push(current);
+    prevAccepted = current;
   }
 
   return out;

@@ -123,17 +123,32 @@ export function buildRelativeTrajectory(frames: FlightFrame[]): FlightFrame[] {
   const earthRadius = 6378137;
   const toRad = (deg: number) => (deg * Math.PI) / 180;
   const toDeg = (rad: number) => (rad * 180) / Math.PI;
+  const normalizeHeadingDelta = (deltaDeg: number) => {
+    let delta = deltaDeg;
+    while (delta > 180) {
+      delta -= 360;
+    }
+    while (delta < -180) {
+      delta += 360;
+    }
+    return delta;
+  };
+  const geodesicDistance = (a: FlightFrame, b: FlightFrame) => {
+    const r = 6371000;
+    const dLat = toRad(b.lat - a.lat);
+    const dLon = toRad(b.lon - a.lon);
+    const lat1 = toRad(a.lat);
+    const lat2 = toRad(b.lat);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+    return 2 * r * Math.asin(Math.min(1, Math.sqrt(h)));
+  };
 
   let east = 0;
   let north = 0;
   let up = 0;
-  let velEast = 0;
-  let velNorth = 0;
+  let forwardSpeed = Number.isFinite(start.speed) ? clamp(start.speed ?? 0, 0, 120) : 0;
   let velUp = 0;
-
-  let gravityEast = 0;
-  let gravityNorth = 0;
-  let gravityUp = 9.81;
+  let headingDeg = Number.isFinite(start.yaw) ? (start.yaw ?? 0) : 0;
 
   const out: FlightFrame[] = [{ ...start }];
 
@@ -141,61 +156,43 @@ export function buildRelativeTrajectory(frames: FlightFrame[]): FlightFrame[] {
     const prev = frames[i - 1];
     const current = frames[i];
 
-    const dt = clamp(current.t - prev.t, 1e-3, 0.5);
+    const dt = clamp(current.t - prev.t, 1e-3, 1.0);
+    const rawYaw = Number.isFinite(current.yaw) ? (current.yaw ?? headingDeg) : headingDeg;
+    const yawStep = normalizeHeadingDelta(rawYaw - headingDeg);
+    headingDeg += yawStep * 0.35;
+    const heading = toRad(headingDeg);
 
-    const roll = toRad(current.roll ?? 0);
-    const pitch = toRad(current.pitch ?? 0);
-    const yaw = toRad(current.yaw ?? 0);
+    const sinYaw = Math.sin(heading);
+    const cosYaw = Math.cos(heading);
 
-    const cphi = Math.cos(roll);
-    const sphi = Math.sin(roll);
-    const cth = Math.cos(pitch);
-    const sth = Math.sin(pitch);
-    const cps = Math.cos(yaw);
-    const sps = Math.sin(yaw);
+    const ax = Number.isFinite(current.accelX) ? (current.accelX ?? 0) : 0;
+    const ay = Number.isFinite(current.accelY) ? (current.accelY ?? 0) : 0;
+    const forwardAcc = clamp(ax * cosYaw + ay * sinYaw, -18, 18);
+    const predictedSpeed = clamp(forwardSpeed + forwardAcc * dt, 0, 120);
 
-    const axBody = current.accelX ?? 0;
-    const ayBody = current.accelY ?? 0;
-    const azBody = current.accelZ ?? 0;
+    const gpsSegmentSpeed = geodesicDistance(prev, current) / dt;
+    const measuredSpeed = Number.isFinite(current.speed)
+      ? clamp(Math.abs(current.speed ?? 0), 0, 120)
+      : Number.isFinite(gpsSegmentSpeed) && gpsSegmentSpeed < 120
+        ? gpsSegmentSpeed
+        : null;
 
-    // Body FRD -> NED rotation, then NED -> ENU.
-    const accNorth = cth * cps * axBody + (sphi * sth * cps - cphi * sps) * ayBody + (cphi * sth * cps + sphi * sps) * azBody;
-    const accEast = cth * sps * axBody + (sphi * sth * sps + cphi * cps) * ayBody + (cphi * sth * sps - sphi * cps) * azBody;
-    const accDown = -sth * axBody + sphi * cth * ayBody + cphi * cth * azBody;
-
-    const accENU = {
-      east: Number.isFinite(accEast) ? accEast : 0,
-      north: Number.isFinite(accNorth) ? accNorth : 0,
-      up: Number.isFinite(-accDown) ? -accDown : 0
-    };
-
-    const gravityAlpha = 0.02;
-    gravityEast = gravityEast * (1 - gravityAlpha) + accENU.east * gravityAlpha;
-    gravityNorth = gravityNorth * (1 - gravityAlpha) + accENU.north * gravityAlpha;
-    gravityUp = gravityUp * (1 - gravityAlpha) + accENU.up * gravityAlpha;
-
-    const linAccEast = accENU.east - gravityEast;
-    const linAccNorth = accENU.north - gravityNorth;
-    const linAccUp = accENU.up - gravityUp;
-
-    velEast = (velEast + linAccEast * dt) * 0.985;
-    velNorth = (velNorth + linAccNorth * dt) * 0.985;
-    velUp = (velUp + linAccUp * dt) * 0.985;
-
-    const horizontalSpeedHint = current.speed;
-    if (Number.isFinite(horizontalSpeedHint) && (horizontalSpeedHint ?? 0) >= 0) {
-      const currentHorizontal = Math.hypot(velEast, velNorth);
-      const targetHorizontal = clamp(horizontalSpeedHint ?? 0, 0, 120);
-      if (currentHorizontal > 1e-6) {
-        const blend = 0.12;
-        const scale = ((1 - blend) * currentHorizontal + blend * targetHorizontal) / currentHorizontal;
-        velEast *= scale;
-        velNorth *= scale;
-      }
+    if (measuredSpeed !== null) {
+      const disagreement = Math.abs(predictedSpeed - measuredSpeed);
+      const trust = clamp(0.2 + disagreement / 30, 0.2, 0.6);
+      forwardSpeed = predictedSpeed * (1 - trust) + measuredSpeed * trust;
+    } else {
+      forwardSpeed = predictedSpeed * 0.995;
     }
 
+    const velEast = forwardSpeed * sinYaw;
+    const velNorth = forwardSpeed * cosYaw;
+
     if (Number.isFinite(current.climbRate)) {
-      velUp = velUp * 0.85 + (current.climbRate ?? 0) * 0.15;
+      velUp = clamp(current.climbRate ?? 0, -40, 40);
+    } else {
+      const az = Number.isFinite(current.accelZ) ? current.accelZ ?? 0 : 0;
+      velUp = clamp((velUp + az * dt) * 0.98, -40, 40);
     }
 
     east += velEast * dt;
@@ -210,7 +207,8 @@ export function buildRelativeTrajectory(frames: FlightFrame[]): FlightFrame[] {
       ...current,
       lat,
       lon,
-      alt
+      alt,
+      speed: forwardSpeed
     });
   }
 
@@ -247,9 +245,9 @@ export function buildHybridTrajectory(frames: FlightFrame[]): FlightFrame[] {
     const dt = clamp(gps.t - gpsPrev.t, 1e-3, 0.5);
     const gpsSpeed = hav(gpsPrev, gps) / dt;
     const insSpeed = hav(insPrev, ins) / dt;
-    const speedHint = Number.isFinite(gps.speed) ? Math.abs(gps.speed ?? 0) : gpsSpeed;
+    const speedHint = Number.isFinite(gps.speed) ? clamp(Math.abs(gps.speed ?? 0), 0, 160) : gpsSpeed;
 
-    const gpsLooksBad = gpsSpeed > 95 || gpsSpeed > speedHint * 2.8 + 12;
+    const gpsLooksBad = gpsSpeed > 95 || gpsSpeed > speedHint * 2.5 + 10;
     const insLooksBad = insSpeed > 140;
 
     let gpsTrust = 0.72;
@@ -259,18 +257,22 @@ export function buildHybridTrajectory(frames: FlightFrame[]): FlightFrame[] {
       gpsTrust = 0.92;
     } else {
       const disagreement = hav(gps, ins);
-      gpsTrust = clamp(0.9 - disagreement / 120, 0.2, 0.9);
+      gpsTrust = clamp(0.88 - disagreement / 180, 0.25, 0.9);
     }
 
     gpsTrustHistory.push(gpsTrust);
     const recent = gpsTrustHistory.slice(-12);
     const smoothedTrust = recent.reduce((acc, value) => acc + value, 0) / recent.length;
 
+    const lat = gps.lat * smoothedTrust + ins.lat * (1 - smoothedTrust);
+    const lon = gps.lon * smoothedTrust + ins.lon * (1 - smoothedTrust);
+    const alt = gps.alt * smoothedTrust + ins.alt * (1 - smoothedTrust);
+
     out.push({
       ...gps,
-      lat: gps.lat * smoothedTrust + ins.lat * (1 - smoothedTrust),
-      lon: gps.lon * smoothedTrust + ins.lon * (1 - smoothedTrust),
-      alt: gps.alt * smoothedTrust + ins.alt * (1 - smoothedTrust)
+      lat: Number.isFinite(lat) ? lat : gps.lat,
+      lon: Number.isFinite(lon) ? lon : gps.lon,
+      alt: Number.isFinite(alt) ? alt : gps.alt
     });
   }
 

@@ -38,6 +38,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
+set "ACTION=up"
 set "RUN_BUILD=1"
 set "RUN_TESTS=1"
 set "RUN_COMPOSE=1"
@@ -45,6 +46,43 @@ set "RUN_LOGS=0"
 
 :parse_args
 if "%~1"=="" goto run
+
+if /I "%~1"=="up" (
+  set "ACTION=up"
+  shift
+  goto parse_args
+)
+
+if /I "%~1"=="restart" (
+  set "ACTION=restart"
+  shift
+  goto parse_args
+)
+
+if /I "%~1"=="down" (
+  set "ACTION=down"
+  shift
+  goto parse_args
+)
+
+if /I "%~1"=="status" (
+  set "ACTION=status"
+  shift
+  goto parse_args
+)
+
+if /I "%~1"=="logs" (
+  set "ACTION=logs"
+  set "RUN_LOGS=1"
+  shift
+  goto parse_args
+)
+
+if /I "%~1"=="validate" (
+  set "ACTION=validate"
+  shift
+  goto parse_args
+)
 
 if /I "%~1"=="skiptests" (
   set "RUN_TESTS=0"
@@ -86,6 +124,17 @@ shift
 goto parse_args
 
 :run
+if /I "%ACTION%"=="status" goto action_status
+if /I "%ACTION%"=="logs" goto action_logs
+if /I "%ACTION%"=="down" goto action_down
+if /I "%ACTION%"=="validate" goto action_validate
+
+if /I "%ACTION%"=="restart" (
+  set "RUN_BUILD=0"
+  set "RUN_TESTS=0"
+  set "RUN_COMPOSE=1"
+)
+
 if "%RUN_BUILD%"=="1" (
   if "%RUN_TESTS%"=="1" (
     echo Running: "%GRADLEW%" clean build
@@ -150,12 +199,121 @@ echo Done.
 popd
 exit /b 0
 
+:action_status
+echo Running: docker compose -f "%API_COMPOSE_FILE%" ps
+docker compose -f "%API_COMPOSE_FILE%" ps
+if errorlevel 1 (
+  echo [ERROR] API Docker Compose status failed.
+  popd
+  exit /b 1
+)
+
+echo Running: docker compose -f "%WORKER_COMPOSE_FILE%" ps
+docker compose -f "%WORKER_COMPOSE_FILE%" ps
+if errorlevel 1 (
+  echo [ERROR] Worker Docker Compose status failed.
+  popd
+  exit /b 1
+)
+
+echo Running: docker compose -f "%FRONTEND_COMPOSE_FILE%" ps
+docker compose -f "%FRONTEND_COMPOSE_FILE%" ps
+if errorlevel 1 (
+  echo [ERROR] Frontend Docker Compose status failed.
+  popd
+  exit /b 1
+)
+
+echo Done.
+popd
+exit /b 0
+
+:action_logs
+set "RUN_LOGS=1"
+
+echo Opening API logs in a new terminal window...
+start "Trajecta API Logs" cmd /k docker compose -f "%API_COMPOSE_FILE%" logs -f --tail=200
+
+echo Opening worker logs in a new terminal window...
+start "Trajecta Worker Logs" cmd /k docker compose -f "%WORKER_COMPOSE_FILE%" logs -f --tail=200
+
+echo Opening frontend logs in a new terminal window...
+start "Trajecta Frontend Logs" cmd /k docker compose -f "%FRONTEND_COMPOSE_FILE%" logs -f --tail=200
+
+echo Done.
+popd
+exit /b 0
+
+:action_down
+echo Running: docker compose -f "%FRONTEND_COMPOSE_FILE%" down --remove-orphans
+docker compose -f "%FRONTEND_COMPOSE_FILE%" down --remove-orphans
+if errorlevel 1 (
+  echo [ERROR] Frontend Docker Compose down failed.
+  popd
+  exit /b 1
+)
+
+echo Running: docker compose -f "%WORKER_COMPOSE_FILE%" down --remove-orphans
+docker compose -f "%WORKER_COMPOSE_FILE%" down --remove-orphans
+if errorlevel 1 (
+  echo [ERROR] Worker Docker Compose down failed.
+  popd
+  exit /b 1
+)
+
+echo Running: docker compose -f "%API_COMPOSE_FILE%" down --remove-orphans
+docker compose -f "%API_COMPOSE_FILE%" down --remove-orphans
+if errorlevel 1 (
+  echo [ERROR] API Docker Compose down failed.
+  popd
+  exit /b 1
+)
+
+echo Done.
+popd
+exit /b 0
+
+:action_validate
+echo Running: docker compose -f "%API_COMPOSE_FILE%" config
+docker compose -f "%API_COMPOSE_FILE%" config >nul
+if errorlevel 1 (
+  echo [ERROR] API Docker Compose config is invalid.
+  popd
+  exit /b 1
+)
+
+echo Running: docker compose -f "%WORKER_COMPOSE_FILE%" config
+docker compose -f "%WORKER_COMPOSE_FILE%" config >nul
+if errorlevel 1 (
+  echo [ERROR] Worker Docker Compose config is invalid.
+  popd
+  exit /b 1
+)
+
+echo Running: docker compose -f "%FRONTEND_COMPOSE_FILE%" config
+docker compose -f "%FRONTEND_COMPOSE_FILE%" config >nul
+if errorlevel 1 (
+  echo [ERROR] Frontend Docker Compose config is invalid.
+  popd
+  exit /b 1
+)
+
+echo [OK] All compose files are valid.
+popd
+exit /b 0
+
 :usage
 echo Usage:
-echo   start-all-stacks.bat [skiptests] [skipbuild] [skipcompose] [autologs]
+echo   start-all-stacks.bat [up^|restart^|down^|status^|logs^|validate] [skiptests] [skipbuild] [skipcompose] [autologs]
 echo.
 echo Examples:
 echo   start-all-stacks.bat
+echo   start-all-stacks.bat up skiptests
+echo   start-all-stacks.bat restart
+echo   start-all-stacks.bat down
+echo   start-all-stacks.bat status
+echo   start-all-stacks.bat logs
+echo   start-all-stacks.bat validate
 echo   start-all-stacks.bat skiptests
 echo   start-all-stacks.bat skipcompose
 echo   start-all-stacks.bat autologs

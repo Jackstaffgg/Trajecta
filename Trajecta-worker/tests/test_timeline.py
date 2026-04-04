@@ -110,3 +110,36 @@ class TimelineTests(TestCase):
         self.assertTrue(lons)
         self.assertLess(max(lats), 56.0)
         self.assertLess(max(lons), 38.0)
+
+    def test_build_output_recovers_after_single_gps_spike(self) -> None:
+        data = {
+            "gps": {
+                "t": [0.0, 1.0, 2.0, 3.0],
+                "lat": [55.0, 75.0, 55.00015, 55.00025],
+                "lon": [37.0, 120.0, 37.00015, 37.00025],
+                "alt": [100.0, 100.0, 101.0, 102.0],
+                "speed": [6.0, 5000.0, 6.2, 6.4],
+                "vz": [0.1, 250.0, 0.2, 0.2],
+            },
+            "att": {"t": [0.0, 3.0], "roll": [0.0, 0.0], "pitch": [0.0, 0.0], "yaw": [0.0, 0.0]},
+            "ctun": {"t": [0.0, 3.0], "throttle": [0.4, 0.5], "alt": [100.0, 102.0], "dalt": [0.0, 0.0], "crt": [0.1, 0.2]},
+            "bat": {"t": [0.0, 3.0], "remainingPct": [95.0, 94.0]},
+            "imu": {"t": [0.0, 3.0], "accx": [0.0, 0.0], "accy": [0.0, 0.0], "accz": [1.0, 1.0], "gyrx": [0.0, 0.0], "gyry": [0.0, 0.0], "gyrz": [0.0, 0.0]},
+            "vibe": {"t": [0.0, 3.0], "x": [0.1, 0.1], "y": [0.1, 0.1], "z": [0.1, 0.1]},
+            "pid": {"t": [0.0, 3.0], "roll": [0.0, 0.0], "pitch": [0.0, 0.0], "yaw": [0.0, 0.0]},
+            "baro": {"t": [0.0, 3.0], "alt": [100.0, 102.0]},
+            "gpa": {"t": [0.0, 3.0], "acc": [0.0, 0.0]},
+            "mode": {"t": [0.0, 3.0], "mode": ["AUTO", "AUTO"]},
+            "stat_rows": [],
+            "pm_rows": [],
+            "events": [],
+            "params": {},
+        }
+
+        output = build_output(data, dt=1.0)
+        last = output["frames"][-1]["pos"]
+
+        self.assertIsNotNone(last["lat"])
+        self.assertIsNotNone(last["lon"])
+        self.assertLess(abs(last["lat"] - 55.00025), 0.001)
+        self.assertLess(abs(last["lon"] - 37.00025), 0.001)

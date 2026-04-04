@@ -153,7 +153,8 @@ def sanitize_gps_dataframe(gps_df: pd.DataFrame) -> pd.DataFrame:
         lon = maybe_float(sanitized.at[i, "lon"]) if "lon" in sanitized else None
 
         if None in (prev_t, prev_lat, prev_lon, t, lat, lon):
-            prev_t, prev_lat, prev_lon = t, lat, lon
+            if None not in (t, lat, lon):
+                prev_t, prev_lat, prev_lon = t, lat, lon
             continue
 
         dt = max(1e-3, t - prev_t)
@@ -165,6 +166,7 @@ def sanitize_gps_dataframe(gps_df: pd.DataFrame) -> pd.DataFrame:
             for col in ("lat", "lon", "alt", "speed", "vz"):
                 if col in sanitized:
                     sanitized.at[i, col] = np.nan
+            continue
 
         prev_t, prev_lat, prev_lon = t, lat, lon
 
