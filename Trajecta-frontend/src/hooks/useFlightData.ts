@@ -166,6 +166,45 @@ function deriveMetrics(frames: FlightLogData["frames"]) {
   };
 }
 
+function normalizeMetrics(
+  input: Record<string, unknown> | null,
+  fallback: ReturnType<typeof deriveMetrics>,
+  imuRateHzFallback?: number
+) {
+  const maxAltitude = asNumber(input?.maxAltitude) ?? fallback.maxAltitude;
+  const maxSpeed =
+    asNumber(input?.maxSpeed) ??
+    asNumber(input?.maxHorizontalSpeed) ??
+    fallback.maxSpeed;
+  const flightDurationSec =
+    asNumber(input?.flightDuration) ??
+    asNumber(input?.flightDurationSec) ??
+    asNumber(input?.totalFlightDuration) ??
+    fallback.flightDurationSec;
+  const totalDistanceMeters =
+    asNumber(input?.distance) ??
+    asNumber(input?.totalDistance) ??
+    asNumber(input?.totalDistanceMeters) ??
+    fallback.totalDistanceMeters;
+  const maxVerticalSpeed =
+    asNumber(input?.maxVerticalSpeed) ??
+    asNumber(input?.maxClimbRate) ??
+    fallback.maxVerticalSpeed;
+  const imuRateHz =
+    asNumber(input?.imuRateHz) ??
+    asNumber(input?.imuSamplingHz) ??
+    imuRateHzFallback;
+
+  return {
+    maxAltitude,
+    maxSpeed,
+    flightDurationSec,
+    totalDistanceMeters,
+    maxVerticalSpeed,
+    imuRateHz
+  };
+}
+
 function normalizeWorkerTrajectory(raw: unknown): FlightLogData {
   const input = asObject(raw) ?? {};
   const framesRaw = Array.isArray(input.frames) ? input.frames : [];
@@ -174,6 +213,7 @@ function normalizeWorkerTrajectory(raw: unknown): FlightLogData {
   const parsingRaw = asObject(metaRaw.parsing) ?? {};
   const messagesRaw = asObject(parsingRaw.messages) ?? {};
   const imuRaw = asObject(messagesRaw.imu) ?? {};
+  const metricsRaw = asObject(input.metrics);
 
   const parsedFrames = framesRaw.map((frame): RawFrame => {
     const src = asObject(frame) ?? {};
@@ -249,10 +289,7 @@ function normalizeWorkerTrajectory(raw: unknown): FlightLogData {
     frames,
     events,
     params: asObject(input.params) as FlightLogData["params"] ?? {},
-    metrics: {
-      ...deriveMetrics(frames),
-      imuRateHz: asNumber(imuRaw.samplingHz)
-    },
+    metrics: normalizeMetrics(metricsRaw, deriveMetrics(frames), asNumber(imuRaw.samplingHz)),
     aiConclusion: typeof input.aiConclusion === "string" ? input.aiConclusion : undefined,
     aiModel: typeof input.aiModel === "string" ? input.aiModel : undefined
   };
