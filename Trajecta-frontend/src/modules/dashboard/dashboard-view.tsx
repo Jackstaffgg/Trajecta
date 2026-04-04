@@ -7,7 +7,7 @@ function StatCard({ label, value, unit }: { label: string; value: string | numbe
     <Card>
       <CardContent className="p-4">
         <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p className="mt-2 text-2xl font-bold text-cyan-100">
+        <p className="mt-2 text-2xl font-bold text-foreground">
           {value}
           {unit ? <span className="ml-1 text-sm text-muted-foreground">{unit}</span> : null}
         </p>

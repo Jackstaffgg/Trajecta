@@ -78,7 +78,7 @@ export function AiDiagnosticsView() {
 
         {report ? (
           <div className="space-y-3 rounded-lg border border-border bg-background/50 p-4">
-            <p className="text-sm text-cyan-100">{safeText(report.summary, "No summary")}</p>
+            <p className="text-sm text-foreground">{safeText(report.summary, "No summary")}</p>
             <div>
               <p className="mb-1 text-xs uppercase text-muted-foreground">Anomalies</p>
               <ul className="space-y-1 text-sm">

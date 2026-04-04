@@ -90,7 +90,7 @@ const authInitial: AuthState = loadAuthState();
 export const useFlightStore = create<FlightState>()(
   devtools((set) => ({
     auth: authInitial,
-    mode: "dashboard",
+    mode: "tasks",
     loading: false,
     data: null,
     currentTask: null,
@@ -105,7 +105,7 @@ export const useFlightStore = create<FlightState>()(
       persistAuthState({ isAuthenticated: false, token: "", user: null });
       set({
         auth: { isAuthenticated: false, token: "", user: null },
-        mode: "dashboard",
+        mode: "tasks",
         loading: false,
         data: null,
         currentTask: null,
@@ -119,7 +119,7 @@ export const useFlightStore = create<FlightState>()(
       set({
         data,
         error: null,
-        mode: data ? "dashboard" : "dashboard",
+        mode: data ? "dashboard" : "tasks",
         replay: { ...replayInitial }
       }),
     setCurrentTask: (currentTask) => set({ currentTask }),
@@ -148,7 +148,7 @@ export const useFlightStore = create<FlightState>()(
     reset: () =>
       set({
         auth: loadAuthState(),
-        mode: "dashboard",
+        mode: "tasks",
         loading: false,
         data: null,
         currentTask: null,

@@ -56,6 +56,14 @@ export type TaskInfo = {
   errorMessage?: string | null;
 };
 
+export type TaskSocketPayload = {
+  taskId: number;
+  taskStatus: TaskStatus;
+  taskTitle?: string;
+  message?: string | null;
+  timestamp?: string;
+};
+
 export type NotificationInfo = {
   id: number;
   type: string;
@@ -64,6 +72,23 @@ export type NotificationInfo = {
   referenceId?: number | null;
   isRead: boolean;
   createdAt: string;
+};
+
+export type NotificationSocketPayload = {
+  notification: NotificationInfo;
+};
+
+export type SocketEvent = {
+  type: "NEW_NOTIFICATION" | "TASK_STATUS_UPDATE";
+  payload: unknown;
+};
+
+export type UserProfileUpdateInput = {
+  name?: string;
+  username?: string;
+  email?: string;
+  role?: string;
+  password?: string;
 };
 
 export type FlightMetadata = {
@@ -87,8 +112,11 @@ export type FlightLogData = {
 export type ReplayCameraMode = "chase" | "fpv" | "free";
 
 export type AnalysisMode =
+  | "tasks"
   | "dashboard"
   | "replay"
   | "charts"
   | "params"
-  | "diagnostics";
+  | "diagnostics"
+  | "profile"
+  | "admin";

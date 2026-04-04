@@ -3,110 +3,13 @@ import {
   ApiClientError,
   addAiConclusion,
   createTask,
-  downloadTrajectory,
-  getTask
+  downloadTrajectory
 } from "@/lib/api";
 import { useFlightStore } from "@/store/flight-store";
-import type { FlightLogData } from "@/types/flight";
-
-const MAX_REASONABLE_DRONE_SPEED_MPS = 120;
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
-}
+import type { FlightLogData, TaskInfo } from "@/types/flight";
 
 function asNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-function normalizeLat(raw: number | undefined): number | undefined {
-  if (!isFiniteNumber(raw)) {
-    return undefined;
-  }
-  const abs = Math.abs(raw);
-  const normalized = abs > 180 ? raw / 1e7 : raw;
-  if (Math.abs(normalized) > 90) {
-    return undefined;
-  }
-  return normalized;
-}
-
-function normalizeLon(raw: number | undefined): number | undefined {
-  if (!isFiniteNumber(raw)) {
-    return undefined;
-  }
-  const abs = Math.abs(raw);
-  const normalized = abs > 180 ? raw / 1e7 : raw;
-  if (Math.abs(normalized) > 180) {
-    return undefined;
-  }
-  return normalized;
-}
-
-function normalizeAltitudeMeters(raw: number | undefined): number | undefined {
-  if (!isFiniteNumber(raw)) {
-    return undefined;
-  }
-  const abs = Math.abs(raw);
-  if (abs > 10000) {
-    return raw / 100;
-  }
-  return raw;
-}
-
-function normalizeSpeedMps(raw: number | undefined): number | undefined {
-  if (!isFiniteNumber(raw)) {
-    return undefined;
-  }
-  const abs = Math.abs(raw);
-  if (abs > MAX_REASONABLE_DRONE_SPEED_MPS) {
-    return raw / 100;
-  }
-  return raw;
-}
-
-function computeDistanceMeters(frames: FlightLogData["frames"]): number {
-  const radius = 6371000;
-  let total = 0;
-  for (let i = 1; i < frames.length; i += 1) {
-    const a = frames[i - 1];
-    const b = frames[i];
-    if (!isFiniteNumber(a.lat) || !isFiniteNumber(a.lon) || !isFiniteNumber(b.lat) || !isFiniteNumber(b.lon)) {
-      continue;
-    }
-    const phi1 = (a.lat * Math.PI) / 180;
-    const phi2 = (b.lat * Math.PI) / 180;
-    const dphi = ((b.lat - a.lat) * Math.PI) / 180;
-    const dlambda = ((b.lon - a.lon) * Math.PI) / 180;
-    const h =
-      Math.sin(dphi / 2) * Math.sin(dphi / 2) +
-      Math.cos(phi1) * Math.cos(phi2) * Math.sin(dlambda / 2) * Math.sin(dlambda / 2);
-    total += 2 * radius * Math.asin(Math.min(1, Math.sqrt(h)));
-  }
-  return total;
-}
-
-function deriveMetrics(frames: FlightLogData["frames"], fallback: Record<string, unknown>) {
-  const maxAltitude = frames.reduce((acc, f) => Math.max(acc, f.alt ?? Number.NEGATIVE_INFINITY), Number.NEGATIVE_INFINITY);
-  const maxSpeed = frames.reduce((acc, f) => Math.max(acc, f.speed ?? Number.NEGATIVE_INFINITY), Number.NEGATIVE_INFINITY);
-  const maxVerticalSpeed = frames.reduce(
-    (acc, f) => Math.max(acc, Math.abs(f.climbRate ?? Number.NEGATIVE_INFINITY)),
-    Number.NEGATIVE_INFINITY
-  );
-
-  const duration =
-    frames.length > 1 ? Math.max(0, (frames[frames.length - 1].t ?? 0) - (frames[0].t ?? 0)) : 0;
-
-  return {
-    maxAltitude: Number.isFinite(maxAltitude) ? maxAltitude : asNumber(fallback.maxAltitude),
-    maxSpeed: Number.isFinite(maxSpeed) ? maxSpeed : asNumber(fallback.maxSpeed),
-    flightDurationSec:
-      duration > 0
-        ? duration
-        : asNumber(fallback.flightDuration) ?? asNumber(fallback.totalFlightDuration),
-    totalDistanceMeters: computeDistanceMeters(frames) || asNumber(fallback.distance) || asNumber(fallback.totalDistance),
-    maxVerticalSpeed: Number.isFinite(maxVerticalSpeed) ? maxVerticalSpeed : asNumber(fallback.maxVerticalSpeed)
-  };
 }
 
 function asObject(value: unknown): Record<string, unknown> | null {
@@ -114,6 +17,23 @@ function asObject(value: unknown): Record<string, unknown> | null {
     return null;
   }
   return value as Record<string, unknown>;
+}
+
+function isFiniteNumber(value: number | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isValidCoordinate(lat: number | undefined, lon: number | undefined): boolean {
+  return isFiniteNumber(lat) && isFiniteNumber(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
+}
+
+type RawFrame = Omit<FlightLogData["frames"][number], "lat" | "lon"> & {
+  lat?: number;
+  lon?: number;
+};
+
+function hasReplayCoordinates(frame: RawFrame): frame is RawFrame & { lat: number; lon: number } {
+  return isFiniteNumber(frame.t) && isValidCoordinate(frame.lat, frame.lon);
 }
 
 function normalizeWorkerTrajectory(raw: unknown): FlightLogData {
@@ -126,64 +46,70 @@ function normalizeWorkerTrajectory(raw: unknown): FlightLogData {
   const messagesRaw = asObject(parsingRaw.messages) ?? {};
   const imuRaw = asObject(messagesRaw.imu) ?? {};
 
-  const frames = framesRaw.map((frame): FlightLogData["frames"][number] | null => {
+  const parsedFrames = framesRaw.map((frame): RawFrame => {
     const src = asObject(frame) ?? {};
     const pos = asObject(src.pos) ?? {};
     const att = asObject(src.att) ?? {};
     const imu = asObject(src.imu) ?? {};
     const accel = Array.isArray(imu.accel) ? imu.accel : [];
 
-    const lat = normalizeLat(asNumber(pos.lat));
-    const lon = normalizeLon(asNumber(pos.lon));
-
-    if (lat === undefined || lon === undefined) {
-      return null;
-    }
-
     return {
-      t: asNumber(src.t) ?? 0,
-      lat,
-      lon,
-      alt: normalizeAltitudeMeters(asNumber(pos.alt)) ?? 0,
-      speed: normalizeSpeedMps(asNumber(src.vel)),
+      t: asNumber(src.t) ?? Number.NaN,
+      lat: asNumber(pos.lat),
+      lon: asNumber(pos.lon),
+      alt: asNumber(pos.alt) ?? 0,
+      speed: asNumber(src.vel),
       roll: asNumber(att.roll),
       pitch: asNumber(att.pitch),
       yaw: asNumber(att.yaw),
       accelX: asNumber(accel[0]),
       accelY: asNumber(accel[1]),
       accelZ: asNumber(accel[2]),
-      climbRate: normalizeSpeedMps(asNumber(src.climbRate))
+      climbRate: asNumber(src.climbRate)
     };
-  }).filter((frame): frame is FlightLogData["frames"][number] => frame !== null);
+  });
+
+  const validFrames = parsedFrames
+    .filter(hasReplayCoordinates)
+    .sort((a, b) => a.t - b.t);
+
+  const t0 = validFrames[0]?.t ?? 0;
+  const frames: FlightLogData["frames"] = validFrames.map((frame, index, arr) => {
+    const base = frame.t - t0;
+    const prev = index > 0 ? arr[index - 1].t - t0 : -1;
+    const t = base <= prev ? prev + 1e-3 : base;
+    return {
+      ...frame,
+      t
+    };
+  });
 
   const events = eventsRaw.map((event): FlightLogData["events"][number] => {
     const src = asObject(event) ?? {};
+    const rawT = asNumber(src.t);
     return {
-      t: asNumber(src.t) ?? 0,
+      t: isFiniteNumber(rawT) ? Math.max(0, rawT - t0) : 0,
       type: typeof src.type === "string" ? src.type : "EVENT",
       message: typeof src.value === "string" ? src.value : undefined
     };
   });
-
-  const derivedMetrics = deriveMetrics(frames, metricsRaw);
 
   return {
     metadata: {
       parserVersion: "trajecta-worker",
       source: "api",
       logName: typeof metaRaw.logName === "string" ? metaRaw.logName : undefined,
-      imuSamplingHz: asNumber(imuRaw.samplingHz),
-      gpsUnits: "deg/WGS84, m, m/s"
+      imuSamplingHz: asNumber(imuRaw.samplingHz)
     },
     frames,
     events,
     params: asObject(input.params) as FlightLogData["params"] ?? {},
     metrics: {
-      maxAltitude: derivedMetrics.maxAltitude,
-      maxSpeed: derivedMetrics.maxSpeed,
-      flightDurationSec: derivedMetrics.flightDurationSec,
-      totalDistanceMeters: derivedMetrics.totalDistanceMeters,
-      maxVerticalSpeed: derivedMetrics.maxVerticalSpeed,
+      maxAltitude: asNumber(metricsRaw.maxAltitude),
+      maxSpeed: asNumber(metricsRaw.maxSpeed) ?? asNumber(metricsRaw.maxHorizontalSpeed),
+      flightDurationSec: asNumber(metricsRaw.flightDuration) ?? asNumber(metricsRaw.totalFlightDuration),
+      totalDistanceMeters: asNumber(metricsRaw.distance) ?? asNumber(metricsRaw.totalDistance),
+      maxVerticalSpeed: asNumber(metricsRaw.maxVerticalSpeed),
       imuRateHz: asNumber(imuRaw.samplingHz)
     },
     aiConclusion: typeof input.aiConclusion === "string" ? input.aiConclusion : undefined
@@ -225,12 +151,6 @@ function parseTrajectory(content: string): FlightLogData {
   }
 }
 
-function sleep(ms: number) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
-
 export function useFlightData() {
   const auth = useFlightStore((s) => s.auth);
   const data = useFlightStore((s) => s.data);
@@ -240,6 +160,7 @@ export function useFlightData() {
   const setCurrentTask = useFlightStore((s) => s.setCurrentTask);
   const setTaskStatus = useFlightStore((s) => s.setTaskStatus);
   const setError = useFlightStore((s) => s.setError);
+  const setMode = useFlightStore((s) => s.setMode);
   const logout = useFlightStore((s) => s.logout);
   const currentTask = useFlightStore((s) => s.currentTask);
 
@@ -250,20 +171,6 @@ export function useFlightData() {
     }
     return frames[frames.length - 1].t;
   }, [data]);
-
-  function handleRequestError(error: unknown) {
-    const message = apiErrorMessage(error);
-    setError(message);
-    if (error instanceof ApiClientError && error.status === 401) {
-      logout();
-    }
-  }
-
-  async function loadTrajectoryForTask(taskId: number) {
-    const trajectory = await downloadTrajectory({ token: auth.token, taskId });
-    const normalized = parseTrajectory(trajectory);
-    setData(normalized);
-  }
 
   async function loadFromBin(file: File, title: string) {
     if (!auth.isAuthenticated || !auth.token) {
@@ -276,47 +183,75 @@ export function useFlightData() {
     try {
       const created = await createTask({ token: auth.token, file, title });
       setCurrentTask({ id: created.id, title: created.title, status: created.status });
-
-      let attempts = 0;
-      while (attempts < 180) {
-        attempts += 1;
-        const task = await getTask({ token: auth.token, taskId: created.id });
-        setTaskStatus(task.status, task.errorMessage);
-
-        if (task.status === "FAILED" || task.status === "CANCELLED") {
-          throw new Error(task.errorMessage || `Task ended with status ${task.status}`);
-        }
-
-        if (task.status === "COMPLETED") {
-          await loadTrajectoryForTask(created.id);
-          return;
-        }
-
-        await sleep(1000);
-      }
-
-      throw new Error("Task processing timeout");
+      setTaskStatus(created.status);
+      setData(null);
+      setMode("tasks");
+      return created;
     } catch (error) {
-      handleRequestError(error);
+      const message = apiErrorMessage(error);
+      setError(message);
+      if (error instanceof ApiClientError && error.status === 401) {
+        logout();
+      }
       return;
     } finally {
       setLoading(false);
     }
   }
 
-  async function requestAiConclusion(): Promise<boolean> {
-    if (!auth.isAuthenticated || !auth.token || !currentTask) {
+  async function selectTask(task: TaskInfo) {
+    if (!auth.isAuthenticated || !auth.token) {
+      setError("Authentication required");
       return false;
+    }
+
+    setCurrentTask(task);
+    setTaskStatus(task.status, task.errorMessage);
+
+    if (task.status !== "COMPLETED") {
+      setData(null);
+      setMode("tasks");
+      return true;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const trajectory = await downloadTrajectory({ token: auth.token, taskId: task.id });
+      const normalized = parseTrajectory(trajectory);
+      setData(normalized);
+      return true;
+    } catch (error) {
+      const message = apiErrorMessage(error);
+      setError(message);
+      if (error instanceof ApiClientError && error.status === 401) {
+        logout();
+      }
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function requestAiConclusion() {
+    if (!auth.isAuthenticated || !auth.token || !currentTask) {
+      return;
     }
 
     setLoading(true);
     setError(null);
     try {
       await addAiConclusion({ token: auth.token, taskId: currentTask.id });
-      await loadTrajectoryForTask(currentTask.id);
+      const trajectory = await downloadTrajectory({ token: auth.token, taskId: currentTask.id });
+      const normalized = parseTrajectory(trajectory);
+      setData(normalized);
       return true;
     } catch (error) {
-      handleRequestError(error);
+      const message = apiErrorMessage(error);
+      setError(message);
+      if (error instanceof ApiClientError && error.status === 401) {
+        logout();
+      }
       return false;
     } finally {
       setLoading(false);
@@ -328,6 +263,7 @@ export function useFlightData() {
     loading,
     maxTimeSec,
     loadFromBin,
+    selectTask,
     requestAiConclusion,
     clear: () => setData(null)
   };

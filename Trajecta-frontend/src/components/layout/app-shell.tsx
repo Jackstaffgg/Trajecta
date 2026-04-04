@@ -1,16 +1,25 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Bell, CheckCheck } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Bell, CheckCheck, LoaderCircle, LogOut, Wifi, WifiOff } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
 import {
   ApiClientError,
+  getApiBaseUrl,
   getMyTasks,
   getNotifications,
+  mapNotificationDto,
   markAllNotificationsAsRead,
   markNotificationAsRead
 } from "@/lib/api";
+import { useFlightData } from "@/hooks/useFlightData";
 import { useFlightStore } from "@/store/flight-store";
-import type { NotificationInfo, TaskInfo } from "@/types/flight";
+import type {
+  NotificationInfo,
+  NotificationSocketPayload,
+  SocketEvent,
+  TaskInfo,
+  TaskSocketPayload
+} from "@/types/flight";
 
 function toText(value: unknown, fallback = "-"): string {
   if (typeof value === "string") {
@@ -30,19 +39,69 @@ function formatTime(iso: string): string {
   return date.toLocaleString();
 }
 
+function parseStompMessage(rawFrame: string): { command: string; body: string } | null {
+  const frame = rawFrame.trim();
+  if (!frame) {
+    return null;
+  }
+
+  const sep = frame.indexOf("\n\n");
+  if (sep < 0) {
+    return { command: frame.split("\n")[0] ?? "", body: "" };
+  }
+
+  const header = frame.slice(0, sep);
+  const body = frame.slice(sep + 2);
+  const command = header.split("\n")[0] ?? "";
+  return { command, body };
+}
+
+function toStompFrame(command: string, headers: Record<string, string>, body = ""): string {
+  const headerLines = Object.entries(headers).map(([k, v]) => `${k}:${v}`);
+  return [command, ...headerLines, "", body].join("\n") + "\0";
+}
+
+function resolveWsEndpoint(): string {
+  const base = getApiBaseUrl();
+  if (base) {
+    const url = new URL(base);
+    url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+    url.pathname = "/ws";
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  }
+
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${window.location.host}/ws`;
+}
+
 type AppShellProps = {
   children: ReactNode;
 };
 
+type WsState = "connecting" | "connected" | "reconnecting" | "offline";
+
 export function AppShell({ children }: AppShellProps) {
   const auth = useFlightStore((s) => s.auth);
   const currentTask = useFlightStore((s) => s.currentTask);
+  const setTaskStatus = useFlightStore((s) => s.setTaskStatus);
   const setError = useFlightStore((s) => s.setError);
+  const logout = useFlightStore((s) => s.logout);
+  const { selectTask } = useFlightData();
 
   const [tasks, setTasks] = useState<TaskInfo[]>([]);
   const [notifications, setNotifications] = useState<NotificationInfo[]>([]);
   const [openNotifications, setOpenNotifications] = useState(false);
   const [loadingPanel, setLoadingPanel] = useState(false);
+  const [wsState, setWsState] = useState<WsState>("connecting");
+
+  const socketRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<number | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const manualCloseRef = useRef(false);
+  const currentTaskRef = useRef<TaskInfo | null>(null);
+  const selectTaskRef = useRef(selectTask);
 
   const unreadCount = useMemo(
     () => notifications.reduce((acc, n) => acc + (n.isRead ? 0 : 1), 0),
@@ -50,13 +109,19 @@ export function AppShell({ children }: AppShellProps) {
   );
 
   useEffect(() => {
+    currentTaskRef.current = currentTask;
+  }, [currentTask]);
+
+  useEffect(() => {
+    selectTaskRef.current = selectTask;
+  }, [selectTask]);
+
+  useEffect(() => {
     if (!auth.isAuthenticated || !auth.token) {
       return;
     }
 
     let active = true;
-    let timerId: number | null = null;
-    let failCount = 0;
 
     const refresh = async () => {
       try {
@@ -64,8 +129,8 @@ export function AppShell({ children }: AppShellProps) {
           setLoadingPanel(true);
         }
 
-        const [tasksResult, notificationsResult] = await Promise.allSettled([
-          getMyTasks({ token: auth.token, offset: 0, limit: 8 }),
+        const [myTasks, myNotifications] = await Promise.all([
+          getMyTasks({ token: auth.token, offset: 0, limit: 10 }),
           getNotifications({ token: auth.token })
         ]);
 
@@ -73,29 +138,8 @@ export function AppShell({ children }: AppShellProps) {
           return;
         }
 
-        if (tasksResult.status === "fulfilled") {
-          setTasks(tasksResult.value);
-        }
-
-        if (notificationsResult.status === "fulfilled") {
-          setNotifications(notificationsResult.value.slice(0, 12));
-        }
-
-        if (tasksResult.status === "rejected") {
-          const reason = tasksResult.reason as unknown;
-          if (reason instanceof ApiClientError) {
-            if (reason.status === 401) {
-              setError("Session expired. Please log in again.");
-            } else if (reason.status >= 500) {
-              failCount += 1;
-              if (failCount >= 2) {
-                setError("Tasks endpoint is temporarily unavailable. Retrying with backoff.");
-              }
-            }
-          }
-        } else {
-          failCount = 0;
-        }
+        setTasks(myTasks);
+        setNotifications(myNotifications.slice(0, 15));
       } catch (error) {
         if (!active) {
           return;
@@ -106,10 +150,6 @@ export function AppShell({ children }: AppShellProps) {
       } finally {
         if (active) {
           setLoadingPanel(false);
-          const delay = failCount >= 2 ? 30000 : 10000;
-          timerId = window.setTimeout(() => {
-            void refresh();
-          }, delay);
         }
       }
     };
@@ -118,13 +158,207 @@ export function AppShell({ children }: AppShellProps) {
 
     return () => {
       active = false;
-      if (timerId !== null) {
-        window.clearTimeout(timerId);
-      }
     };
   }, [auth.isAuthenticated, auth.token, setError]);
 
+  useEffect(() => {
+    if (!auth.isAuthenticated || !auth.token) {
+      setWsState("offline");
+      return;
+    }
+
+    manualCloseRef.current = false;
+
+    const scheduleReconnect = () => {
+      if (manualCloseRef.current) {
+        return;
+      }
+      if (reconnectTimerRef.current !== null) {
+        window.clearTimeout(reconnectTimerRef.current);
+      }
+
+      const attempt = reconnectAttemptsRef.current;
+      const delayMs = Math.min(1000 * 2 ** attempt, 15000);
+      reconnectAttemptsRef.current += 1;
+      setWsState("reconnecting");
+
+      reconnectTimerRef.current = window.setTimeout(() => {
+        connectWs();
+      }, delayMs);
+    };
+
+    const connectWs = () => {
+      if (manualCloseRef.current) {
+        return;
+      }
+
+      setWsState(reconnectAttemptsRef.current > 0 ? "reconnecting" : "connecting");
+      const ws = new WebSocket(resolveWsEndpoint());
+      socketRef.current = ws;
+
+      ws.onopen = () => {
+        ws.send(
+          toStompFrame("CONNECT", {
+            "accept-version": "1.2",
+            host: window.location.host,
+            Authorization: `Bearer ${auth.token}`
+          })
+        );
+      };
+
+      ws.onmessage = (event) => {
+        const chunks = String(event.data).split("\0").filter(Boolean);
+
+        for (const chunk of chunks) {
+          const message = parseStompMessage(chunk);
+          if (!message) {
+            continue;
+          }
+
+          if (message.command === "CONNECTED") {
+            reconnectAttemptsRef.current = 0;
+            setWsState("connected");
+            ws.send(
+              toStompFrame("SUBSCRIBE", {
+                id: "events-sub-0",
+                destination: "/user/queue/events",
+                ack: "auto"
+              })
+            );
+            continue;
+          }
+
+          if (message.command !== "MESSAGE" || !message.body) {
+            continue;
+          }
+
+          let envelope: SocketEvent | null = null;
+          try {
+            envelope = JSON.parse(message.body) as SocketEvent;
+          } catch {
+            envelope = null;
+          }
+
+          if (!envelope) {
+            continue;
+          }
+
+          if (envelope.type === "TASK_STATUS_UPDATE") {
+            const payload = envelope.payload as TaskSocketPayload;
+            if (!payload?.taskId || !payload.taskStatus) {
+              continue;
+            }
+
+            setTasks((prev) => {
+              const idx = prev.findIndex((t) => t.id === payload.taskId);
+              const nextTask: TaskInfo = {
+                id: payload.taskId,
+                title: payload.taskTitle || `Task #${payload.taskId}`,
+                status: payload.taskStatus,
+                errorMessage: payload.message ?? null
+              };
+
+              if (idx < 0) {
+                return [nextTask, ...prev].slice(0, 10);
+              }
+
+              const next = [...prev];
+              next[idx] = { ...next[idx], ...nextTask };
+              return next;
+            });
+
+            if (currentTaskRef.current?.id === payload.taskId) {
+              setTaskStatus(payload.taskStatus, payload.message ?? null);
+              if (payload.taskStatus === "COMPLETED") {
+                void selectTaskRef.current({
+                  id: payload.taskId,
+                  title: payload.taskTitle || currentTaskRef.current.title,
+                  status: "COMPLETED"
+                });
+              }
+            }
+          }
+
+          if (envelope.type === "NEW_NOTIFICATION") {
+            const payload = envelope.payload as NotificationSocketPayload;
+            const incoming = payload?.notification;
+            if (!incoming) {
+              continue;
+            }
+
+            const normalized = mapNotificationDto({
+              id: incoming.id,
+              type: incoming.type,
+              content: incoming.content,
+              senderId: null,
+              senderName: incoming.senderName ?? null,
+              referenceId: incoming.referenceId ?? null,
+              isRead: incoming.isRead,
+              createdAt: incoming.createdAt
+            });
+
+            setNotifications((prev) => {
+              const rest = prev.filter((n) => n.id !== normalized.id);
+              return [normalized, ...rest].slice(0, 15);
+            });
+          }
+        }
+      };
+
+      ws.onerror = () => {
+        setError("Realtime connection issue. Trying to reconnect...");
+      };
+
+      ws.onclose = () => {
+        if (manualCloseRef.current) {
+          setWsState("offline");
+          return;
+        }
+        scheduleReconnect();
+      };
+    };
+
+    connectWs();
+
+    return () => {
+      manualCloseRef.current = true;
+      if (reconnectTimerRef.current !== null) {
+        window.clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      socketRef.current?.close();
+      socketRef.current = null;
+      setWsState("offline");
+    };
+  }, [auth.isAuthenticated, auth.token, setError, setTaskStatus]);
+
+  const wsBadge = useMemo(() => {
+    if (wsState === "connected") {
+      return {
+        icon: Wifi,
+        label: "Realtime connected",
+        className: "text-emerald-200 border-emerald-400/40 bg-emerald-500/10"
+      };
+    }
+    if (wsState === "reconnecting") {
+      return {
+        icon: LoaderCircle,
+        label: "Reconnecting",
+        className: "text-amber-200 border-amber-400/40 bg-amber-500/10"
+      };
+    }
+    return {
+      icon: WifiOff,
+      label: "Realtime offline",
+      className: "text-rose-200 border-rose-400/40 bg-rose-500/10"
+    };
+  }, [wsState]);
+
   const activeTaskId = currentTask?.id ?? null;
+
+  async function handleTaskSelect(task: TaskInfo) {
+    await selectTask(task);
+  }
 
   async function handleMarkAsRead(notification: NotificationInfo) {
     if (!auth.token || notification.isRead) {
@@ -154,28 +388,39 @@ export function AppShell({ children }: AppShellProps) {
     }
   }
 
+  const WsIcon = wsBadge.icon;
+
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-30 border-b border-border/70 bg-slate-950/70 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-border/70 bg-card/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between px-4 py-3 md:px-6">
           <div>
-            <h1 className="text-base font-semibold tracking-wide text-cyan-200">Trajecta Control Panel</h1>
+            <h1 className="text-base font-semibold tracking-wide text-foreground">Trajecta Control Panel</h1>
             <p className="text-xs text-muted-foreground">Telemetry analysis workspace</p>
+            <div className={`mt-1 inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] ${wsBadge.className}`}>
+              <WsIcon className={`h-3 w-3 ${wsState === "reconnecting" ? "animate-spin" : ""}`} />
+              {wsBadge.label}
+            </div>
           </div>
 
-          <div className="relative">
+          <div className="relative flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setOpenNotifications((v) => !v)}>
               <Bell className="h-4 w-4" />
               Notifications
               {unreadCount > 0 ? (
-                <span className="rounded-full bg-cyan-500 px-1.5 py-0.5 text-[10px] font-bold text-slate-950">
+                <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-slate-950">
                   {unreadCount}
                 </span>
               ) : null}
             </Button>
 
+            <Button variant="ghost" size="sm" onClick={logout}>
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
+
             {openNotifications ? (
-              <div className="absolute right-0 mt-2 w-[360px] rounded-lg border border-border bg-card/95 p-3 shadow-2xl">
+              <div className="surface-panel absolute right-0 top-9 mt-2 w-[360px] rounded-lg p-3 shadow-2xl animate-rise">
                 <div className="mb-3 flex items-center justify-between">
                   <p className="text-sm font-semibold">Notifications</p>
                   <Button variant="ghost" size="sm" onClick={() => void handleMarkAllAsRead()}>
@@ -191,10 +436,10 @@ export function AppShell({ children }: AppShellProps) {
                     notifications.map((notification) => (
                       <button
                         key={notification.id}
-                        className={`w-full rounded-md border p-2 text-left text-xs ${
+                        className={`w-full rounded-md border p-2 text-left text-xs transition ${
                           notification.isRead
                             ? "border-border/50 bg-background/40 text-muted-foreground"
-                            : "border-cyan-500/40 bg-cyan-500/10 text-foreground"
+                            : "border-accent/40 bg-accent/10 text-foreground"
                         }`}
                         onClick={() => void handleMarkAsRead(notification)}
                       >
@@ -213,15 +458,14 @@ export function AppShell({ children }: AppShellProps) {
       </header>
 
       <div className="mx-auto flex max-w-[1600px] flex-col md:flex-row">
-        <Sidebar tasks={tasks} activeTaskId={activeTaskId} loadingTasks={loadingPanel} />
+        <Sidebar tasks={tasks} activeTaskId={activeTaskId} loadingTasks={loadingPanel} onTaskSelect={handleTaskSelect} />
         <main className="min-h-[calc(100vh-120px)] flex-1 p-4 md:p-6">{children}</main>
       </div>
 
-      <footer className="border-t border-border/70 bg-slate-950/60 px-4 py-2 text-center text-xs text-muted-foreground md:px-6">
+      <footer className="border-t border-border/70 bg-card/70 px-4 py-2 text-center text-xs text-muted-foreground md:px-6">
         Trajecta · Real-time flight analytics · {new Date().getFullYear()}
       </footer>
     </div>
   );
 }
-
 

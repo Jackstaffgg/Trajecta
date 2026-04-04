@@ -52,7 +52,7 @@ export function ParamsTableView() {
                   className="absolute left-0 top-0 grid w-full grid-cols-[2fr_1fr_2fr] gap-2 border-b border-border/50 px-3 py-2 text-sm"
                   style={{ transform: `translateY(${item.start}px)` }}
                 >
-                  <span className="font-mono text-cyan-200">{row.name}</span>
+                  <span className="font-mono text-accent">{row.name}</span>
                   <span>{String(row.value)}</span>
                   <span className="text-muted-foreground">ArduPilot standard description placeholder</span>
                 </div>

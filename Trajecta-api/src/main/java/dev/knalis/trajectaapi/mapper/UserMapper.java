@@ -1,5 +1,6 @@
 package dev.knalis.trajectaapi.mapper;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.knalis.trajectaapi.dto.user.UserResponse;
 import dev.knalis.trajectaapi.dto.user.UserUpdateRequest;
 import dev.knalis.trajectaapi.model.User;
@@ -7,21 +8,50 @@ import org.mapstruct.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Mapper(componentModel = "spring")
 public abstract class UserMapper {
     
     @Autowired
     protected PasswordEncoder passwordEncoder;
+
+    @Autowired
+    protected ObjectMapper objectMapper;
     
     @Mapping(target = "password", qualifiedByName = "encodePassword")
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "authorities", ignore = true)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     public abstract void updateUserFromDto(UserUpdateRequest request, @MappingTarget User user);
     
     public abstract UserResponse toDto(User user);
-    
-    public abstract List<UserResponse> toDtoList(List<User> users);
+
+    public List<UserResponse> toDtoList(List<?> users) {
+        if (users == null) {
+            return null;
+        }
+        if (users.isEmpty()) {
+            return List.of();
+        }
+
+        List<UserResponse> result = new ArrayList<>(users.size());
+        for (Object entry : users) {
+            User user;
+            if (entry instanceof User casted) {
+                user = casted;
+            } else if (entry instanceof Map<?, ?>) {
+                user = objectMapper.convertValue(entry, User.class);
+            } else {
+                throw new IllegalArgumentException("Unsupported user list entry type: " + entry.getClass());
+            }
+            result.add(toDto(user));
+        }
+        return result;
+    }
     
     @Named("encodePassword")
     protected String encodePassword(String rawPassword) {
@@ -31,5 +61,3 @@ public abstract class UserMapper {
         return passwordEncoder.encode(rawPassword);
     }
 }
-
-

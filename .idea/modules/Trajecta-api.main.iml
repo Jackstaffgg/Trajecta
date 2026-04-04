@@ -10,7 +10,7 @@
       </configuration>
     </facet>
   </component>
-  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_21">
+  <component name="NewModuleRootManager">
     <output url="file://$MODULE_DIR$/../../Trajecta-api/build/classes/java/main" />
     <exclude-output />
     <content url="file://$MODULE_DIR$/../../Trajecta-api/build/generated/sources/annotationProcessor/java/main">
@@ -20,7 +20,7 @@
       <sourceFolder url="file://$MODULE_DIR$/../../Trajecta-api/src/main/java" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../../Trajecta-api/src/main/resources" type="java-resource" />
     </content>
-    <orderEntry type="jdk" jdkName="21" jdkType="JavaSDK" />
+    <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" scope="PROVIDED" name="Gradle: org.projectlombok:lombok:1.18.44" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework.boot:spring-boot-starter-web:4.0.5" level="project" />

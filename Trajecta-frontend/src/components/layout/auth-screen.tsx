@@ -43,9 +43,9 @@ export function AuthScreen() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-md border-cyan-500/20">
+      <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-xl font-bold text-cyan-200">
+          <CardTitle className="text-xl font-bold text-foreground">
             {isRegister ? "Create account" : "Flight Analyst Login"}
           </CardTitle>
           <p className="text-sm text-muted-foreground">

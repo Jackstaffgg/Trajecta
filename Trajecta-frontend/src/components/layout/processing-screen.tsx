@@ -1,17 +1,47 @@
-import { LoaderCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, LoaderCircle } from "lucide-react";
 import { useFlightStore } from "@/store/flight-store";
+import type { TaskStatus } from "@/types/flight";
+
+function statusProgress(status: TaskStatus): number {
+  if (status === "PENDING") return 20;
+  if (status === "PROCESSING") return 70;
+  if (status === "COMPLETED") return 100;
+  if (status === "FAILED" || status === "CANCELLED") return 100;
+  return 10;
+}
 
 export function ProcessingScreen() {
   const task = useFlightStore((s) => s.currentTask);
 
+  const status = task?.status ?? "PENDING";
+  const isDone = status === "COMPLETED";
+  const isError = status === "FAILED" || status === "CANCELLED";
+
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
-      <div className="rounded-xl border border-cyan-500/20 bg-card/90 px-8 py-6 text-center">
-        <LoaderCircle className="mx-auto mb-3 h-8 w-8 animate-spin text-cyan-300" />
-        <p className="text-sm font-medium">Processing flight log...</p>
+      <div className="w-full max-w-lg rounded-xl border border-border/80 bg-card/95 px-8 py-6 text-center shadow-glow animate-rise">
+        {isDone ? (
+          <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-emerald-300" />
+        ) : isError ? (
+          <AlertTriangle className="mx-auto mb-3 h-8 w-8 text-rose-300" />
+        ) : (
+          <LoaderCircle className="mx-auto mb-3 h-8 w-8 animate-spin text-accent" />
+        )}
+
+        <p className="text-sm font-medium">
+          {isDone ? "Task is ready" : isError ? "Task finished with error" : "Processing flight log..."}
+        </p>
         <p className="mt-1 text-xs text-muted-foreground">Java/Python pipeline is preparing telemetry JSON.</p>
+
+        <div className="mt-4 progress-track">
+          <div className={`progress-bar ${isError ? "progress-bar-danger" : ""}`} style={{ width: `${statusProgress(status)}%` }} />
+        </div>
+
         {task ? (
-          <p className="mt-2 text-xs text-cyan-200">Task #{task.id}: {task.status}</p>
+          <p className="mt-3 text-xs text-foreground">
+            Task #{task.id}: {task.status}
+            {task.errorMessage ? ` - ${task.errorMessage}` : ""}
+          </p>
         ) : null}
       </div>
     </div>

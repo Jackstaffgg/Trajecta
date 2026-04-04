@@ -1,4 +1,10 @@
-import type { AuthUser, NotificationInfo, TaskInfo, TaskStatus } from "@/types/flight";
+import type {
+  AuthUser,
+  NotificationInfo,
+  TaskInfo,
+  TaskStatus,
+  UserProfileUpdateInput
+} from "@/types/flight";
 
 type ApiError = {
   status: number;
@@ -24,53 +30,16 @@ type TaskCreateResponse = {
   status: TaskStatus;
 };
 
-function asString(value: unknown, fallback = ""): string {
-  if (typeof value === "string") {
-    return value;
-  }
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  return fallback;
-}
-
-function asNumber(value: unknown, fallback = 0): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
-}
-
-function normalizeTaskInfo(value: unknown): TaskInfo | null {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-  const src = value as Record<string, unknown>;
-  const statusRaw = asString(src.status, "PENDING");
-  const status = ["PENDING", "PROCESSING", "COMPLETED", "FAILED", "CANCELLED"].includes(statusRaw)
-    ? (statusRaw as TaskStatus)
-    : "PENDING";
-
-  return {
-    id: asNumber(src.id, -1),
-    title: asString(src.title, "Untitled task"),
-    status,
-    errorMessage: src.errorMessage == null ? null : asString(src.errorMessage, "Unknown error")
-  };
-}
-
-function normalizeNotification(value: unknown): NotificationInfo | null {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-  const src = value as Record<string, unknown>;
-  return {
-    id: asNumber(src.id, -1),
-    type: asString(src.type, "SYSTEM"),
-    content: asString(src.content, "Notification"),
-    senderName: src.senderName == null ? null : asString(src.senderName, "System"),
-    referenceId: src.referenceId == null ? null : asNumber(src.referenceId, 0),
-    isRead: Boolean(src.isRead),
-    createdAt: asString(src.createdAt, new Date().toISOString())
-  };
-}
+type NotificationDto = {
+  id: number;
+  type: string;
+  content: string;
+  senderId: number | null;
+  senderName: string | null;
+  referenceId: number | null;
+  isRead: boolean;
+  createdAt: string;
+};
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ?? "";
 
@@ -189,12 +158,7 @@ export async function getTask(input: { token: string; taskId: number }): Promise
     headers: withAuth({}, input.token)
   });
 
-  const payload = await readEnvelope<unknown>(res);
-  const normalized = normalizeTaskInfo(payload);
-  if (!normalized) {
-    throw new ApiClientError("Invalid task payload", 500);
-  }
-  return normalized;
+  return readEnvelope<TaskInfo>(res);
 }
 
 export async function getMyTasks(input: {
@@ -209,13 +173,7 @@ export async function getMyTasks(input: {
     headers: withAuth({}, input.token)
   });
 
-  const payload = await readEnvelope<unknown>(res);
-  if (!Array.isArray(payload)) {
-    return [];
-  }
-  return payload
-    .map((item) => normalizeTaskInfo(item))
-    .filter((item): item is TaskInfo => item !== null && item.id >= 0);
+  return readEnvelope<TaskInfo[]>(res);
 }
 
 export async function downloadTrajectory(input: {
@@ -242,12 +200,11 @@ export async function addAiConclusion(input: {
     headers: withAuth({}, input.token)
   });
 
-  const payload = await readEnvelope<unknown>(res);
-  const normalized = normalizeTaskInfo(payload);
-  if (!normalized) {
-    throw new ApiClientError("Invalid task payload", 500);
-  }
-  return normalized;
+  return readEnvelope<TaskInfo>(res);
+}
+
+export function getApiBaseUrl() {
+  return API_BASE_URL;
 }
 
 export async function getNotifications(input: { token: string }): Promise<NotificationInfo[]> {
@@ -255,14 +212,49 @@ export async function getNotifications(input: { token: string }): Promise<Notifi
     headers: withAuth({}, input.token)
   });
 
-  const data = await readEnvelope<unknown>(res);
-  if (!Array.isArray(data)) {
-    return [];
-  }
+  const data = await readEnvelope<NotificationDto[]>(res);
+  return data.map(mapNotificationDto);
+}
 
-  return data
-    .map((item) => normalizeNotification(item))
-    .filter((item): item is NotificationInfo => item !== null && item.id >= 0);
+export function mapNotificationDto(item: NotificationDto): NotificationInfo {
+  return {
+    id: item.id,
+    type: item.type,
+    content: item.content,
+    senderName: item.senderName,
+    referenceId: item.referenceId,
+    isRead: item.isRead,
+    createdAt: item.createdAt
+  };
+}
+
+export async function getCurrentUserProfile(input: { token: string }): Promise<AuthUser> {
+  const res = await fetch(buildUrl("/api/v1/users/me"), {
+    headers: withAuth({}, input.token)
+  });
+
+  return readEnvelope<AuthUser>(res);
+}
+
+export async function updateCurrentUserProfile(input: {
+  token: string;
+  update: UserProfileUpdateInput;
+}): Promise<AuthUser> {
+  const res = await fetch(buildUrl("/api/v1/users"), {
+    method: "PUT",
+    headers: withAuth({ "Content-Type": "application/json" }, input.token),
+    body: JSON.stringify(input.update)
+  });
+
+  return readEnvelope<AuthUser>(res);
+}
+
+export async function getAdminUsers(input: { token: string }): Promise<AuthUser[]> {
+  const res = await fetch(buildUrl("/api/v1/admin/users"), {
+    headers: withAuth({}, input.token)
+  });
+
+  return readEnvelope<AuthUser[]>(res);
 }
 
 export async function markNotificationAsRead(input: { token: string; id: number }): Promise<void> {
@@ -282,4 +274,3 @@ export async function markAllNotificationsAsRead(input: { token: string }): Prom
 
   await ensureSuccess(res);
 }
-

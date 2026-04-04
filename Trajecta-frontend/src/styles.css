@@ -4,15 +4,15 @@
 @tailwind utilities;
 
 :root {
-  --background: 214 20% 8%;
-  --foreground: 210 18% 92%;
-  --card: 216 20% 11%;
-  --card-foreground: 212 18% 90%;
-  --muted: 216 16% 15%;
-  --muted-foreground: 212 12% 63%;
-  --border: 216 20% 20%;
-  --accent: 200 92% 57%;
-  --ring: 160 87% 42%;
+  --background: 221 24% 10%;
+  --foreground: 214 22% 94%;
+  --card: 222 21% 13%;
+  --card-foreground: 214 22% 94%;
+  --muted: 221 16% 19%;
+  --muted-foreground: 215 14% 71%;
+  --border: 220 16% 29%;
+  --accent: 213 82% 61%;
+  --ring: 213 78% 56%;
 }
 
 * {
@@ -23,9 +23,9 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 15% 15%, rgba(19, 96, 161, 0.28), transparent 40%),
-    radial-gradient(circle at 85% 20%, rgba(17, 162, 121, 0.2), transparent 35%),
-    linear-gradient(145deg, #0b1017 0%, #111722 100%);
+    radial-gradient(circle at 14% 10%, rgba(96, 165, 250, 0.12), transparent 36%),
+    radial-gradient(circle at 86% 14%, rgba(129, 140, 248, 0.08), transparent 36%),
+    linear-gradient(160deg, #0d1320 0%, #121a29 55%, #152033 100%);
   color: hsl(var(--foreground));
   font-family: Manrope, "Segoe UI", sans-serif;
 }
@@ -36,15 +36,63 @@ body {
 
 .panel-grid {
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
+.surface-panel {
+  background: linear-gradient(180deg, rgba(21, 29, 45, 0.9), rgba(18, 24, 38, 0.9));
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+.surface-divider {
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.nav-item {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 22, 34, 0.62);
+}
+
+.nav-item-active {
+  border-color: rgba(96, 165, 250, 0.52);
+  background: rgba(59, 130, 246, 0.14);
+}
+
 .telemetry-pill {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(9, 18, 32, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+.progress-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: rgba(148, 163, 184, 0.24);
+}
+
+.progress-bar {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(96, 165, 250, 0.78), rgba(59, 130, 246, 0.95));
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.32);
+  transition: width 420ms ease;
+}
+
+.progress-bar-danger {
+  background: linear-gradient(90deg, rgba(251, 113, 133, 0.8), rgba(244, 63, 94, 0.95));
+  box-shadow: 0 0 14px rgba(244, 63, 94, 0.35);
+}
+
+.error-banner {
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  background: rgba(127, 29, 29, 0.25);
+  border-radius: 8px;
+  padding: 8px 10px;
+  animation: shake 380ms ease;
 }
 
 @keyframes rise {
@@ -58,6 +106,32 @@ body {
   }
 }
 
+@keyframes shimmer {
+  0% {
+    transform: translateX(-130%);
+  }
+  100% {
+    transform: translateX(360%);
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
+}
+
 .animate-rise {
   animation: rise 300ms ease-out both;
+}
+
+.animate-shimmer {
+  animation: shimmer 1.4s linear infinite;
 }

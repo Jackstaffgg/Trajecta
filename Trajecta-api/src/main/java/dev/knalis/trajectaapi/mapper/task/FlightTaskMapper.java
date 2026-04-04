@@ -17,7 +17,6 @@ public interface FlightTaskMapper {
     @Mapping(target = "errorMessage", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "finishedAt", ignore = true)
+    @Mapping(target = "hasAiConclusion", ignore = true)
     FlightTask toEntity(String title, Long userId);
 }
-
-

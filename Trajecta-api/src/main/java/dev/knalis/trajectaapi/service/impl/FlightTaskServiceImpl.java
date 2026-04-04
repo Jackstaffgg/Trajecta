@@ -114,7 +114,6 @@ public class FlightTaskServiceImpl implements FlightTaskService {
     }
     
     @Override
-    @Cacheable(cacheNames = "tasksByUserPage", key = "#auth.name + ':' + #offset + ':' + #limit")
     public List<FlightTask> getMyTasks(Authentication auth, int offset, int limit) {
         validatePaginationParams(offset, limit);
         
