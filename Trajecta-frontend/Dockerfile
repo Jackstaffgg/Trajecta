@@ -20,6 +20,10 @@ ENV VITE_WS_PATH=${VITE_WS_PATH}
 
 RUN npm run build
 
+# Ensure Cesium runtime assets are shipped with production bundle.
+RUN mkdir -p /app/dist/cesium \
+	&& cp -R /app/node_modules/cesium/Build/Cesium/* /app/dist/cesium/
+
 FROM nginx:1.27-alpine
 
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
