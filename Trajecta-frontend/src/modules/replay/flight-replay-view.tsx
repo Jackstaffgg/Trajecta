@@ -11,22 +11,27 @@ import {
   Matrix4,
   Math as CesiumMath,
   Quaternion,
+  Transforms,
+  createWorldTerrainAsync,
   Viewer as CesiumViewer
 } from "cesium";
 import { Pause, Play, Camera, Move3D, Rewind, FastForward, RotateCcw } from "lucide-react";
 import { useFlightStore } from "@/store/flight-store";
-import { interpolateFrame, positionFromFrame } from "@/modules/replay/replay-utils";
+import { buildHybridTrajectory, buildRelativeTrajectory, interpolateFrame, speedToColor } from "@/modules/replay/replay-utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import type { FlightFrame } from "@/types/flight";
 
 const CESIUM_TOKEN = import.meta.env.VITE_CESIUM_ION_TOKEN as string | undefined;
 if (CESIUM_TOKEN) {
   Ion.defaultAccessToken = CESIUM_TOKEN;
 }
 
-const TRACE_ENTITY_ID = "trace-main";
+const TRACE_ENTITY_PREFIX = "trace-segment-";
 
 type EventTone = "critical" | "warning" | "info";
+type PositionMode = "absolute" | "relative" | "hybrid";
+type VisualizationMode = "geo" | "cartesian";
 
 function eventToneFromType(type: string): EventTone {
   const normalized = type.toLowerCase();
@@ -62,6 +67,26 @@ function eventToneColor(tone: EventTone): Color {
   return Color.fromCssColorString("#38bdf8");
 }
 
+function haversineMeters(a: FlightFrame, b: FlightFrame): number {
+  const toRad = (v: number) => (v * Math.PI) / 180;
+  const r = 6371000;
+  const dLat = toRad(b.lat - a.lat);
+  const dLon = toRad(b.lon - a.lon);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return 2 * r * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+function median(values: number[]): number {
+  if (!values.length) {
+    return 0;
+  }
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
 export function FlightReplayView() {
   const data = useFlightStore((s) => s.data);
   const replay = useFlightStore((s) => s.replay);
@@ -71,20 +96,27 @@ export function FlightReplayView() {
   const setSpeed = useFlightStore((s) => s.setReplaySpeed);
   const viewerRef = useRef<CesiumViewer | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const interpolatedRef = useRef(interpolateFrame(data?.frames ?? [], replay.timeSec));
+  const interpolatedRef = useRef(interpolateFrame([], replay.timeSec));
   const isPlayingRef = useRef(replay.isPlaying);
   const timeRef = useRef(replay.timeSec);
   const maxTimeRef = useRef(0);
   const hasInitialFramingRef = useRef(false);
   const eventEntityIdsRef = useRef<string[]>([]);
+  const traceEntityIdsRef = useRef<string[]>([]);
   const droneEntityRef = useRef<ReturnType<CesiumViewer["entities"]["add"]> | null>(null);
   const terrainBiasRef = useRef<number | null>(null);
+  const cartesianGuideIdsRef = useRef<string[]>([]);
+  const cartesianFrameRef = useRef<{ startLat: number; startLon: number; startAlt: number; cosLat: number } | null>(null);
+  const cartesianTransformRef = useRef<Matrix4 | null>(null);
+  const [terrainRevision, setTerrainRevision] = useState(0);
   const [compactHud, setCompactHud] = useState(false);
   const [chaseStyle, setChaseStyle] = useState<"normal" | "cinematic">("normal");
   const [hoveredEventKey, setHoveredEventKey] = useState<string | null>(null);
   const [importantOnly, setImportantOnly] = useState(false);
+  const [positionMode, setPositionMode] = useState<PositionMode>("absolute");
+  const [visualizationMode, setVisualizationMode] = useState<VisualizationMode>("geo");
 
-  const frames = useMemo(
+  const allFrames = useMemo(
     () =>
       (data?.frames ?? [])
         .filter(
@@ -98,7 +130,47 @@ export function FlightReplayView() {
         .sort((a, b) => a.t - b.t),
     [data?.frames]
   );
+
+  const { frames, startOffset } = useMemo(() => {
+    if (!allFrames.length) {
+      return { frames: [] as FlightFrame[], startOffset: 0 };
+    }
+
+    const origin = allFrames[0];
+    const baseAlt = Number.isFinite(origin.alt) ? origin.alt : 0;
+    let activeIndex = 0;
+
+    for (let i = 1; i < allFrames.length; i += 1) {
+      const frame = allFrames[i];
+      const prev = allFrames[i - 1];
+      const dt = Math.max(1e-3, frame.t - prev.t);
+      const distFromStart = haversineMeters(origin, frame);
+      const horizontalSpeed = Number.isFinite(frame.speed) ? Math.abs(frame.speed ?? 0) : haversineMeters(prev, frame) / dt;
+      const absoluteSpeed = Math.hypot(horizontalSpeed, Math.abs(frame.climbRate ?? 0));
+      const altitudeGain = Math.abs((frame.alt ?? baseAlt) - baseAlt);
+
+      if (absoluteSpeed > 1.2 || distFromStart > 6 || altitudeGain > 2) {
+        activeIndex = Math.max(0, i - 3);
+        break;
+      }
+    }
+
+    const offset = allFrames[activeIndex]?.t ?? 0;
+    const trimmed = allFrames.slice(activeIndex).map((frame) => ({
+      ...frame,
+      t: Math.max(0, frame.t - offset)
+    }));
+
+    return { frames: trimmed, startOffset: offset };
+  }, [allFrames]);
+
   const maxTime = frames.length ? frames[frames.length - 1].t : 0;
+  const relativeFrames = useMemo(() => buildRelativeTrajectory(frames), [frames]);
+  const hybridFrames = useMemo(() => buildHybridTrajectory(frames), [frames]);
+  const playbackFrames = useMemo(
+    () => (positionMode === "relative" ? relativeFrames : positionMode === "hybrid" ? hybridFrames : frames),
+    [frames, hybridFrames, positionMode, relativeFrames]
+  );
   const speedPresets = [0.25, 0.5, 1, 2, 4];
 
   const progressPct = maxTime > 0 ? (replay.timeSec / maxTime) * 100 : 0;
@@ -107,12 +179,14 @@ export function FlightReplayView() {
       (data?.events ?? [])
         .map((event, index) => ({
           key: `${String(event.id ?? event.type ?? "event")}-${index}`,
-          t: Number.isFinite(event.t) ? Math.max(0, Math.min(maxTime, event.t)) : 0,
+          t: Number.isFinite(event.t)
+            ? Math.max(0, Math.min(maxTime, (event.t as number) - startOffset))
+            : 0,
           label: typeof event.type === "string" ? event.type : "EVENT",
           tone: eventToneFromType(typeof event.type === "string" ? event.type : "EVENT")
         }))
-        .filter((event) => maxTime > 0 && Number.isFinite(event.t)),
-    [data?.events, maxTime]
+        .filter((event) => maxTime > 0 && Number.isFinite(event.t) && event.t <= maxTime),
+    [data?.events, maxTime, startOffset]
   );
 
   const visibleEventMarkers = useMemo(
@@ -151,38 +225,79 @@ export function FlightReplayView() {
     }
 
     const viewer = viewerRef.current;
-    const first = frames[0];
-    if (!viewer || !first) {
+    if (!viewer || !frames.length) {
       return 0;
     }
 
-    const terrain = viewer.scene.globe.getHeight(Cartographic.fromDegrees(first.lon, first.lat));
-    if (terrain === undefined || !Number.isFinite(terrain)) {
+    const sample = frames.slice(0, Math.min(40, frames.length));
+    const deltas: number[] = [];
+    for (const frame of sample) {
+      const terrain = viewer.scene.globe.getHeight(Cartographic.fromDegrees(frame.lon, frame.lat));
+      if (terrain !== undefined && Number.isFinite(terrain)) {
+        deltas.push(terrain - (frame.alt ?? 0));
+      }
+    }
+    if (!deltas.length) {
+      terrainBiasRef.current = 0;
       return 0;
     }
 
-    const firstAlt = Number.isFinite(first.alt) ? first.alt : 0;
-    const delta = terrain - firstAlt;
-    terrainBiasRef.current = delta > 5 ? delta + 5 : 0;
+    const delta = median(deltas);
+    terrainBiasRef.current = delta > 3 ? delta + 1.5 : 0;
     return terrainBiasRef.current;
   }, [frames]);
 
-  const positionFromFrameAligned = useCallback((frame: { lat: number; lon: number; alt: number }) => {
-    const lat = Number.isFinite(frame.lat) ? frame.lat : 0;
-    const lon = Number.isFinite(frame.lon) ? frame.lon : 0;
+  const alignedAltitudeFromFrame = useCallback((frame: { lat: number; lon: number; alt: number }) => {
+    if (visualizationMode === "cartesian") {
+      return Number.isFinite(frame.alt) ? frame.alt : 0;
+    }
+
     const srcAlt = Number.isFinite(frame.alt) ? frame.alt : 0;
     let alt = srcAlt + getTerrainBias();
 
     const viewer = viewerRef.current;
     if (viewer) {
-      const terrain = viewer.scene.globe.getHeight(Cartographic.fromDegrees(lon, lat));
+      const terrain = viewer.scene.globe.getHeight(Cartographic.fromDegrees(frame.lon, frame.lat));
       if (terrain !== undefined && Number.isFinite(terrain)) {
-        alt = Math.max(alt, terrain + 2);
+        alt = Math.max(alt, terrain + 0.5);
       }
     }
 
+    return alt;
+  }, [getTerrainBias, visualizationMode]);
+
+  const localCartesianOffset = useCallback((frame: { lat: number; lon: number; alt: number }) => {
+    const local = cartesianFrameRef.current;
+    if (!local) {
+      return new Cartesian3(0, 0, 0);
+    }
+
+    const metersPerDegLat = 111320;
+    const metersPerDegLon = 111320 * local.cosLat;
+    const east = ((frame.lon ?? local.startLon) - local.startLon) * metersPerDegLon;
+    const north = ((frame.lat ?? local.startLat) - local.startLat) * metersPerDegLat;
+    const up = (Number.isFinite(frame.alt) ? frame.alt : local.startAlt) - local.startAlt;
+    return new Cartesian3(Number.isFinite(east) ? east : 0, Number.isFinite(north) ? north : 0, Number.isFinite(up) ? up : 0);
+  }, []);
+
+  const localToWorld = useCallback((offset: Cartesian3) => {
+    const transform = cartesianTransformRef.current;
+    if (!transform) {
+      return offset;
+    }
+    return Matrix4.multiplyByPoint(transform, offset, new Cartesian3());
+  }, []);
+
+  const positionFromFrameAligned = useCallback((frame: { lat: number; lon: number; alt: number }) => {
+    if (visualizationMode === "cartesian") {
+      return localToWorld(localCartesianOffset(frame));
+    }
+
+    const lat = Number.isFinite(frame.lat) ? frame.lat : 0;
+    const lon = Number.isFinite(frame.lon) ? frame.lon : 0;
+    const alt = alignedAltitudeFromFrame({ lat, lon, alt: frame.alt });
     return Cartesian3.fromDegrees(lon, lat, alt);
-  }, [getTerrainBias]);
+  }, [alignedAltitudeFromFrame, localCartesianOffset, localToWorld, visualizationMode]);
 
   function formatReplayTime(sec: number) {
     const s = Math.max(0, Math.floor(sec));
@@ -195,6 +310,13 @@ export function FlightReplayView() {
     const next = Math.max(0, Math.min(maxTime, replay.timeSec + deltaSec));
     setTime(next);
   }
+
+  useEffect(() => {
+    if (replay.timeSec > maxTime && maxTime > 0) {
+      setTime(maxTime);
+      setPlaying(false);
+    }
+  }, [maxTime, replay.timeSec, setPlaying, setTime]);
 
   useEffect(() => {
     if (!replay.isPlaying || maxTime <= 0) {
@@ -273,7 +395,23 @@ export function FlightReplayView() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [setCamera, setPlaying, setTime]);
 
-  const interpolated = useMemo(() => interpolateFrame(frames, replay.timeSec), [frames, replay.timeSec]);
+  const interpolated = useMemo(
+    () => interpolateFrame(playbackFrames, replay.timeSec),
+    [playbackFrames, replay.timeSec]
+  );
+  const terrainAtDrone = (() => {
+    const viewer = viewerRef.current;
+    if (!viewer) {
+      return undefined;
+    }
+    const terrain = viewer.scene.globe.getHeight(Cartographic.fromDegrees(interpolated.lon, interpolated.lat));
+    return terrain !== undefined && Number.isFinite(terrain) ? terrain : undefined;
+  })();
+  const alignedAltitude = alignedAltitudeFromFrame({ lat: interpolated.lat, lon: interpolated.lon, alt: interpolated.alt });
+  const altitudeAgl = terrainAtDrone !== undefined ? Math.max(0, alignedAltitude - terrainAtDrone) : Math.max(0, alignedAltitude);
+  const horizontalSpeed = Math.max(0, interpolated.speed ?? 0);
+  const verticalSpeed = interpolated.climbRate ?? 0;
+  const absoluteSpeed = Math.hypot(horizontalSpeed, verticalSpeed);
   const batteryPct = interpolated.battery ?? 0;
   const batteryTone = batteryPct <= 20 ? "text-rose-300" : batteryPct <= 40 ? "text-amber-200" : "text-emerald-200";
 
@@ -284,7 +422,8 @@ export function FlightReplayView() {
   const replayEvents = useMemo(
     () =>
       (data?.events ?? []).map((event, index) => {
-        const near = frames.find((f) => Math.abs(f.t - event.t) < 0.2) ?? frames[0];
+        const localT = Number.isFinite(event.t) ? Math.max(0, (event.t as number) - startOffset) : 0;
+        const near = playbackFrames.find((f) => Math.abs(f.t - localT) < 0.2) ?? playbackFrames[0];
         const label = typeof event.type === "string" ? event.type : "EVENT";
         return {
           key: `${String(event.id ?? event.type ?? "event")}-${index}`,
@@ -293,7 +432,7 @@ export function FlightReplayView() {
           tone: eventToneFromType(label)
         };
       }),
-    [data?.events, frames]
+    [data?.events, playbackFrames, startOffset]
   );
 
   const visibleReplayEvents = useMemo(
@@ -301,21 +440,77 @@ export function FlightReplayView() {
     [replayEvents, importantOnly]
   );
 
-  const tracePositions = useMemo(() => {
-    if (frames.length <= 2) {
-      return frames.map((frame) => positionFromFrame(frame));
+  const traceSegments = useMemo(() => {
+    if (playbackFrames.length < 2) {
+      return [] as Array<{ id: string; color: Color; positions: Cartesian3[] }>;
     }
 
-    const targetSamples = 1600;
-    const stride = Math.max(1, Math.ceil(frames.length / targetSamples));
-    const sampled = frames
-      .filter((_, idx) => idx % stride === 0)
-      .map((frame) => positionFromFrame(frame));
+    const maxSamples = 1800;
+    const stride = Math.max(1, Math.ceil(playbackFrames.length / maxSamples));
+    const sampled = playbackFrames.filter((_, idx) => idx % stride === 0);
+    if (sampled[sampled.length - 1] !== playbackFrames[playbackFrames.length - 1]) {
+      sampled.push(playbackFrames[playbackFrames.length - 1]);
+    }
 
-    const last = frames[frames.length - 1];
-    sampled.push(positionFromFrame(last));
-    return sampled;
-  }, [frames]);
+    const optimized: FlightFrame[] = [];
+    for (const frame of sampled) {
+      if (!optimized.length) {
+        optimized.push(frame);
+        continue;
+      }
+      const prev = optimized[optimized.length - 1];
+      if (haversineMeters(prev, frame) >= 1.2 || Math.abs((frame.alt ?? 0) - (prev.alt ?? 0)) >= 0.8) {
+        optimized.push(frame);
+      }
+    }
+    if (optimized[optimized.length - 1] !== playbackFrames[playbackFrames.length - 1]) {
+      optimized.push(playbackFrames[playbackFrames.length - 1]);
+    }
+
+    const maxAbsSpeed = Math.max(
+      1,
+      ...optimized.map((f) => Math.hypot(Math.abs(f.speed ?? 0), Math.abs(f.climbRate ?? 0)))
+    );
+
+    const segments: Array<{ id: string; color: Color; positions: Cartesian3[] }> = [];
+    let activeBucket = -1;
+    let activePositions: Cartesian3[] = [];
+
+    for (let i = 1; i < optimized.length; i += 1) {
+      const current = optimized[i];
+      const prev = optimized[i - 1];
+      const absSpeed = Math.hypot(Math.abs(current.speed ?? 0), Math.abs(current.climbRate ?? 0));
+      const bucket = Math.min(6, Math.floor((absSpeed / maxAbsSpeed) * 7));
+      const p0 = positionFromFrameAligned(prev);
+      const p1 = positionFromFrameAligned(current);
+
+      if (bucket !== activeBucket) {
+        if (activePositions.length >= 2 && activeBucket >= 0) {
+          const bucketSpeed = (activeBucket / 6) * maxAbsSpeed;
+          segments.push({
+            id: `${TRACE_ENTITY_PREFIX}${segments.length}`,
+            color: speedToColor(bucketSpeed, maxAbsSpeed),
+            positions: activePositions
+          });
+        }
+        activeBucket = bucket;
+        activePositions = [p0, p1];
+      } else {
+        activePositions.push(p1);
+      }
+    }
+
+    if (activePositions.length >= 2 && activeBucket >= 0) {
+      const bucketSpeed = (activeBucket / 6) * maxAbsSpeed;
+      segments.push({
+        id: `${TRACE_ENTITY_PREFIX}${segments.length}`,
+        color: speedToColor(bucketSpeed, maxAbsSpeed),
+        positions: activePositions
+      });
+    }
+
+    return segments;
+  }, [playbackFrames, positionFromFrameAligned, terrainRevision]);
 
   useEffect(() => {
     if (!containerRef.current || viewerRef.current) {
@@ -331,6 +526,19 @@ export function FlightReplayView() {
       navigationHelpButton: false,
       sceneModePicker: false
     });
+    viewer.scene.globe.depthTestAgainstTerrain = true;
+
+    void createWorldTerrainAsync()
+      .then((terrainProvider) => {
+        if (!viewer.isDestroyed()) {
+          viewer.scene.terrainProvider = terrainProvider;
+          terrainBiasRef.current = null;
+          setTerrainRevision((v) => v + 1);
+        }
+      })
+      .catch(() => {
+        // Keep default ellipsoid terrain if world terrain cannot be loaded.
+      });
 
     viewerRef.current = viewer;
     const droneEntity = viewer.entities.add({
@@ -364,23 +572,98 @@ export function FlightReplayView() {
   }, [positionFromFrameAligned]);
 
   useEffect(() => {
+    const base = playbackFrames[0];
+    if (!base) {
+      cartesianFrameRef.current = null;
+      cartesianTransformRef.current = null;
+      return;
+    }
+
+    const startLat = Number.isFinite(base.lat) ? base.lat : 0;
+    const startLon = Number.isFinite(base.lon) ? base.lon : 0;
+    const startAlt = Number.isFinite(base.alt) ? base.alt : 0;
+    const cosLat = Math.max(1e-6, Math.cos((startLat * Math.PI) / 180));
+
+    cartesianFrameRef.current = { startLat, startLon, startAlt, cosLat };
+    const origin = Cartesian3.fromDegrees(startLon, startLat, startAlt);
+    cartesianTransformRef.current = Transforms.eastNorthUpToFixedFrame(origin);
+  }, [playbackFrames]);
+
+  useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) {
       return;
     }
 
-    viewer.entities.removeById(TRACE_ENTITY_ID);
-    if (tracePositions.length >= 2) {
+    for (const id of cartesianGuideIdsRef.current) {
+      viewer.entities.removeById(id);
+    }
+    cartesianGuideIdsRef.current = [];
+
+    if (visualizationMode !== "cartesian") {
+      viewer.scene.globe.show = true;
+      return;
+    }
+
+    viewer.scene.globe.show = false;
+
+    const addGuide = (id: string, positions: Cartesian3[], color: Color, width = 1) => {
+      cartesianGuideIdsRef.current.push(id);
       viewer.entities.add({
-        id: TRACE_ENTITY_ID,
+        id,
         polyline: {
-          positions: tracePositions,
+          positions,
+          width,
+          material: color
+        }
+      });
+    };
+
+    const size = 1200;
+    const step = 100;
+    for (let x = -size; x <= size; x += step) {
+      addGuide(
+        `cart-grid-x-${x}`,
+        [localToWorld(new Cartesian3(x, -size, 0)), localToWorld(new Cartesian3(x, size, 0))],
+        Color.fromCssColorString("#6b7280").withAlpha(x % 500 === 0 ? 0.5 : 0.2)
+      );
+    }
+    for (let y = -size; y <= size; y += step) {
+      addGuide(
+        `cart-grid-y-${y}`,
+        [localToWorld(new Cartesian3(-size, y, 0)), localToWorld(new Cartesian3(size, y, 0))],
+        Color.fromCssColorString("#6b7280").withAlpha(y % 500 === 0 ? 0.5 : 0.2)
+      );
+    }
+
+    addGuide("cart-axis-x", [localToWorld(new Cartesian3(0, 0, 0)), localToWorld(new Cartesian3(600, 0, 0))], Color.RED, 2);
+    addGuide("cart-axis-y", [localToWorld(new Cartesian3(0, 0, 0)), localToWorld(new Cartesian3(0, 600, 0))], Color.GREEN, 2);
+    addGuide("cart-axis-z", [localToWorld(new Cartesian3(0, 0, 0)), localToWorld(new Cartesian3(0, 0, 400))], Color.CYAN, 2);
+  }, [localToWorld, visualizationMode]);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) {
+      return;
+    }
+
+    for (const id of traceEntityIdsRef.current) {
+      viewer.entities.removeById(id);
+    }
+    traceEntityIdsRef.current = [];
+
+    for (const segment of traceSegments) {
+      traceEntityIdsRef.current.push(segment.id);
+      viewer.entities.add({
+        id: segment.id,
+        polyline: {
+          positions: segment.positions,
           width: 3,
-          material: Color.CYAN.withAlpha(0.85)
+          material: segment.color
         }
       });
     }
-  }, [tracePositions]);
+  }, [traceSegments]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -415,19 +698,20 @@ export function FlightReplayView() {
   useEffect(() => {
     hasInitialFramingRef.current = false;
     terrainBiasRef.current = null;
-  }, [frames]);
+    setTerrainRevision((v) => v + 1);
+  }, [playbackFrames, visualizationMode]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
-    if (!viewer || !frames.length || hasInitialFramingRef.current) {
+    if (!viewer || !playbackFrames.length || hasInitialFramingRef.current) {
       return;
     }
 
     hasInitialFramingRef.current = true;
     viewer.camera.flyTo({
-      destination: positionFromFrameAligned(frames[0])
+      destination: positionFromFrameAligned(playbackFrames[0])
     });
-  }, [frames, positionFromFrameAligned]);
+  }, [playbackFrames, positionFromFrameAligned]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -487,7 +771,7 @@ export function FlightReplayView() {
     viewer.camera.flyTo({ destination: positionFromFrameAligned(interpolatedRef.current) });
   }
 
-  if (!frames.length) {
+  if (!playbackFrames.length) {
     return <p className="text-sm text-muted-foreground">No frames found for replay.</p>;
   }
 
@@ -503,8 +787,10 @@ export function FlightReplayView() {
         </div>
 
         <div className="absolute left-3 top-3 flex flex-wrap gap-2">
-          <div className="telemetry-pill rounded-md px-2 py-1 text-xs">Alt: {(interpolated.alt ?? 0).toFixed(1)} m</div>
-          <div className="telemetry-pill rounded-md px-2 py-1 text-xs">Speed: {(interpolated.speed ?? 0).toFixed(1)} m/s</div>
+          <div className="telemetry-pill rounded-md px-2 py-1 text-xs">Alt AGL: {altitudeAgl.toFixed(1)} m</div>
+          <div className="telemetry-pill rounded-md px-2 py-1 text-xs">Alt MSL: {alignedAltitude.toFixed(1)} m</div>
+          <div className="telemetry-pill rounded-md px-2 py-1 text-xs">Speed ABS: {absoluteSpeed.toFixed(1)} m/s</div>
+          <div className="telemetry-pill rounded-md px-2 py-1 text-xs">Speed H/V: {horizontalSpeed.toFixed(1)} / {verticalSpeed.toFixed(1)} m/s</div>
           <div className={`telemetry-pill rounded-md px-2 py-1 text-xs ${batteryTone}`}>Battery: {batteryPct.toFixed(0)}%</div>
           {!compactHud ? (
             <>
@@ -619,9 +905,27 @@ export function FlightReplayView() {
             <Button variant={importantOnly ? "default" : "outline"} size="sm" onClick={() => setImportantOnly((prev) => !prev)}>
               {importantOnly ? "Important Only" : "All Events"}
             </Button>
+            <Button variant={positionMode === "absolute" ? "default" : "outline"} size="sm" onClick={() => setPositionMode("absolute") }>
+              GPS Absolute
+            </Button>
+            <Button variant={positionMode === "relative" ? "default" : "outline"} size="sm" onClick={() => setPositionMode("relative") }>
+              Relative INS
+            </Button>
+            <Button variant={positionMode === "hybrid" ? "default" : "outline"} size="sm" onClick={() => setPositionMode("hybrid") }>
+              Hybrid GPS+INS
+            </Button>
+            <Button variant={visualizationMode === "geo" ? "default" : "outline"} size="sm" onClick={() => setVisualizationMode("geo") }>
+              Geo Globe
+            </Button>
+            <Button variant={visualizationMode === "cartesian" ? "default" : "outline"} size="sm" onClick={() => setVisualizationMode("cartesian") }>
+              Cartesian 3D
+            </Button>
             <span className="text-[11px] text-rose-300">Critical</span>
             <span className="text-[11px] text-amber-200">Warning</span>
             <span className="text-[11px] text-sky-300">Info</span>
+            <span className="text-[11px] text-muted-foreground">Trace color: blue (slow) -> red (fast)</span>
+            <span className="text-[11px] text-muted-foreground">Position mode: {positionMode === "absolute" ? "GPS absolute" : positionMode === "relative" ? "Relative INS from start" : "Hybrid GPS+INS"}</span>
+            <span className="text-[11px] text-muted-foreground">Viz: {visualizationMode === "geo" ? "Geographic globe" : "Cartesian plane (ENU)"}</span>
             <span className="text-[11px] text-muted-foreground">Keys: Space, ←/→, Shift+←/→, 1/2/3, C, R</span>
           </div>
         </section>

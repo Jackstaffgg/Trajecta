@@ -1,3 +1,4 @@
 .env.vps
 .env.vps.*
 !.env.vps.example
+data/
