@@ -69,8 +69,8 @@ public class FlightTaskServiceImpl implements FlightTaskService {
     @Caching(evict = {
             @CacheEvict(cacheNames = "taskRawKey", allEntries = true),
             @CacheEvict(cacheNames = "taskTrajectoryKey", allEntries = true),
-            @CacheEvict(cacheNames = "taskDtoByIdAndUserV2", allEntries = true),
-            @CacheEvict(cacheNames = "taskDtoByUserPageV2", allEntries = true)
+            @CacheEvict(cacheNames = "taskDtoByIdAndUserV3", allEntries = true),
+            @CacheEvict(cacheNames = "taskDtoByUserPageV3", allEntries = true)
     })
     public FlightTask createAndStartAnalysis(String title, MultipartFile file, Long userId) {
         checkRateLimit(userId);
@@ -139,8 +139,8 @@ public class FlightTaskServiceImpl implements FlightTaskService {
     @Caching(evict = {
             @CacheEvict(cacheNames = "taskRawKey", key = "#p0.taskId"),
             @CacheEvict(cacheNames = "taskTrajectoryKey", key = "#p0.taskId"),
-            @CacheEvict(cacheNames = "taskDtoByIdAndUserV2", allEntries = true),
-            @CacheEvict(cacheNames = "taskDtoByUserPageV2", allEntries = true)
+            @CacheEvict(cacheNames = "taskDtoByIdAndUserV3", allEntries = true),
+            @CacheEvict(cacheNames = "taskDtoByUserPageV3", allEntries = true)
     })
     public FlightTask completeTask(AnalysisResult result) {
         FlightTask task = taskRepository.findById(result.getTaskId())
@@ -244,8 +244,8 @@ public class FlightTaskServiceImpl implements FlightTaskService {
     @Override
     @Transactional
     @Caching(evict = {
-            @CacheEvict(cacheNames = "taskDtoByIdAndUserV2", allEntries = true),
-            @CacheEvict(cacheNames = "taskDtoByUserPageV2", allEntries = true)
+            @CacheEvict(cacheNames = "taskDtoByIdAndUserV3", allEntries = true),
+            @CacheEvict(cacheNames = "taskDtoByUserPageV3", allEntries = true)
     })
     public FlightTask addAiConclusion(Long taskId, Authentication auth) {
         return generateAiConclusion(taskId, auth, false);
@@ -254,8 +254,8 @@ public class FlightTaskServiceImpl implements FlightTaskService {
     @Override
     @Transactional
     @Caching(evict = {
-            @CacheEvict(cacheNames = "taskDtoByIdAndUserV2", allEntries = true),
-            @CacheEvict(cacheNames = "taskDtoByUserPageV2", allEntries = true)
+            @CacheEvict(cacheNames = "taskDtoByIdAndUserV3", allEntries = true),
+            @CacheEvict(cacheNames = "taskDtoByUserPageV3", allEntries = true)
     })
     public FlightTask regenerateAiConclusion(Long taskId, Authentication auth) {
         return generateAiConclusion(taskId, auth, true);
@@ -266,8 +266,8 @@ public class FlightTaskServiceImpl implements FlightTaskService {
     @Caching(evict = {
             @CacheEvict(cacheNames = "taskRawKey", allEntries = true),
             @CacheEvict(cacheNames = "taskTrajectoryKey", allEntries = true),
-            @CacheEvict(cacheNames = "taskDtoByIdAndUserV2", allEntries = true),
-            @CacheEvict(cacheNames = "taskDtoByUserPageV2", allEntries = true)
+            @CacheEvict(cacheNames = "taskDtoByIdAndUserV3", allEntries = true),
+            @CacheEvict(cacheNames = "taskDtoByUserPageV3", allEntries = true)
     })
     public TaskBulkDeleteResponse deleteTasks(List<Long> taskIds, Authentication auth) {
         if (taskIds == null || taskIds.isEmpty()) {
@@ -443,5 +443,4 @@ public class FlightTaskServiceImpl implements FlightTaskService {
         }
     }
 }
-
 

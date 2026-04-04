@@ -31,8 +31,8 @@ public class CacheConfig {
         cacheConfigs.put("notificationDtoByUser", defaultConfig.entryTtl(Duration.ofMinutes(5)));
         cacheConfigs.put("taskRawKey", defaultConfig.entryTtl(Duration.ofMinutes(10)));
         cacheConfigs.put("taskTrajectoryKey", defaultConfig.entryTtl(Duration.ofMinutes(10)));
-        cacheConfigs.put("taskDtoByIdAndUserV2", defaultConfig.entryTtl(Duration.ofMinutes(2)));
-        cacheConfigs.put("taskDtoByUserPageV2", defaultConfig.entryTtl(Duration.ofMinutes(1)));
+        cacheConfigs.put("taskDtoByIdAndUserV3", defaultConfig.entryTtl(Duration.ofMinutes(2)));
+        cacheConfigs.put("taskDtoByUserPageV3", defaultConfig.entryTtl(Duration.ofMinutes(1)));
 
         return RedisCacheManager.builder(redisConnectionFactory)
                 .cacheDefaults(defaultConfig)
