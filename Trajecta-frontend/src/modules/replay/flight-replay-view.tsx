@@ -9,6 +9,7 @@ import {
   LabelStyle,
   Matrix4,
   Math as CesiumMath,
+  OpenStreetMapImageryProvider,
   PolylineGlowMaterialProperty,
   Quaternion,
   HeadingPitchRoll,
@@ -18,6 +19,7 @@ import {
 import {
   Viewer,
   Entity,
+  ImageryLayer,
   PolylineGraphics,
   ModelGraphics,
   BillboardGraphics,
@@ -35,8 +37,14 @@ if (CESIUM_TOKEN) {
   Ion.defaultAccessToken = CESIUM_TOKEN;
 }
 
+const defaultImageryProvider = new OpenStreetMapImageryProvider({
+  url: "https://tile.openstreetmap.org/"
+});
+
 export function FlightReplayView() {
   const data = useFlightStore((s) => s.data);
+  const error = useFlightStore((s) => s.error);
+  const setMode = useFlightStore((s) => s.setMode);
   const replay = useFlightStore((s) => s.replay);
   const setTime = useFlightStore((s) => s.setReplayTime);
   const setPlaying = useFlightStore((s) => s.setReplayPlaying);
@@ -44,7 +52,7 @@ export function FlightReplayView() {
   const viewerRef = useRef<CesiumViewer | null>(null);
   const resiumRef = useRef<CesiumComponentRef<CesiumViewer> | null>(null);
 
-  const frames = data?.frames ?? [];
+  const frames = useMemo(() => data?.frames ?? [], [data?.frames]);
   const maxTime = frames.length ? frames[frames.length - 1].t : 0;
   const maxSpeed = data?.metrics.maxSpeed ?? 30;
 
@@ -79,9 +87,10 @@ export function FlightReplayView() {
     for (let i = 1; i < frames.length; i += 1) {
       const a = frames[i - 1];
       const b = frames[i];
+      const avgSpeed = ((a.speed ?? 0) + (b.speed ?? 0)) / 2;
       parts.push({
         positions: [positionFromFrame(a), positionFromFrame(b)],
-        color: speedToColor((a.speed ?? 0 + (b.speed ?? 0)) / 2, maxSpeed)
+        color: speedToColor(avgSpeed, maxSpeed)
       });
     }
     return parts;
@@ -90,6 +99,27 @@ export function FlightReplayView() {
   useEffect(() => {
     viewerRef.current = resiumRef.current?.cesiumElement ?? null;
   }, []);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || frames.length < 2) {
+      return;
+    }
+
+    const sampleStride = Math.max(1, Math.floor(frames.length / 400));
+    const positions = frames
+      .filter((_, idx) => idx % sampleStride === 0)
+      .map((frame) => positionFromFrame(frame));
+
+    if (!positions.length) {
+      return;
+    }
+
+    viewer.camera.flyTo({
+      destination: positions[Math.min(positions.length - 1, Math.floor(positions.length / 2))],
+      duration: 0
+    });
+  }, [frames]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -163,7 +193,16 @@ export function FlightReplayView() {
   );
 
   if (!frames.length) {
-    return <p className="text-sm text-muted-foreground">No frames found for replay.</p>;
+    return (
+      <div className="rounded-xl border border-border bg-card/70 p-6">
+        <p className="text-sm font-semibold text-cyan-200">3D Replay is ready, but no trajectory is loaded yet.</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Upload a BIN log on Dashboard and wait until processing completes.
+        </p>
+        {error ? <p className="mt-2 text-xs text-rose-300">{error}</p> : null}
+        <Button className="mt-4" size="sm" onClick={() => setMode("dashboard")}>Go to Dashboard</Button>
+      </div>
+    );
   }
 
   return (
@@ -180,6 +219,8 @@ export function FlightReplayView() {
           sceneModePicker={false}
           ref={resiumRef}
         >
+          <ImageryLayer imageryProvider={defaultImageryProvider} />
+
           {traceSegments.map((seg, idx) => (
             <Entity key={idx}>
               <PolylineGraphics

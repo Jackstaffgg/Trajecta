@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Bell, CheckCheck, RefreshCw } from "lucide-react";
+import { Bell, CheckCheck } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
 import {
@@ -55,6 +55,8 @@ export function AppShell({ children }: AppShellProps) {
     }
 
     let active = true;
+    let timerId: number | null = null;
+    let failCount = 0;
 
     const refresh = async () => {
       try {
@@ -62,7 +64,7 @@ export function AppShell({ children }: AppShellProps) {
           setLoadingPanel(true);
         }
 
-        const [myTasks, myNotifications] = await Promise.all([
+        const [tasksResult, notificationsResult] = await Promise.allSettled([
           getMyTasks({ token: auth.token, offset: 0, limit: 8 }),
           getNotifications({ token: auth.token })
         ]);
@@ -71,8 +73,29 @@ export function AppShell({ children }: AppShellProps) {
           return;
         }
 
-        setTasks(myTasks);
-        setNotifications(myNotifications.slice(0, 12));
+        if (tasksResult.status === "fulfilled") {
+          setTasks(tasksResult.value);
+        }
+
+        if (notificationsResult.status === "fulfilled") {
+          setNotifications(notificationsResult.value.slice(0, 12));
+        }
+
+        if (tasksResult.status === "rejected") {
+          const reason = tasksResult.reason as unknown;
+          if (reason instanceof ApiClientError) {
+            if (reason.status === 401) {
+              setError("Session expired. Please log in again.");
+            } else if (reason.status >= 500) {
+              failCount += 1;
+              if (failCount >= 2) {
+                setError("Tasks endpoint is temporarily unavailable. Retrying with backoff.");
+              }
+            }
+          }
+        } else {
+          failCount = 0;
+        }
       } catch (error) {
         if (!active) {
           return;
@@ -83,18 +106,21 @@ export function AppShell({ children }: AppShellProps) {
       } finally {
         if (active) {
           setLoadingPanel(false);
+          const delay = failCount >= 2 ? 30000 : 10000;
+          timerId = window.setTimeout(() => {
+            void refresh();
+          }, delay);
         }
       }
     };
 
     void refresh();
-    const intervalId = window.setInterval(() => {
-      void refresh();
-    }, 10000);
 
     return () => {
       active = false;
-      window.clearInterval(intervalId);
+      if (timerId !== null) {
+        window.clearTimeout(timerId);
+      }
     };
   }, [auth.isAuthenticated, auth.token, setError]);
 

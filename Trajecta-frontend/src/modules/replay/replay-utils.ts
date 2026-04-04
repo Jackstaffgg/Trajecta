@@ -10,6 +10,10 @@ import {
 } from "cesium";
 import type { FlightFrame } from "@/types/flight";
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
 export function findFramePair(frames: FlightFrame[], t: number): [FlightFrame, FlightFrame, number] {
   if (frames.length === 0) {
     const empty: FlightFrame = { t: 0, lat: 0, lon: 0, alt: 0 };
@@ -86,7 +90,10 @@ export function speedToColor(speed = 0, maxSpeed = 30) {
 }
 
 export function positionFromFrame(frame: FlightFrame) {
-  return Cartesian3.fromDegrees(frame.lon, frame.lat, frame.alt);
+  const lat = Number.isFinite(frame.lat) ? clamp(frame.lat, -90, 90) : 0;
+  const lon = Number.isFinite(frame.lon) ? clamp(frame.lon, -180, 180) : 0;
+  const alt = Number.isFinite(frame.alt) ? frame.alt : 0;
+  return Cartesian3.fromDegrees(lon, lat, alt);
 }
 
 export function droneModelMatrix(frame: FlightFrame, result?: Matrix4) {

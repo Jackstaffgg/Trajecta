@@ -106,7 +106,7 @@ export function FlightChartsView() {
       <h2 className="text-xl font-semibold">Flight Dynamics</h2>
       <Card>
         <CardHeader>
-          <CardTitle>Speed and Altitude</CardTitle>
+          <CardTitle>Speed (m/s) and Altitude (m)</CardTitle>
         </CardHeader>
         <CardContent>
           <TimelineChart
@@ -124,7 +124,7 @@ export function FlightChartsView() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Acceleration</CardTitle>
+          <CardTitle>Acceleration (m/s^2)</CardTitle>
         </CardHeader>
         <CardContent>
           <TimelineChart

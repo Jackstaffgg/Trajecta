@@ -25,6 +25,16 @@ function taskStatusClass(status: TaskInfo["status"]) {
   return "text-slate-300";
 }
 
+function safeText(value: unknown, fallback = "-") {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return fallback;
+}
+
 export function Sidebar({ tasks, activeTaskId, loadingTasks = false }: SidebarProps) {
   const mode = useFlightStore((s) => s.mode);
   const setMode = useFlightStore((s) => s.setMode);
@@ -88,8 +98,8 @@ export function Sidebar({ tasks, activeTaskId, loadingTasks = false }: SidebarPr
                   activeTaskId === task.id ? "border-cyan-400/40 bg-cyan-400/10" : "border-border/70 bg-background/40"
                 )}
               >
-                <p className="truncate text-xs font-medium">#{task.id} {task.title}</p>
-                <p className={cn("text-[11px]", taskStatusClass(task.status))}>{task.status}</p>
+                <p className="truncate text-xs font-medium">#{safeText(task.id, "?")} {safeText(task.title, "Untitled")}</p>
+                <p className={cn("text-[11px]", taskStatusClass(task.status))}>{safeText(task.status, "PENDING")}</p>
               </div>
             ))
           )}

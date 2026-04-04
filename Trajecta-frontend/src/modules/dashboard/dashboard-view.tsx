@@ -30,9 +30,9 @@ export function DashboardView() {
       <h2 className="text-xl font-semibold">Flight Summary</h2>
       <div className="grid gap-3 md:grid-cols-3">
         <StatCard label="Max Altitude" value={(m.maxAltitude ?? 0).toFixed(1)} unit="m" />
-        <StatCard label="Max Speed" value={(m.maxSpeed ?? 0).toFixed(1)} unit="m/s" />
+        <StatCard label="Max Horizontal Speed" value={(m.maxSpeed ?? 0).toFixed(1)} unit="m/s" />
         <StatCard label="Flight Duration" value={formatDuration(m.flightDurationSec ?? 0)} />
-        <StatCard label="Total Distance" value={metersToKm(m.totalDistanceMeters ?? 0)} unit="km" />
+        <StatCard label="Total GPS Distance" value={metersToKm(m.totalDistanceMeters ?? 0)} unit="km" />
         <StatCard label="Max Vertical Speed" value={(m.maxVerticalSpeed ?? 0).toFixed(1)} unit="m/s" />
         <StatCard label="IMU Sampling" value={(m.imuRateHz ?? 0).toFixed(0)} unit="Hz" />
       </div>

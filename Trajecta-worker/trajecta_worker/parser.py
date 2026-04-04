@@ -37,6 +37,40 @@ def to_float(value: Any) -> float | None:
         return None
 
 
+def normalize_lat(value: float | None) -> float | None:
+    if value is None:
+        return None
+    abs_value = abs(value)
+    normalized = value / 1e7 if abs_value > 180 else value
+    if abs(normalized) > 90:
+        return None
+    return normalized
+
+
+def normalize_lon(value: float | None) -> float | None:
+    if value is None:
+        return None
+    abs_value = abs(value)
+    normalized = value / 1e7 if abs_value > 180 else value
+    if abs(normalized) > 180:
+        return None
+    return normalized
+
+
+def normalize_alt_meters(value: float | None) -> float | None:
+    if value is None:
+        return None
+    # Some logs store altitude in centimeters.
+    return value / 100.0 if abs(value) > 10000 else value
+
+
+def normalize_speed_mps(value: float | None) -> float | None:
+    if value is None:
+        return None
+    # ArduPilot can report speed in cm/s; convert suspiciously large values.
+    return value / 100.0 if abs(value) > 120 else value
+
+
 def safe_json_value(value: Any) -> Any:
     if value is None:
         return None
@@ -88,10 +122,10 @@ def parse_log(bin_path: str) -> dict[str, Any]:
 
         if mtype == "GPS":
             data["gps"]["t"].append(t)
-            data["gps"]["lat"].append(to_float(first_present(md, ["Lat", "lat"])))
-            data["gps"]["lon"].append(to_float(first_present(md, ["Lng", "Lon", "lon"])))
-            data["gps"]["alt"].append(to_float(first_present(md, ["Alt", "AltMSL", "alt"])))
-            data["gps"]["speed"].append(to_float(first_present(md, ["Spd", "GSpd", "Speed", "spd"])))
+            data["gps"]["lat"].append(normalize_lat(to_float(first_present(md, ["Lat", "lat"]))))
+            data["gps"]["lon"].append(normalize_lon(to_float(first_present(md, ["Lng", "Lon", "lon"]))))
+            data["gps"]["alt"].append(normalize_alt_meters(to_float(first_present(md, ["Alt", "AltMSL", "alt"]))))
+            data["gps"]["speed"].append(normalize_speed_mps(to_float(first_present(md, ["Spd", "GSpd", "Speed", "spd"]))))
 
         elif mtype == "ATT":
             data["att"]["t"].append(t)
@@ -102,8 +136,8 @@ def parse_log(bin_path: str) -> dict[str, Any]:
         elif mtype == "CTUN":
             data["ctun"]["t"].append(t)
             data["ctun"]["throttle"].append(to_float(first_present(md, ["ThO", "ThrOut", "Thr", "Throttle"])))
-            data["ctun"]["alt"].append(to_float(first_present(md, ["Alt", "alt"])))
-            data["ctun"]["dalt"].append(to_float(first_present(md, ["DAlt", "dalt"])))
+            data["ctun"]["alt"].append(normalize_alt_meters(to_float(first_present(md, ["Alt", "alt"]))))
+            data["ctun"]["dalt"].append(normalize_alt_meters(to_float(first_present(md, ["DAlt", "dalt"]))))
 
         elif mtype.startswith("IMU"):
             data["imu"]["t"].append(t)
@@ -134,7 +168,7 @@ def parse_log(bin_path: str) -> dict[str, Any]:
 
         elif mtype == "BARO":
             data["baro"]["t"].append(t)
-            data["baro"]["alt"].append(to_float(first_present(md, ["Alt", "PressAlt", "alt"])))
+            data["baro"]["alt"].append(normalize_alt_meters(to_float(first_present(md, ["Alt", "PressAlt", "alt"]))))
 
         elif mtype == "GPA":
             data["gpa"]["t"].append(t)

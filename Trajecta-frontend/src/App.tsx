@@ -31,14 +31,21 @@ export default function App() {
   const auth = useFlightStore((s) => s.auth);
   const data = useFlightStore((s) => s.data);
   const loading = useFlightStore((s) => s.loading);
+  const mode = useFlightStore((s) => s.mode);
 
   if (!auth.isAuthenticated) {
     return <AuthScreen />;
   }
 
+  const content = loading
+    ? <ProcessingScreen />
+    : !data && mode === "dashboard"
+      ? <StartScreen />
+      : <MainContent />;
+
   return (
     <AppShell>
-      {loading ? <ProcessingScreen /> : !data ? <StartScreen /> : <MainContent />}
+      {content}
     </AppShell>
   );
 }
