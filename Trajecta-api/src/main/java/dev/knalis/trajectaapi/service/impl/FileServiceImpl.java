@@ -76,27 +76,6 @@ public class FileServiceImpl implements FileService {
     }
     
     @Override
-    public String updateFile(String objectKey, MultipartFile file) {
-        validateObjectKey(objectKey);
-        validateFileForUpload(file);
-        
-        try (InputStream inputStream = file.getInputStream()) {
-            minioClient.putObject(
-                    PutObjectArgs.builder()
-                            .bucket(bucket)
-                            .object(objectKey)
-                            .stream(inputStream, file.getSize(), -1)
-                            .contentType(resolveContentTypeForBinaryUpload())
-                            .build()
-            );
-            
-            return objectKey;
-        } catch (Exception e) {
-            throw new InternalServerException("Failed to update file in object storage", e);
-        }
-    }
-    
-    @Override
     public InputStream getObjectStream(String objectKey) {
         validateObjectKey(objectKey);
         

@@ -1,19 +1,20 @@
 package dev.knalis.trajectaapi.service.impl;
 
 import dev.knalis.trajectaapi.dto.notification.NotificationCreateRequest;
+import dev.knalis.trajectaapi.dto.notification.NotificationResponse;
 import dev.knalis.trajectaapi.dto.ws.WsEventType;
 import dev.knalis.trajectaapi.dto.ws.payload.NotificationPayload;
 import dev.knalis.trajectaapi.exception.NotFoundException;
 import dev.knalis.trajectaapi.exception.PermissionDeniedException;
 import dev.knalis.trajectaapi.mapper.NotificationMapper;
 import dev.knalis.trajectaapi.model.notiffication.Notification;
+import dev.knalis.trajectaapi.model.notiffication.NotificationType;
 import dev.knalis.trajectaapi.repo.NotificationRepository;
 import dev.knalis.trajectaapi.service.intrf.NotificationService;
 import dev.knalis.trajectaapi.service.intrf.WsEventDispatcher;
 import lombok.RequiredArgsConstructor;
 import io.micrometer.core.instrument.MeterRegistry;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -32,13 +33,11 @@ public class NotificationServiceImpl implements NotificationService {
     private MeterRegistry meterRegistry;
     
     @Override
-    @Cacheable(cacheNames = "notificationsByRecipient", key = "#userId")
-    public List<Notification> getUserNotifications(Long userId) {
-        return notificationRepository.findByRecipientId(userId);
+    public List<NotificationResponse> getUserNotifications(Long userId) {
+        return notificationMapper.toDtoList(notificationRepository.findByRecipientId(userId));
     }
     
     @Override
-    @CacheEvict(cacheNames = "notificationsByRecipient", key = "#request.recipientId")
     public Notification createNotification(NotificationCreateRequest request) {
         final var notification = new Notification();
         
@@ -66,7 +65,6 @@ public class NotificationServiceImpl implements NotificationService {
     }
     
     @Override
-    @CacheEvict(cacheNames = "notificationsByRecipient", key = "#currentUserId")
     public void markAsRead(Long notificationId, Long currentUserId) {
         final var notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new NotFoundException("Notification not found"));
@@ -81,7 +79,6 @@ public class NotificationServiceImpl implements NotificationService {
     }
     
     @Override
-    @CacheEvict(cacheNames = "notificationsByRecipient", key = "#currentUserId")
     public void markAllAsRead(Long currentUserId) {
         final var unreadNotifications = notificationRepository.findByRecipientIdAndIsRead(currentUserId, false);
         
@@ -94,7 +91,6 @@ public class NotificationServiceImpl implements NotificationService {
     }
     
     @Override
-    @CacheEvict(cacheNames = "notificationsByRecipient", key = "#currentUserId")
     public void deleteNotification(Long notificationId, Long currentUserId) {
         final var notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new NotFoundException("Notification not found"));
@@ -105,6 +101,16 @@ public class NotificationServiceImpl implements NotificationService {
 
         notificationRepository.deleteById(notificationId);
         incrementCounter("notifications.deleted");
+    }
+
+    @Override
+    public List<Notification> getAdminBroadcastHistory(Long adminId, int limit) {
+        int safeLimit = Math.min(Math.max(limit, 1), 200);
+        return notificationRepository.findBySenderIdAndTypeInOrderByCreatedAtDesc(
+                adminId,
+                List.of(NotificationType.SYSTEM_NEWS, NotificationType.SYSTEM_ALERT),
+                PageRequest.of(0, safeLimit)
+        );
     }
 
     private void incrementCounter(String name) {

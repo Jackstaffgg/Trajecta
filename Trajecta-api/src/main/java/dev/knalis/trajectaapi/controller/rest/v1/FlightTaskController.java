@@ -2,10 +2,13 @@ package dev.knalis.trajectaapi.controller.rest.v1;
 
 import dev.knalis.trajectaapi.dto.task.TaskCreateRequest;
 import dev.knalis.trajectaapi.dto.task.TaskCreateResponse;
+import dev.knalis.trajectaapi.dto.task.TaskBulkDeleteRequest;
+import dev.knalis.trajectaapi.dto.task.TaskBulkDeleteResponse;
 import dev.knalis.trajectaapi.dto.common.ApiResponse;
 import dev.knalis.trajectaapi.dto.task.TaskResponse;
 import dev.knalis.trajectaapi.controller.rest.v1.support.CurrentUserResolver;
 import dev.knalis.trajectaapi.mapper.task.TaskResponseMapper;
+import dev.knalis.trajectaapi.service.impl.FlightTaskDtoCacheService;
 import dev.knalis.trajectaapi.service.intrf.FileService;
 import dev.knalis.trajectaapi.service.intrf.FlightTaskService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -34,6 +37,7 @@ public class FlightTaskController {
     
     private final FlightTaskService flightTaskService;
     private final TaskResponseMapper taskResponseMapper;
+    private final FlightTaskDtoCacheService flightTaskDtoCacheService;
     private final FileService fileService;
     private final CurrentUserResolver currentUserResolver;
     
@@ -61,14 +65,20 @@ public class FlightTaskController {
     @Operation(summary = "Get task by id", description = "Returns a task if it belongs to the current user or the caller is admin.")
     @GetMapping("/{taskId}")
     public ResponseEntity<ApiResponse<TaskResponse>> getTask(@Parameter(description = "Task identifier", example = "42") @PathVariable Long taskId, Authentication auth) {
-        var task = flightTaskService.getTask(taskId, auth);
-        return ResponseEntity.ok(ApiResponse.success(taskResponseMapper.toDto(task)));
+        return ResponseEntity.ok(ApiResponse.success(flightTaskDtoCacheService.getTaskDto(taskId, auth.getName(), auth)));
     }
 
     @Operation(summary = "Append AI conclusion", description = "Appends a static AI conclusion to trajectory content and marks the task as concluded.")
     @PostMapping("/{taskId}/ai-conclusion")
     public ResponseEntity<ApiResponse<TaskResponse>> addAiConclusion(@Parameter(description = "Task identifier", example = "42") @PathVariable Long taskId, Authentication auth) {
         var task = flightTaskService.addAiConclusion(taskId, auth);
+        return ResponseEntity.ok(ApiResponse.success(taskResponseMapper.toDto(task)));
+    }
+
+    @Operation(summary = "Regenerate AI conclusion", description = "Forces AI conclusion regeneration and overwrites the previous conclusion.")
+    @PostMapping("/{taskId}/ai-conclusion/regenerate")
+    public ResponseEntity<ApiResponse<TaskResponse>> regenerateAiConclusion(@Parameter(description = "Task identifier", example = "42") @PathVariable Long taskId, Authentication auth) {
+        var task = flightTaskService.regenerateAiConclusion(taskId, auth);
         return ResponseEntity.ok(ApiResponse.success(taskResponseMapper.toDto(task)));
     }
     
@@ -81,8 +91,15 @@ public class FlightTaskController {
             @RequestParam(defaultValue = "20") int limit,
             Authentication auth
     ) {
-        var tasks = flightTaskService.getMyTasks(auth, offset, limit);
-        return ResponseEntity.ok(ApiResponse.success(taskResponseMapper.toDtoList(tasks)));
+        var tasks = flightTaskDtoCacheService.getMyTaskDtos(auth.getName(), offset, limit, auth);
+        return ResponseEntity.ok(ApiResponse.success(tasks));
+    }
+
+    @Operation(summary = "Bulk delete tasks", description = "Deletes tasks from provided id list when caller has access.")
+    @PostMapping("/delete-bulk")
+    public ResponseEntity<ApiResponse<TaskBulkDeleteResponse>> deleteTasks(@Valid @RequestBody TaskBulkDeleteRequest request, Authentication auth) {
+        var result = flightTaskService.deleteTasks(request.getTaskIds(), auth);
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
     
     @Operation(summary = "Download raw BIN file", description = "Streams the original uploaded BIN telemetry file.")

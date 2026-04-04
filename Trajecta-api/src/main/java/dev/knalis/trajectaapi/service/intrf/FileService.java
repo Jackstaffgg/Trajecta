@@ -17,9 +17,6 @@ public interface FileService {
     /** Uploads trajectory JSON payload to a specific object key. */
     void uploadJson(String objectKey, String jsonPayload);
 
-    /** Replaces an existing binary object and returns the same object key. */
-    String updateFile(String objectKey, MultipartFile file);
-
     /** Opens object stream for download. */
     InputStream getObjectStream(String objectKey);
 

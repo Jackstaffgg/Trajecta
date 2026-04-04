@@ -108,24 +108,6 @@ class FileServiceImplTest {
     }
 
     @Test
-    void updateFile_returnsSameObjectKey() throws Exception {
-        var file = new MockMultipartFile("file", "source.bin", "application/octet-stream", new byte[]{1, 2});
-
-        service.updateFile("tasks/3/4/raw/source.bin", file);
-
-        verify(minioClient).putObject(any(PutObjectArgs.class));
-    }
-
-    @Test
-    void updateFile_wrapsStorageExceptions() throws Exception {
-        var file = new MockMultipartFile("file", "source.bin", "application/octet-stream", new byte[]{9});
-        doThrow(new RuntimeException("fail")).when(minioClient).putObject(any(PutObjectArgs.class));
-
-        assertThatThrownBy(() -> service.updateFile("tasks/1/2/raw/source.bin", file))
-                .isInstanceOf(InternalServerException.class);
-    }
-
-    @Test
     void getAndDelete_rejectInvalidObjectKey() {
         assertThatThrownBy(() -> service.getObjectStream("../x")).isInstanceOf(BadRequestException.class);
         assertThatThrownBy(() -> service.delete("../x")).isInstanceOf(BadRequestException.class);

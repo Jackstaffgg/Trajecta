@@ -2,6 +2,7 @@ package dev.knalis.trajectaapi.service.intrf;
 
 
 import dev.knalis.trajectaapi.dto.notification.NotificationCreateRequest;
+import dev.knalis.trajectaapi.dto.notification.NotificationResponse;
 import dev.knalis.trajectaapi.model.notiffication.Notification;
 
 import java.util.List;
@@ -11,7 +12,7 @@ import java.util.List;
  */
 public interface NotificationService {
     /** Returns all notifications for a user. */
-    List<Notification> getUserNotifications(Long userId);
+    List<NotificationResponse> getUserNotifications(Long userId);
 
     /** Creates and emits a notification. */
     Notification createNotification(NotificationCreateRequest request);
@@ -24,6 +25,9 @@ public interface NotificationService {
 
     /** Deletes a user notification by id. */
     void deleteNotification(Long notificationId, Long currentUserId);
+
+    /** Returns recent notifications broadcast by an admin account. */
+    List<Notification> getAdminBroadcastHistory(Long adminId, int limit);
 }
 
 

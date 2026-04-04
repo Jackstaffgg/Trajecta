@@ -85,22 +85,20 @@ class AuthServiceImplTest {
     void login_success_returnsTokenAndUser() {
         User details = new User();
         details.setUsername("pilot");
-        User domain = new User();
-        domain.setUsername("pilot");
         UserResponse dto = new UserResponse();
         dto.setUsername("pilot");
 
         when(rateLimiter.isAllowed("pilot")).thenReturn(true);
         when(userDetailsService.loadUserByUsername("pilot")).thenReturn(details);
         when(jwtService.generateToken(details)).thenReturn("jwt-token");
-        when(userService.findByUsername("pilot")).thenReturn(domain);
-        when(userMapper.toDto(domain)).thenReturn(dto);
+        when(userMapper.toDto(details)).thenReturn(dto);
 
         var response = service.login("pilot", "pass");
 
         assertThat(response.getToken()).isEqualTo("jwt-token");
         assertThat(response.getUser().getUsername()).isEqualTo("pilot");
         verify(rateLimiter).onSuccess("pilot");
+        verify(userService, never()).findByUsername(any());
     }
 }
 

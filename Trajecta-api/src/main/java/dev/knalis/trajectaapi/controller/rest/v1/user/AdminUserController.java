@@ -5,7 +5,6 @@ import dev.knalis.trajectaapi.dto.common.ApiResponse;
 import dev.knalis.trajectaapi.dto.user.UserResponse;
 import dev.knalis.trajectaapi.dto.user.UserUpdateRequest;
 import dev.knalis.trajectaapi.mapper.UserMapper;
-import dev.knalis.trajectaapi.model.User;
 import dev.knalis.trajectaapi.service.intrf.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -33,7 +32,7 @@ public class AdminUserController {
     @Operation(summary = "List all users", description = "Returns every user account. Intended for administrators.")
     @GetMapping
     public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers() {
-        return ResponseEntity.ok(ApiResponse.success(userMapper.toDtoList(userService.findAll())));
+        return ResponseEntity.ok(ApiResponse.success(userService.findAllResponses()));
     }
     
     @Operation(summary = "Create user", description = "Creates a new user account with explicit role.")
@@ -58,8 +57,7 @@ public class AdminUserController {
     @Operation(summary = "Get user by id", description = "Returns a single user profile by identifier.")
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(@Parameter(description = "User identifier", example = "3") @PathVariable Long id) {
-        User user = userService.findById(id);
-        return ResponseEntity.ok(ApiResponse.success(userMapper.toDto(user)));
+        return ResponseEntity.ok(ApiResponse.success(userService.findResponseById(id)));
     }
 }
 

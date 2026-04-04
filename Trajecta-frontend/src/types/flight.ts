@@ -58,6 +58,8 @@ export type TaskInfo = {
   title: string;
   status: TaskStatus;
   errorMessage?: string | null;
+  aiConclusion?: string | null;
+  aiModel?: string | null;
 };
 
 export type TaskSocketPayload = {
@@ -72,7 +74,9 @@ export type NotificationInfo = {
   id: number;
   type: string;
   content: string;
+  senderId?: number | null;
   senderName?: string | null;
+  recipientId?: number | null;
   referenceId?: number | null;
   isRead: boolean;
   createdAt: string;
@@ -111,6 +115,7 @@ export type FlightLogData = {
   params: Record<string, string | number | boolean | null>;
   metrics: FlightMetrics;
   aiConclusion?: string;
+  aiModel?: string;
 };
 
 export type ReplayCameraMode = "chase" | "fpv" | "free";

@@ -3,7 +3,9 @@ import {
   ApiClientError,
   addAiConclusion,
   createTask,
-  downloadTrajectory
+  downloadTrajectory,
+  getTask,
+  regenerateAiConclusion
 } from "@/lib/api";
 import { useFlightStore } from "@/store/flight-store";
 import type { FlightLogData, TaskInfo } from "@/types/flight";
@@ -248,7 +250,8 @@ function normalizeWorkerTrajectory(raw: unknown): FlightLogData {
       ...deriveMetrics(frames),
       imuRateHz: asNumber(imuRaw.samplingHz)
     },
-    aiConclusion: typeof input.aiConclusion === "string" ? input.aiConclusion : undefined
+    aiConclusion: typeof input.aiConclusion === "string" ? input.aiConclusion : undefined,
+    aiModel: typeof input.aiModel === "string" ? input.aiModel : undefined
   };
 }
 
@@ -353,8 +356,14 @@ export function useFlightData() {
     setLoading(true);
     setError(null);
     try {
+      const freshTask = await getTask({ token: auth.token, taskId: task.id });
+      setCurrentTask(freshTask);
+      setTaskStatus(freshTask.status, freshTask.errorMessage);
+
       const trajectory = await downloadTrajectory({ token: auth.token, taskId: task.id });
       const normalized = parseTrajectory(trajectory);
+      normalized.aiConclusion = normalized.aiConclusion ?? freshTask.aiConclusion ?? undefined;
+      normalized.aiModel = normalized.aiModel ?? freshTask.aiModel ?? undefined;
       setData(normalized);
       return true;
     } catch (error) {
@@ -369,7 +378,7 @@ export function useFlightData() {
     }
   }
 
-  async function requestAiConclusion() {
+  async function requestAiConclusion(force = false) {
     if (!auth.isAuthenticated || !auth.token || !currentTask) {
       return;
     }
@@ -377,9 +386,17 @@ export function useFlightData() {
     setLoading(true);
     setError(null);
     try {
-      await addAiConclusion({ token: auth.token, taskId: currentTask.id });
+      const task = force
+        ? await regenerateAiConclusion({ token: auth.token, taskId: currentTask.id })
+        : await addAiConclusion({ token: auth.token, taskId: currentTask.id });
+
+      setCurrentTask(task);
+      setTaskStatus(task.status, task.errorMessage);
+
       const trajectory = await downloadTrajectory({ token: auth.token, taskId: currentTask.id });
       const normalized = parseTrajectory(trajectory);
+      normalized.aiConclusion = normalized.aiConclusion ?? task.aiConclusion ?? undefined;
+      normalized.aiModel = normalized.aiModel ?? task.aiModel ?? undefined;
       setData(normalized);
       return true;
     } catch (error) {

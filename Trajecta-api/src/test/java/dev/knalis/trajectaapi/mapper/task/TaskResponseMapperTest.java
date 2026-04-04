@@ -2,6 +2,8 @@ package dev.knalis.trajectaapi.mapper.task;
 
 import dev.knalis.trajectaapi.model.task.FlightTask;
 import dev.knalis.trajectaapi.model.task.TaskStatus;
+import dev.knalis.trajectaapi.model.task.ai.AiConclusion;
+import dev.knalis.trajectaapi.model.task.ai.AiModel;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
@@ -40,6 +42,23 @@ class TaskResponseMapperTest {
 
         assertThat(mapper.toDtoList(List.of(task))).hasSize(1);
         assertThat(mapper.toDtoList(null)).isNull();
+    }
+
+    @Test
+    void toDto_mapsAiConclusion() {
+        FlightTask task = new FlightTask();
+        task.setId(3L);
+        task.setStatus(TaskStatus.COMPLETED);
+
+        AiConclusion aiConclusion = new AiConclusion();
+        aiConclusion.setConclusion("Stable flight");
+        aiConclusion.setAiModel(AiModel.GPT_4O_MINI);
+        task.setAiConclusion(aiConclusion);
+
+        var dto = mapper.toDto(task);
+
+        assertThat(dto.getAiConclusion()).isEqualTo("Stable flight");
+        assertThat(dto.getAiModel()).isEqualTo("GPT_4O_MINI");
     }
 }
 

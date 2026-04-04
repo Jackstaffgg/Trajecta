@@ -14,9 +14,10 @@ public interface FlightTaskMapper {
     @Mapping(target = "rawLogObjectKey", ignore = true)
     @Mapping(target = "status", expression = "java(TaskStatus.PROCESSING)")
     @Mapping(target = "trajectoryObjectKey", ignore = true)
+    @Mapping(target = "hasAiConclusion", constant = "false")
+    @Mapping(target = "aiConclusion", ignore = true)
     @Mapping(target = "errorMessage", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "finishedAt", ignore = true)
-    @Mapping(target = "hasAiConclusion", ignore = true)
     FlightTask toEntity(String title, Long userId);
 }

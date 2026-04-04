@@ -17,7 +17,6 @@ import org.springframework.security.core.Authentication;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -40,8 +39,7 @@ class AdminUserControllerTest {
 
     @Test
     void getAllUsers_returnsMappedList() {
-        when(userService.findAll()).thenReturn(List.of(new User()));
-        when(userMapper.toDtoList(anyList())).thenReturn(List.of(new UserResponse()));
+        when(userService.findAllResponses()).thenReturn(List.of(new UserResponse()));
 
         var response = controller.getAllUsers();
 
@@ -89,13 +87,10 @@ class AdminUserControllerTest {
 
     @Test
     void getUserById_returnsMappedDto() {
-        User user = new User();
-        user.setId(6L);
         UserResponse dto = new UserResponse();
         dto.setId(6L);
 
-        when(userService.findById(6L)).thenReturn(user);
-        when(userMapper.toDto(user)).thenReturn(dto);
+        when(userService.findResponseById(6L)).thenReturn(dto);
 
         var response = controller.getUserById(6L);
 

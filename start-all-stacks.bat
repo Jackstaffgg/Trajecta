@@ -104,24 +104,24 @@ if "%RUN_BUILD%"=="1" (
 )
 
 if "%RUN_COMPOSE%"=="1" (
-  echo Running: docker compose -f "%API_COMPOSE_FILE%" up --build --force-recreate --remove-orphans -d
-  docker compose -f "%API_COMPOSE_FILE%" up --build --force-recreate --remove-orphans -d
+  echo Running: docker compose -f "%API_COMPOSE_FILE%" up --build -d backend
+  docker compose -f "%API_COMPOSE_FILE%" up --build -d backend
   if errorlevel 1 (
     echo [ERROR] API Docker Compose failed.
     popd
     exit /b 1
   )
 
-  echo Running: docker compose -f "%WORKER_COMPOSE_FILE%" up --build --force-recreate --remove-orphans -d
-  docker compose -f "%WORKER_COMPOSE_FILE%" up --build --force-recreate --remove-orphans -d
+  echo Running: docker compose -f "%WORKER_COMPOSE_FILE%" up --build -d worker
+  docker compose -f "%WORKER_COMPOSE_FILE%" up --build -d worker
   if errorlevel 1 (
     echo [ERROR] Worker Docker Compose failed.
     popd
     exit /b 1
   )
 
-  echo Running: docker compose -f "%FRONTEND_COMPOSE_FILE%" up --build --force-recreate --remove-orphans -d
-  docker compose -f "%FRONTEND_COMPOSE_FILE%" up --build --force-recreate --remove-orphans -d
+  echo Running: docker compose -f "%FRONTEND_COMPOSE_FILE%" up --build -d frontend
+  docker compose -f "%FRONTEND_COMPOSE_FILE%" up --build -d frontend
   if errorlevel 1 (
     echo [ERROR] Frontend Docker Compose failed.
     popd

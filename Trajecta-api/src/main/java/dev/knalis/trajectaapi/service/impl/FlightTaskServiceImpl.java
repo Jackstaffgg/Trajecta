@@ -3,6 +3,7 @@ package dev.knalis.trajectaapi.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.knalis.trajectaapi.dto.messaging.AnalysisResult;
+import dev.knalis.trajectaapi.dto.task.TaskBulkDeleteResponse;
 import dev.knalis.trajectaapi.event.EventPublisher;
 import dev.knalis.trajectaapi.exception.BadRequestException;
 import dev.knalis.trajectaapi.exception.NotFoundException;
@@ -14,9 +15,14 @@ import dev.knalis.trajectaapi.model.Role;
 import dev.knalis.trajectaapi.model.User;
 import dev.knalis.trajectaapi.model.task.FlightMetrics;
 import dev.knalis.trajectaapi.model.task.FlightTask;
+import dev.knalis.trajectaapi.model.task.ai.AiConclusion;
+import dev.knalis.trajectaapi.repo.AiConclusionRepository;
 import dev.knalis.trajectaapi.repo.FlightMetricsRepository;
 import dev.knalis.trajectaapi.repo.FlightTaskRepository;
+import dev.knalis.trajectaapi.security.AiConclusionRateLimiter;
 import dev.knalis.trajectaapi.security.TaskCreationRateLimiter;
+import dev.knalis.trajectaapi.service.intrf.AiConclusionGenerationResult;
+import dev.knalis.trajectaapi.service.intrf.AiConclusionService;
 import dev.knalis.trajectaapi.service.intrf.FileService;
 import dev.knalis.trajectaapi.service.intrf.FlightTaskService;
 import dev.knalis.trajectaapi.storage.ObjectKeyBuilder;
@@ -35,33 +41,36 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class FlightTaskServiceImpl implements FlightTaskService {
 
-    private static final String STATIC_AI_CONCLUSION = "AI conclusion is temporarily static. Please review trajectory manually until AI summarization is enabled.";
-    
     private final FlightTaskRepository taskRepository;
     private final FileService fileService;
     private final FlightMetricsRepository metricsRepository;
+    private final AiConclusionRepository aiConclusionRepository;
+    private final AiConclusionRateLimiter aiConclusionRateLimiter;
     private final TaskCreationRateLimiter taskCreationRateLimiter;
     private final FlightMetricMapper flightMetricMapper;
     private final FlightTaskFactory taskFactory;
     private final EventPublisher eventPublisher;
     private final ObjectKeyBuilder objectKeyBuilder;
     private final ObjectMapper objectMapper;
+    private final AiConclusionService aiConclusionService;
     @Autowired(required = false)
     private MeterRegistry meterRegistry;
     
     @Transactional
     @Override
     @Caching(evict = {
-            @CacheEvict(cacheNames = "tasksByUserPage", allEntries = true),
-            @CacheEvict(cacheNames = "tasksById", allEntries = true),
             @CacheEvict(cacheNames = "taskRawKey", allEntries = true),
-            @CacheEvict(cacheNames = "taskTrajectoryKey", allEntries = true)
+            @CacheEvict(cacheNames = "taskTrajectoryKey", allEntries = true),
+            @CacheEvict(cacheNames = "taskDtoByIdAndUserV2", allEntries = true),
+            @CacheEvict(cacheNames = "taskDtoByUserPageV2", allEntries = true)
     })
     public FlightTask createAndStartAnalysis(String title, MultipartFile file, Long userId) {
         checkRateLimit(userId);
@@ -99,7 +108,6 @@ public class FlightTaskServiceImpl implements FlightTaskService {
     }
     
     @Override
-    @Cacheable(cacheNames = "tasksById", key = "#taskId")
     public FlightTask getTask(Long taskId, Authentication auth) {
         User currentUser = getCurrentUser(auth);
         
@@ -129,10 +137,10 @@ public class FlightTaskServiceImpl implements FlightTaskService {
     @Transactional
     @Override
     @Caching(evict = {
-            @CacheEvict(cacheNames = "tasksById", key = "#p0.taskId"),
             @CacheEvict(cacheNames = "taskRawKey", key = "#p0.taskId"),
             @CacheEvict(cacheNames = "taskTrajectoryKey", key = "#p0.taskId"),
-            @CacheEvict(cacheNames = "tasksByUserPage", allEntries = true)
+            @CacheEvict(cacheNames = "taskDtoByIdAndUserV2", allEntries = true),
+            @CacheEvict(cacheNames = "taskDtoByUserPageV2", allEntries = true)
     })
     public FlightTask completeTask(AnalysisResult result) {
         FlightTask task = taskRepository.findById(result.getTaskId())
@@ -232,41 +240,132 @@ public class FlightTaskServiceImpl implements FlightTaskService {
         
         return trajectoryKey;
     }
-
-    @Transactional
+    
     @Override
+    @Transactional
     @Caching(evict = {
-            @CacheEvict(cacheNames = "tasksById", key = "#taskId"),
-            @CacheEvict(cacheNames = "taskTrajectoryKey", key = "#taskId"),
-            @CacheEvict(cacheNames = "tasksByUserPage", allEntries = true)
+            @CacheEvict(cacheNames = "taskDtoByIdAndUserV2", allEntries = true),
+            @CacheEvict(cacheNames = "taskDtoByUserPageV2", allEntries = true)
     })
     public FlightTask addAiConclusion(Long taskId, Authentication auth) {
+        return generateAiConclusion(taskId, auth, false);
+    }
+
+    @Override
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "taskDtoByIdAndUserV2", allEntries = true),
+            @CacheEvict(cacheNames = "taskDtoByUserPageV2", allEntries = true)
+    })
+    public FlightTask regenerateAiConclusion(Long taskId, Authentication auth) {
+        return generateAiConclusion(taskId, auth, true);
+    }
+
+    @Override
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "taskRawKey", allEntries = true),
+            @CacheEvict(cacheNames = "taskTrajectoryKey", allEntries = true),
+            @CacheEvict(cacheNames = "taskDtoByIdAndUserV2", allEntries = true),
+            @CacheEvict(cacheNames = "taskDtoByUserPageV2", allEntries = true)
+    })
+    public TaskBulkDeleteResponse deleteTasks(List<Long> taskIds, Authentication auth) {
+        if (taskIds == null || taskIds.isEmpty()) {
+            throw new BadRequestException("Task ids must not be empty");
+        }
+
+        User currentUser = getCurrentUser(auth);
+        List<Long> requestedIds = taskIds.stream()
+                .filter(id -> id != null && id > 0)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (requestedIds.isEmpty()) {
+            throw new BadRequestException("Task ids must not be empty");
+        }
+
+        List<Long> deleted = new ArrayList<>();
+        List<Long> skipped = new ArrayList<>();
+
+        for (Long taskId : requestedIds) {
+            var optionalTask = taskRepository.findById(taskId);
+            if (optionalTask.isEmpty()) {
+                skipped.add(taskId);
+                continue;
+            }
+
+            FlightTask task = optionalTask.get();
+            if (!currentUser.getId().equals(task.getUserId()) && currentUser.getRole() != Role.ADMIN) {
+                skipped.add(taskId);
+                continue;
+            }
+
+            safelyDeleteObject(task.getRawLogObjectKey());
+            safelyDeleteObject(task.getTrajectoryObjectKey());
+
+            metricsRepository.deleteByTaskId(taskId);
+
+            AiConclusion aiConclusion = task.getAiConclusion();
+            if (aiConclusion == null) {
+                aiConclusion = aiConclusionRepository.findByFlightTaskId(taskId).orElse(null);
+            }
+            if (aiConclusion != null) {
+                task.setAiConclusion(null);
+                task.setHasAiConclusion(false);
+                aiConclusion.setFlightTask(null);
+                aiConclusionRepository.delete(aiConclusion);
+            }
+
+            taskRepository.delete(task);
+            deleted.add(taskId);
+        }
+
+        incrementCounter("tasks.deleted.bulk");
+        return TaskBulkDeleteResponse.builder()
+                .deletedTaskIds(deleted)
+                .skippedTaskIds(skipped)
+                .build();
+    }
+
+    private FlightTask generateAiConclusion(Long taskId, Authentication auth, boolean force) {
         FlightTask task = getTask(taskId, auth);
 
-        if (task.isHasAiConclusion()) {
+        if (!force && task.getAiConclusion() != null && task.getAiConclusion().getConclusion() != null && !task.getAiConclusion().getConclusion().isBlank()) {
             return task;
         }
 
+        checkAiConclusionRateLimit(task.getUserId());
+
         String trajectoryKey = task.getTrajectoryObjectKey();
         if (trajectoryKey == null || trajectoryKey.isBlank()) {
-            throw new NotFoundException("Trajectory file not found");
+            throw new NotFoundException("Trajectory key not found");
         }
 
-        String trajectoryContent;
-        try (var inputStream = fileService.getObjectStream(trajectoryKey)) {
-            trajectoryContent = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new BadRequestException("Failed to read trajectory content");
+        String trajectoryContent = readTrajectoryContent(trajectoryKey);
+        AiConclusionGenerationResult generationResult = aiConclusionService.generateConclusion(trajectoryContent);
+        String conclusion = generationResult.conclusion();
+        if (conclusion == null || conclusion.isBlank()) {
+            throw new BadRequestException("AI conclusion must not be empty");
         }
 
-        String updatedContent = appendConclusionToTrajectory(trajectoryContent);
-        fileService.uploadJson(trajectoryKey, updatedContent);
+        String updatedTrajectory = appendConclusionToTrajectory(trajectoryContent, conclusion);
+        fileService.uploadJson(trajectoryKey, updatedTrajectory);
 
+        AiConclusion aiConclusion = task.getAiConclusion();
+        if (aiConclusion == null) {
+            aiConclusion = aiConclusionRepository.findByFlightTaskId(task.getId()).orElseGet(AiConclusion::new);
+        }
+        aiConclusion.setFlightTask(task);
+        aiConclusion.setConclusion(conclusion);
+        aiConclusion.setAiModel(generationResult.model());
+        aiConclusion.setErrorMessage(generationResult.errorMessage());
+
+        task.setAiConclusion(aiConclusionRepository.save(aiConclusion));
         task.setHasAiConclusion(true);
-        incrementCounter("tasks.aiConclusion.added");
+        incrementCounter("tasks.ai_conclusion.added");
         return taskRepository.save(task);
     }
-
+    
     private void incrementCounter(String name) {
         if (meterRegistry == null) {
             return;
@@ -279,6 +378,23 @@ public class FlightTaskServiceImpl implements FlightTaskService {
             throw new RateLimitException("Too many task creation attempts");
         }
         taskCreationRateLimiter.onAttempt(userId);
+    }
+
+    private void checkAiConclusionRateLimit(Long userId) {
+        if (!aiConclusionRateLimiter.isAllowed(userId)) {
+            throw new RateLimitException("Too many AI conclusion generation attempts");
+        }
+        aiConclusionRateLimiter.onAttempt(userId);
+    }
+
+    private void safelyDeleteObject(String objectKey) {
+        if (objectKey == null || objectKey.isBlank()) {
+            return;
+        }
+        try {
+            fileService.delete(objectKey);
+        } catch (Exception ignored) {
+        }
     }
     
     private User getCurrentUser(Authentication auth) {
@@ -300,7 +416,15 @@ public class FlightTaskServiceImpl implements FlightTaskService {
         }
     }
 
-    private String appendConclusionToTrajectory(String trajectoryContent) {
+    private String readTrajectoryContent(String trajectoryKey) {
+        try (var inputStream = fileService.getObjectStream(trajectoryKey)) {
+            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException ex) {
+            throw new BadRequestException("Failed to read trajectory file");
+        }
+    }
+
+    private String appendConclusionToTrajectory(String trajectoryContent, String conclusion) {
         try {
             var root = objectMapper.readTree(trajectoryContent);
             ObjectNode wrapper;
@@ -312,10 +436,10 @@ public class FlightTaskServiceImpl implements FlightTaskService {
                 wrapper.set("trajectory", root);
             }
 
-            wrapper.put("aiConclusion", STATIC_AI_CONCLUSION);
+            wrapper.put("aiConclusion", conclusion);
             return objectMapper.writeValueAsString(wrapper);
         } catch (Exception ex) {
-            return trajectoryContent + System.lineSeparator() + System.lineSeparator() + "AI Conclusion: " + STATIC_AI_CONCLUSION;
+            return trajectoryContent + System.lineSeparator() + System.lineSeparator() + "AI Conclusion: " + conclusion;
         }
     }
 }

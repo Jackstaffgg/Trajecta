@@ -1,23 +1,27 @@
-import { useState } from "react";
-import { Sparkles, AlertTriangle } from "lucide-react";
+import { useMemo, useState } from "react";
+import { RefreshCcw, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useFlightStore } from "@/store/flight-store";
 import { useFlightData } from "@/hooks/useFlightData";
 
-type AiReport = {
-  summary: string;
-  anomalies: string[];
-  probableCause: string;
-};
-
 export function AiDiagnosticsView() {
-  const [loading, setLoading] = useState(false);
-  const [report, setReport] = useState<AiReport | null>(null);
+  const [loadingAppend, setLoadingAppend] = useState(false);
+  const [loadingRegenerate, setLoadingRegenerate] = useState(false);
   const data = useFlightStore((s) => s.data);
   const currentTask = useFlightStore((s) => s.currentTask);
   const error = useFlightStore((s) => s.error);
   const { requestAiConclusion } = useFlightData();
+
+  const aiConclusion = useMemo(
+    () => data?.aiConclusion ?? currentTask?.aiConclusion ?? undefined,
+    [data?.aiConclusion, currentTask?.aiConclusion]
+  );
+
+  const aiModel = useMemo(
+    () => data?.aiModel ?? currentTask?.aiModel ?? undefined,
+    [data?.aiModel, currentTask?.aiModel]
+  );
 
   function safeText(value: unknown, fallback = "") {
     if (typeof value === "string") return value;
@@ -25,38 +29,24 @@ export function AiDiagnosticsView() {
     return fallback;
   }
 
-  async function requestAnalysis() {
+  async function requestAnalysis(force: boolean) {
     if (!data || !currentTask) {
       return;
     }
 
-    setLoading(true);
+    if (force) {
+      setLoadingRegenerate(true);
+    } else {
+      setLoadingAppend(true);
+    }
     try {
-      const ok = await requestAiConclusion();
-      if (!ok) {
-        setReport({
-          summary: "Failed to append AI conclusion to trajectory.",
-          anomalies: ["Task or trajectory endpoint returned an error"],
-          probableCause: "See backend error details"
-        });
-        return;
-      }
-      const latest = useFlightStore.getState().data;
-      setReport({
-        summary:
-          latest?.aiConclusion ??
-          "AI conclusion was appended to trajectory. Re-open this screen after load to see details.",
-        anomalies: ["Conclusion attached to trajectory JSON"],
-        probableCause: "Static backend conclusion"
-      });
-    } catch {
-      setReport({
-        summary: "Failed to append AI conclusion to trajectory.",
-        anomalies: ["Task or trajectory endpoint returned an error"],
-        probableCause: "See backend error details"
-      });
+      await requestAiConclusion(force);
     } finally {
-      setLoading(false);
+      if (force) {
+        setLoadingRegenerate(false);
+      } else {
+        setLoadingAppend(false);
+      }
     }
   }
 
@@ -67,33 +57,38 @@ export function AiDiagnosticsView() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Trigger backend AI conclusion append on current task trajectory output.
+          Generate AI conclusion for the selected trajectory and review model metadata.
         </p>
         {currentTask ? <p className="text-xs text-muted-foreground">Task #{currentTask.id}</p> : null}
         {error ? <p className="text-xs text-rose-300">{error}</p> : null}
-        <Button onClick={() => void requestAnalysis()} disabled={loading || !currentTask || !data}>
-          <Sparkles className="h-4 w-4" />
-          {loading ? "Request in progress..." : "Append AI Conclusion"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => void requestAnalysis(false)}
+            disabled={loadingAppend || loadingRegenerate || !currentTask || !data}
+          >
+            <Sparkles className="h-4 w-4" />
+            {loadingAppend ? "Request in progress..." : aiConclusion ? "Refresh AI Conclusion" : "Generate AI Conclusion"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => void requestAnalysis(true)}
+            disabled={loadingAppend || loadingRegenerate || !currentTask || !data}
+          >
+            <RefreshCcw className="h-4 w-4" />
+            {loadingRegenerate ? "Regenerating..." : "Force Regenerate"}
+          </Button>
+        </div>
 
-        {report ? (
-          <div className="space-y-3 rounded-lg border border-border bg-background/50 p-4">
-            <p className="text-sm text-foreground">{safeText(report.summary, "No summary")}</p>
-            <div>
-              <p className="mb-1 text-xs uppercase text-muted-foreground">Anomalies</p>
-              <ul className="space-y-1 text-sm">
-                {report.anomalies.map((a) => (
-                  <li key={safeText(a, "anomaly")} className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-amber-400" />
-                    {safeText(a, "Unknown anomaly")}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <p className="mb-1 text-xs uppercase text-muted-foreground">Probable Cause</p>
-              <p className="text-sm">{safeText(report.probableCause, "N/A")}</p>
-            </div>
+        {aiModel ? (
+          <p className="text-xs text-muted-foreground">
+            Model: <span className="font-medium text-foreground">{safeText(aiModel, "UNKNOWN")}</span>
+          </p>
+        ) : null}
+
+        {aiConclusion ? (
+          <div className="rounded-lg border border-border bg-background/50 p-4">
+            <p className="mb-1 text-xs uppercase text-muted-foreground">AI Conclusion</p>
+            <p className="text-sm text-foreground">{safeText(aiConclusion, "No conclusion yet")}</p>
           </div>
         ) : null}
       </CardContent>

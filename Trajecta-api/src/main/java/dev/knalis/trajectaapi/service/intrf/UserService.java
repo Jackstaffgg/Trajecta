@@ -2,6 +2,7 @@ package dev.knalis.trajectaapi.service.intrf;
 
 import dev.knalis.trajectaapi.dto.auth.RegisterRequest;
 import dev.knalis.trajectaapi.dto.user.UserCreateRequest;
+import dev.knalis.trajectaapi.dto.user.UserResponse;
 import dev.knalis.trajectaapi.dto.user.UserUpdateRequest;
 import dev.knalis.trajectaapi.model.User;
 import org.springframework.security.core.Authentication;
@@ -24,8 +25,14 @@ public interface UserService {
     /** Finds user by identifier. */
     User findById(long id);
 
+    /** Finds user DTO by identifier. */
+    UserResponse findResponseById(long id);
+
     /** Returns all users. */
     List<User> findAll();
+
+    /** Returns all users as DTO view. */
+    List<UserResponse> findAllResponses();
 
     /** Deletes user by identifier. */
     void delete(long id);

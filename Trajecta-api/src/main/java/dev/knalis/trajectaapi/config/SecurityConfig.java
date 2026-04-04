@@ -2,6 +2,7 @@ package dev.knalis.trajectaapi.config;
 
 import dev.knalis.trajectaapi.security.InternalWorkerTokenFilter;
 import dev.knalis.trajectaapi.security.JwtAuthenticationFilter;
+import dev.knalis.trajectaapi.security.RequestLoggingFilter;
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -31,6 +32,7 @@ public class SecurityConfig {
     
     private final InternalWorkerTokenFilter internalWorkerTokenFilter;
     private final JwtAuthenticationFilter jwtAuthFilter;
+    private final RequestLoggingFilter requestLoggingFilter;
     private final UserDetailsService userDetailsService;
     
     @Bean
@@ -59,6 +61,7 @@ public class SecurityConfig {
                 .authenticationProvider(
                         authenticationProvider()
                 )
+                .addFilterBefore(requestLoggingFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(internalWorkerTokenFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         

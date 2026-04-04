@@ -1,4 +1,4 @@
-import { useState, type ComponentType } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import {
   Activity,
   Bot,
@@ -57,7 +57,9 @@ type SidebarProps = {
   tasks: TaskInfo[];
   activeTaskId: number | null;
   loadingTasks?: boolean;
+  deletingTasks?: boolean;
   onTaskSelect: (task: TaskInfo) => void;
+  onDeleteTasks: (taskIds: number[]) => void;
 };
 
 function taskStatusClass(status: TaskInfo["status"]) {
@@ -67,7 +69,7 @@ function taskStatusClass(status: TaskInfo["status"]) {
   return "text-muted-foreground";
 }
 
-export function Sidebar({ tasks, activeTaskId, loadingTasks = false, onTaskSelect }: SidebarProps) {
+export function Sidebar({ tasks, activeTaskId, loadingTasks = false, deletingTasks = false, onTaskSelect, onDeleteTasks }: SidebarProps) {
   const mode = useFlightStore((s) => s.mode);
   const setMode = useFlightStore((s) => s.setMode);
   const auth = useFlightStore((s) => s.auth);
@@ -75,6 +77,39 @@ export function Sidebar({ tasks, activeTaskId, loadingTasks = false, onTaskSelec
   const hasSelectedTask = Boolean(activeTaskId);
   const isAdmin = auth.user?.role?.toUpperCase() === "ADMIN";
   const [tasksExpanded, setTasksExpanded] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+
+  const allTaskIds = useMemo(() => tasks.map((task) => task.id), [tasks]);
+  const allSelected = allTaskIds.length > 0 && allTaskIds.every((id) => selectedTaskIds.includes(id));
+
+  useEffect(() => {
+    const availableIds = new Set(allTaskIds);
+    setSelectedTaskIds((prev) => prev.filter((id) => availableIds.has(id)));
+  }, [allTaskIds]);
+
+  function toggleTaskSelection(taskId: number) {
+    setSelectedTaskIds((prev) =>
+      prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]
+    );
+  }
+
+  function deleteSelected() {
+    if (selectedTaskIds.length === 0) {
+      return;
+    }
+    onDeleteTasks(selectedTaskIds);
+    setSelectedTaskIds([]);
+    setConfirmDeleteOpen(false);
+  }
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelectedTaskIds([]);
+      return;
+    }
+    setSelectedTaskIds(allTaskIds);
+  }
 
   return (
     <aside className="panel-grid w-full border-b border-border/70 p-3 backdrop-blur md:h-screen md:w-80 md:border-b-0 md:border-r">
@@ -152,11 +187,53 @@ export function Sidebar({ tasks, activeTaskId, loadingTasks = false, onTaskSelec
 
           <div className={cn("overflow-hidden transition-all", tasksExpanded ? "max-h-[340px]" : "max-h-0")}>
             <div className="max-h-[320px] space-y-2 overflow-auto pr-1">
+              <div className="flex items-center justify-between px-1 pb-1">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleSelectAll}
+                    disabled={tasks.length === 0 || deletingTasks}
+                  />
+                  <span className="text-[11px] text-muted-foreground">Selected: {selectedTaskIds.length}</span>
+                </div>
+                <button
+                  type="button"
+                  className="rounded border border-border/70 px-2 py-0.5 text-[11px] text-rose-300 disabled:opacity-50"
+                  disabled={deletingTasks || selectedTaskIds.length === 0}
+                  onClick={() => setConfirmDeleteOpen(true)}
+                >
+                  {deletingTasks ? "Deleting..." : "Delete selected"}
+                </button>
+              </div>
+              {confirmDeleteOpen ? (
+                <div className="rounded-md border border-rose-400/40 bg-rose-500/10 p-2 text-[11px] text-rose-200">
+                  <p>Delete {selectedTaskIds.length} selected task(s)? This action cannot be undone.</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="rounded border border-border/70 px-2 py-0.5 text-[11px] text-muted-foreground"
+                      onClick={() => setConfirmDeleteOpen(false)}
+                      disabled={deletingTasks}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded border border-rose-400/50 px-2 py-0.5 text-[11px] text-rose-300 disabled:opacity-50"
+                      onClick={deleteSelected}
+                      disabled={deletingTasks}
+                    >
+                      Confirm delete
+                    </button>
+                  </div>
+                </div>
+              ) : null}
               {tasks.length === 0 ? (
                 <p className="text-xs text-muted-foreground">No tasks yet.</p>
               ) : (
                 tasks.map((task) => (
-                  <button
+                  <div
                     key={task.id}
                     className={cn(
                       "nav-item w-full rounded-md px-2 py-1.5 text-left transition",
@@ -164,14 +241,23 @@ export function Sidebar({ tasks, activeTaskId, loadingTasks = false, onTaskSelec
                         ? "nav-item-active"
                         : "hover:border-accent/40"
                     )}
-                    onClick={() => onTaskSelect(task)}
                   >
-                    <p className="truncate text-xs font-medium">#{task.id} {task.title}</p>
-                    <div className="mt-0.5 flex items-center justify-between">
-                      <p className={cn("text-[11px]", taskStatusClass(task.status))}>{task.status}</p>
-                      {activeTaskId === task.id ? <span className="text-[10px] text-foreground">Selected</span> : null}
+                    <div className="flex items-start gap-2">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5"
+                        checked={selectedTaskIds.includes(task.id)}
+                        onChange={() => toggleTaskSelection(task.id)}
+                      />
+                      <button type="button" className="w-full text-left" onClick={() => onTaskSelect(task)}>
+                        <p className="truncate text-xs font-medium">#{task.id} {task.title}</p>
+                        <div className="mt-0.5 flex items-center justify-between">
+                          <p className={cn("text-[11px]", taskStatusClass(task.status))}>{task.status}</p>
+                          {activeTaskId === task.id ? <span className="text-[10px] text-foreground">Selected</span> : null}
+                        </div>
+                      </button>
                     </div>
-                  </button>
+                  </div>
                 ))
               )}
             </div>
