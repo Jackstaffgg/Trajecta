@@ -1,5 +1,6 @@
 package dev.knalis.trajectaapi.mapper;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.knalis.trajectaapi.dto.user.UserUpdateRequest;
 import dev.knalis.trajectaapi.model.Role;
 import dev.knalis.trajectaapi.model.User;
@@ -24,6 +25,7 @@ class UserMapperTest {
         mapper = new UserMapperImpl();
         passwordEncoder = mock(PasswordEncoder.class);
         ReflectionTestUtils.setField(mapper, "passwordEncoder", passwordEncoder);
+        ReflectionTestUtils.setField(mapper, "objectMapper", new ObjectMapper());
     }
 
     @Test
@@ -111,6 +113,31 @@ class UserMapperTest {
         mapper.updateUserFromDto(req, user);
 
         assertThat(user.getEmail()).isEqualTo("new@example.com");
+    }
+
+    @Test
+    void toDtoList_convertsMapEntriesWithSecurityFlags() {
+        List<?> users = List.of(
+                java.util.Map.of(
+                        "id", 7,
+                        "name", "Cached User",
+                        "username", "cached",
+                        "email", "cached@example.com",
+                        "role", "USER",
+                        "authorities", List.of(java.util.Map.of("authority", "ROLE_USER")),
+                        "accountNonExpired", true,
+                        "accountNonLocked", true,
+                        "credentialsNonExpired", true,
+                        "enabled", true
+                )
+        );
+
+        var result = mapper.toDtoList(users);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getUsername()).isEqualTo("cached");
+        assertThat(result.get(0).getEmail()).isEqualTo("cached@example.com");
+        assertThat(result.get(0).getRole()).isEqualTo("USER");
     }
 }
 

@@ -1,5 +1,6 @@
 package dev.knalis.trajectaapi.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,6 +15,13 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @Entity(name = "users")
+@JsonIgnoreProperties(value = {
+        "authorities",
+        "accountNonExpired",
+        "accountNonLocked",
+        "credentialsNonExpired",
+        "enabled"
+}, ignoreUnknown = true)
 public class User implements UserDetails {
     
     @Id
