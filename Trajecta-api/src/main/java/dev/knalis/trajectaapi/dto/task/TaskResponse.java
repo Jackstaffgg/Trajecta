@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.time.Instant;
 
 @Data
@@ -14,7 +16,10 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Schema(description = "Telemetry task details.")
-public class TaskResponse {
+public class TaskResponse implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
+
     @Schema(description = "Task identifier.", example = "42")
     private Long id;
 
