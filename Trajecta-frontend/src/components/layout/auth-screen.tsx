@@ -18,6 +18,11 @@ export function AuthScreen() {
 
   async function handleAuth() {
     if (!username || !password || (isRegister && (!name || !email))) {
+      setError(
+        isRegister
+          ? "Please fill in all fields: name, email, username and password."
+          : "Please enter your username and password."
+      );
       return;
     }
 

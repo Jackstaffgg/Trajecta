@@ -3,3 +3,6 @@
 !.env.vps.example
 data/
 .idea/
+.DS_Store                                                                                                          
+Thumbs.db                                                                                                             
+Desktop.ini 
