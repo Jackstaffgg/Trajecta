@@ -44,6 +44,9 @@ This keeps UI modules focused on rendering and interaction, while ingestion logi
 ## Environment Variables
 
 - VITE_CESIUM_ION_TOKEN: optional token for Cesium terrain/imagery providers
+- VITE_APP_BASE_PATH: public app base path (for subpath deploys, e.g. /trajecta/)
+- VITE_API_BASE_URL: API prefix/base (for subpath deploys, e.g. /trajecta)
+- VITE_WS_PATH: websocket endpoint path suffix (default /ws)
 
 ## Docker (Production)
 

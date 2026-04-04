@@ -61,19 +61,34 @@ function toStompFrame(command: string, headers: Record<string, string>, body = "
   return [command, ...headerLines, "", body].join("\n") + "\0";
 }
 
+function normalizePath(value: string, fallback: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return fallback;
+  }
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+}
+
 function resolveWsEndpoint(): string {
+  const wsPath = normalizePath((import.meta.env.VITE_WS_PATH as string | undefined) ?? "/ws", "/ws");
   const base = getApiBaseUrl();
   if (base) {
-    const url = new URL(base);
-    url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-    url.pathname = "/ws";
-    url.search = "";
-    url.hash = "";
-    return url.toString();
+    if (/^https?:\/\//i.test(base)) {
+      const url = new URL(base);
+      url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+      url.pathname = wsPath;
+      url.search = "";
+      url.hash = "";
+      return url.toString();
+    }
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const prefix = normalizePath(base, "").replace(/\/$/, "");
+    return `${protocol}//${window.location.host}${prefix}${wsPath}`;
   }
 
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${window.location.host}/ws`;
+  return `${protocol}//${window.location.host}${wsPath}`;
 }
 
 type AppShellProps = {

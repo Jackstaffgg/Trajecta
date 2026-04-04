@@ -1,0 +1,24 @@
+{$DOMAIN} {
+    tls {$ACME_EMAIL}
+    encode gzip zstd
+
+    @root path /
+    redir @root /trajecta/ 308
+
+    @base path /trajecta
+    redir @base /trajecta/ 308
+
+    handle_path /trajecta/api/* {
+        reverse_proxy backend:8080
+    }
+
+    handle_path /trajecta/ws* {
+        reverse_proxy backend:8080
+    }
+
+    handle_path /trajecta/* {
+        reverse_proxy frontend:80
+    }
+
+    respond 404
+}
