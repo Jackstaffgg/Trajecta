@@ -30,7 +30,13 @@ export function AuthScreen() {
       setAuthenticated(result.token, result.user);
     } catch (e) {
       if (e instanceof ApiClientError) {
-        setError(e.message);
+        if (isRegister && e.status === 400) {
+          setError(
+            `${e.message} Check fields: name 4-40 chars, username 4-16 [a-zA-Z0-9_], password >= 8, valid email, and unique username.`
+          );
+        } else {
+          setError(e.message);
+        }
       } else if (e instanceof Error) {
         setError(e.message);
       } else {
