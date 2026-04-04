@@ -459,7 +459,7 @@ export function AppShell({ children }: AppShellProps) {
           <div className="relative flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setOpenNotifications((v) => !v)}>
               <Bell className="h-4 w-4" />
-              Notifications
+              <span className="hidden md:inline">Notifications</span>
               {unreadCount > 0 ? (
                 <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-slate-950">
                   {unreadCount}
@@ -469,7 +469,7 @@ export function AppShell({ children }: AppShellProps) {
 
             <Button variant="ghost" size="sm" onClick={logout}>
               <LogOut className="h-4 w-4" />
-              Logout
+              <span className="hidden md:inline">Logout</span>
             </Button>
 
             {openNotifications ? (
