@@ -1,22 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Cartesian2,
   Cartesian3,
+  Cartographic,
   CallbackPositionProperty,
   CallbackProperty,
   Color,
+  ConstantPositionProperty,
   HeadingPitchRoll,
   Ion,
-  LabelStyle,
   Matrix4,
   Math as CesiumMath,
-  PolylineGlowMaterialProperty,
   Quaternion,
   Viewer as CesiumViewer
 } from "cesium";
 import { Pause, Play, Camera, Move3D, Rewind, FastForward, RotateCcw } from "lucide-react";
 import { useFlightStore } from "@/store/flight-store";
-import { interpolateFrame, speedToColor, positionFromFrame } from "@/modules/replay/replay-utils";
+import { interpolateFrame, positionFromFrame } from "@/modules/replay/replay-utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -24,6 +23,8 @@ const CESIUM_TOKEN = import.meta.env.VITE_CESIUM_ION_TOKEN as string | undefined
 if (CESIUM_TOKEN) {
   Ion.defaultAccessToken = CESIUM_TOKEN;
 }
+
+const TRACE_ENTITY_ID = "trace-main";
 
 type EventTone = "critical" | "warning" | "info";
 
@@ -75,10 +76,9 @@ export function FlightReplayView() {
   const timeRef = useRef(replay.timeSec);
   const maxTimeRef = useRef(0);
   const hasInitialFramingRef = useRef(false);
-  const traceEntityIdsRef = useRef<string[]>([]);
   const eventEntityIdsRef = useRef<string[]>([]);
-  const prevCameraModeRef = useRef(replay.camera);
-  const chaseAnchorRef = useRef<Cartesian3 | null>(null);
+  const droneEntityRef = useRef<ReturnType<CesiumViewer["entities"]["add"]> | null>(null);
+  const terrainBiasRef = useRef<number | null>(null);
   const [compactHud, setCompactHud] = useState(false);
   const [chaseStyle, setChaseStyle] = useState<"normal" | "cinematic">("normal");
   const [hoveredEventKey, setHoveredEventKey] = useState<string | null>(null);
@@ -99,7 +99,6 @@ export function FlightReplayView() {
     [data?.frames]
   );
   const maxTime = frames.length ? frames[frames.length - 1].t : 0;
-  const maxSpeed = data?.metrics.maxSpeed ?? 30;
   const speedPresets = [0.25, 0.5, 1, 2, 4];
 
   const progressPct = maxTime > 0 ? (replay.timeSec / maxTime) * 100 : 0;
@@ -138,7 +137,52 @@ export function FlightReplayView() {
     return best;
   }, [visibleEventMarkers, replay.timeSec]);
 
-  const chaseLerpAlpha = chaseStyle === "cinematic" ? 0.08 : 0.18;
+  const chaseViewFrom = useMemo(
+    () =>
+      chaseStyle === "cinematic"
+        ? new Cartesian3(-140, 0, 55)
+        : new Cartesian3(-90, 0, 35),
+    [chaseStyle]
+  );
+
+  const getTerrainBias = useCallback(() => {
+    if (terrainBiasRef.current !== null) {
+      return terrainBiasRef.current;
+    }
+
+    const viewer = viewerRef.current;
+    const first = frames[0];
+    if (!viewer || !first) {
+      return 0;
+    }
+
+    const terrain = viewer.scene.globe.getHeight(Cartographic.fromDegrees(first.lon, first.lat));
+    if (terrain === undefined || !Number.isFinite(terrain)) {
+      return 0;
+    }
+
+    const firstAlt = Number.isFinite(first.alt) ? first.alt : 0;
+    const delta = terrain - firstAlt;
+    terrainBiasRef.current = delta > 5 ? delta + 5 : 0;
+    return terrainBiasRef.current;
+  }, [frames]);
+
+  const positionFromFrameAligned = useCallback((frame: { lat: number; lon: number; alt: number }) => {
+    const lat = Number.isFinite(frame.lat) ? frame.lat : 0;
+    const lon = Number.isFinite(frame.lon) ? frame.lon : 0;
+    const srcAlt = Number.isFinite(frame.alt) ? frame.alt : 0;
+    let alt = srcAlt + getTerrainBias();
+
+    const viewer = viewerRef.current;
+    if (viewer) {
+      const terrain = viewer.scene.globe.getHeight(Cartographic.fromDegrees(lon, lat));
+      if (terrain !== undefined && Number.isFinite(terrain)) {
+        alt = Math.max(alt, terrain + 2);
+      }
+    }
+
+    return Cartesian3.fromDegrees(lon, lat, alt);
+  }, [getTerrainBias]);
 
   function formatReplayTime(sec: number) {
     const s = Math.max(0, Math.floor(sec));
@@ -257,6 +301,22 @@ export function FlightReplayView() {
     [replayEvents, importantOnly]
   );
 
+  const tracePositions = useMemo(() => {
+    if (frames.length <= 2) {
+      return frames.map((frame) => positionFromFrame(frame));
+    }
+
+    const targetSamples = 1600;
+    const stride = Math.max(1, Math.ceil(frames.length / targetSamples));
+    const sampled = frames
+      .filter((_, idx) => idx % stride === 0)
+      .map((frame) => positionFromFrame(frame));
+
+    const last = frames[frames.length - 1];
+    sampled.push(positionFromFrame(last));
+    return sampled;
+  }, [frames]);
+
   useEffect(() => {
     if (!containerRef.current || viewerRef.current) {
       return;
@@ -273,9 +333,9 @@ export function FlightReplayView() {
     });
 
     viewerRef.current = viewer;
-    viewer.entities.add({
+    const droneEntity = viewer.entities.add({
       id: "replay-drone",
-      position: new CallbackPositionProperty(() => positionFromFrame(interpolatedRef.current), false),
+      position: new CallbackPositionProperty(() => positionFromFrameAligned(interpolatedRef.current), false),
       orientation: new CallbackProperty(
         () =>
           Quaternion.fromHeadingPitchRoll(
@@ -294,12 +354,14 @@ export function FlightReplayView() {
         outlineWidth: 2
       }
     });
+    droneEntityRef.current = droneEntity;
 
     return () => {
+      droneEntityRef.current = null;
       viewerRef.current = null;
       viewer.destroy();
     };
-  }, []);
+  }, [positionFromFrameAligned]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -307,31 +369,18 @@ export function FlightReplayView() {
       return;
     }
 
-    for (const id of traceEntityIdsRef.current) {
-      viewer.entities.removeById(id);
-    }
-    traceEntityIdsRef.current = [];
-
-    for (let i = 1; i < frames.length; i += 1) {
-      const a = frames[i - 1];
-      const b = frames[i];
-      const avgSpeed = ((a.speed ?? 0) + (b.speed ?? 0)) / 2;
-      const id = `trace-${i}`;
-      traceEntityIdsRef.current.push(id);
+    viewer.entities.removeById(TRACE_ENTITY_ID);
+    if (tracePositions.length >= 2) {
       viewer.entities.add({
-        id,
+        id: TRACE_ENTITY_ID,
         polyline: {
-          positions: [positionFromFrame(a), positionFromFrame(b)],
-          width: 4,
-          material: new PolylineGlowMaterialProperty({
-            glowPower: 0.2,
-            taperPower: 0.5,
-            color: speedToColor(avgSpeed, maxSpeed)
-          })
+          positions: tracePositions,
+          width: 3,
+          material: Color.CYAN.withAlpha(0.85)
         }
       });
     }
-  }, [frames, maxSpeed]);
+  }, [tracePositions]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -352,28 +401,20 @@ export function FlightReplayView() {
       eventEntityIdsRef.current.push(id);
       viewer.entities.add({
         id,
-        position: positionFromFrame(event.near),
+        position: positionFromFrameAligned(event.near),
         point: {
-          pixelSize: 10,
+          pixelSize: 7,
           color: eventToneColor(event.tone),
-          outlineColor: Color.BLACK,
-          outlineWidth: 2
-        },
-        label: {
-          text: event.label,
-          font: "12px Manrope",
-          pixelOffset: new Cartesian2(0, -30),
-          fillColor: Color.WHITE,
-          style: LabelStyle.FILL_AND_OUTLINE,
           outlineColor: Color.BLACK,
           outlineWidth: 2
         }
       });
     });
-  }, [visibleReplayEvents]);
+  }, [visibleReplayEvents, positionFromFrameAligned]);
 
   useEffect(() => {
     hasInitialFramingRef.current = false;
+    terrainBiasRef.current = null;
   }, [frames]);
 
   useEffect(() => {
@@ -384,51 +425,66 @@ export function FlightReplayView() {
 
     hasInitialFramingRef.current = true;
     viewer.camera.flyTo({
-      destination: positionFromFrame(frames[0])
+      destination: positionFromFrameAligned(frames[0])
     });
-  }, [frames]);
+  }, [frames, positionFromFrameAligned]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
-    if (!viewer) {
+    const droneEntity = droneEntityRef.current;
+    if (!viewer || !droneEntity) {
       return;
     }
 
-    const pos = positionFromFrame(interpolated);
+    if (replay.camera === "chase") {
+      droneEntity.viewFrom = new ConstantPositionProperty(Cartesian3.clone(chaseViewFrom));
+      if (viewer.trackedEntity !== droneEntity) {
+        viewer.trackedEntity = droneEntity;
+      }
+      return;
+    }
+
+    if (viewer.trackedEntity) {
+      viewer.trackedEntity = undefined;
+      viewer.camera.lookAtTransform(Matrix4.IDENTITY);
+    }
+  }, [replay.camera, chaseViewFrom]);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || replay.camera !== "fpv") {
+      return;
+    }
+
+    const pos = positionFromFrameAligned(interpolated);
     const yaw = CesiumMath.toRadians(interpolated.yaw ?? 0);
     const pitch = CesiumMath.toRadians(interpolated.pitch ?? 0);
 
-    if (replay.camera === "chase") {
-      if (!chaseAnchorRef.current) {
-        chaseAnchorRef.current = Cartesian3.clone(pos);
-      } else {
-        Cartesian3.lerp(chaseAnchorRef.current, pos, chaseLerpAlpha, chaseAnchorRef.current);
+    viewer.camera.setView({
+      destination: pos,
+      orientation: {
+        heading: yaw,
+        pitch,
+        roll: CesiumMath.toRadians(interpolated.roll ?? 0)
       }
-      viewer.camera.lookAt(chaseAnchorRef.current, new Cartesian3(-60 * Math.cos(yaw), -60 * Math.sin(yaw), 25));
-    } else if (replay.camera === "fpv") {
-      chaseAnchorRef.current = null;
-      viewer.camera.setView({
-        destination: pos,
-        orientation: {
-          heading: yaw,
-          pitch,
-          roll: CesiumMath.toRadians(interpolated.roll ?? 0)
-        }
-      });
-    } else if (prevCameraModeRef.current !== "free") {
-      chaseAnchorRef.current = null;
-      viewer.camera.lookAtTransform(Matrix4.IDENTITY);
-    }
-
-    prevCameraModeRef.current = replay.camera;
-  }, [interpolated, replay.camera, chaseLerpAlpha]);
+    });
+  }, [interpolated, replay.camera, positionFromFrameAligned]);
 
   function recenterCamera() {
     const viewer = viewerRef.current;
     if (!viewer) {
       return;
     }
-    viewer.camera.flyTo({ destination: positionFromFrame(interpolatedRef.current) });
+
+    const droneEntity = droneEntityRef.current;
+    if (replay.camera === "chase" && droneEntity) {
+      droneEntity.viewFrom = new ConstantPositionProperty(Cartesian3.clone(chaseViewFrom));
+      viewer.trackedEntity = undefined;
+      viewer.trackedEntity = droneEntity;
+      return;
+    }
+
+    viewer.camera.flyTo({ destination: positionFromFrameAligned(interpolatedRef.current) });
   }
 
   if (!frames.length) {
@@ -459,103 +515,116 @@ export function FlightReplayView() {
         </div>
       </div>
 
-      <div className="grid gap-3 rounded-xl border border-border bg-card/80 p-3 md:grid-cols-[auto_1fr_auto] md:items-center">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => seekBy(-5)}>
-            <Rewind className="h-4 w-4" />
-            -5s
-          </Button>
-          <Button size="sm" onClick={() => setPlaying(!replay.isPlaying)}>
-            {replay.isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            {replay.isPlaying ? "Pause" : "Play"}
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => seekBy(5)}>
-            <FastForward className="h-4 w-4" />
-            +5s
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => { setTime(0); setPlaying(false); }}>
-            <RotateCcw className="h-4 w-4" />
-            Reset
-          </Button>
-          <Button variant="outline" size="sm" onClick={recenterCamera}>
-            <Camera className="h-4 w-4" />
-            Recenter
-          </Button>
-          <Badge>{formatReplayTime(replay.timeSec)} / {formatReplayTime(maxTime)}</Badge>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>{replay.isPlaying ? "Playing" : replay.timeSec >= maxTime ? "Ended" : "Paused"}</span>
-            <span>{progressPct.toFixed(1)}% · left {formatReplayTime(maxTime - replay.timeSec)}</span>
-          </div>
-          <div className="relative">
-            <div className="absolute -top-2 left-0 right-0 h-2">
-              {visibleEventMarkers.map((event) => (
-                <button
-                  key={event.key}
-                  type="button"
-                  className={`absolute h-2 w-[3px] rounded ${eventToneClass(event.tone, nearestEvent?.key === event.key)}`}
-                  style={{ left: `${(event.t / Math.max(1e-6, maxTime)) * 100}%` }}
-                  onMouseEnter={() => setHoveredEventKey(event.key)}
-                  onMouseLeave={() => setHoveredEventKey((prev) => (prev === event.key ? null : prev))}
-                  onClick={() => setTime(event.t)}
-                  title={`${event.label} @ ${formatReplayTime(event.t)}`}
-                />
-              ))}
+      <div className="space-y-3 rounded-xl border border-border bg-card/80 p-3">
+        <div className="grid gap-3 lg:grid-cols-3">
+          <section className="rounded-lg border border-border/70 bg-background/30 p-3">
+            <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">Playback</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => seekBy(-5)}>
+                <Rewind className="h-4 w-4" />
+                -5s
+              </Button>
+              <Button size="sm" onClick={() => setPlaying(!replay.isPlaying)}>
+                {replay.isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                {replay.isPlaying ? "Pause" : "Play"}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => seekBy(5)}>
+                <FastForward className="h-4 w-4" />
+                +5s
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => { setTime(0); setPlaying(false); }}>
+                <RotateCcw className="h-4 w-4" />
+                Reset
+              </Button>
+              <Button variant="outline" size="sm" onClick={recenterCamera}>
+                <Camera className="h-4 w-4" />
+                Recenter
+              </Button>
             </div>
-            <input
-              className="h-1.5 w-full cursor-pointer appearance-none rounded bg-muted"
-              type="range"
-              min={0}
-              max={maxTime}
-              step={0.01}
-              value={replay.timeSec}
-              onChange={(e) => setTime(Number(e.target.value))}
-            />
-          </div>
-          <div className="text-[11px] text-muted-foreground">
-            {(() => {
-              const active = visibleEventMarkers.find((event) => event.key === hoveredEventKey) ?? nearestEvent;
-              if (!active) {
-                return "No events on timeline";
-              }
-              return `Nearest event: ${active.label} (${active.tone}) @ ${formatReplayTime(active.t)}`;
-            })()}
-          </div>
+            <div className="mt-2">
+              <Badge>{formatReplayTime(replay.timeSec)} / {formatReplayTime(maxTime)}</Badge>
+            </div>
+          </section>
+
+          <section className="rounded-lg border border-border/70 bg-background/30 p-3 lg:col-span-2">
+            <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">Timeline</p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{replay.isPlaying ? "Playing" : replay.timeSec >= maxTime ? "Ended" : "Paused"}</span>
+                <span>{progressPct.toFixed(1)}% · left {formatReplayTime(maxTime - replay.timeSec)}</span>
+              </div>
+              <div className="relative">
+                <div className="absolute -top-2 left-0 right-0 h-2">
+                  {visibleEventMarkers.map((event) => (
+                    <button
+                      key={event.key}
+                      type="button"
+                      className={`absolute h-2 w-[3px] rounded ${eventToneClass(event.tone, nearestEvent?.key === event.key)}`}
+                      style={{ left: `${(event.t / Math.max(1e-6, maxTime)) * 100}%` }}
+                      onMouseEnter={() => setHoveredEventKey(event.key)}
+                      onMouseLeave={() => setHoveredEventKey((prev) => (prev === event.key ? null : prev))}
+                      onClick={() => setTime(event.t)}
+                      title={`${event.label} @ ${formatReplayTime(event.t)}`}
+                    />
+                  ))}
+                </div>
+                <input
+                  className="h-1.5 w-full cursor-pointer appearance-none rounded bg-muted"
+                  type="range"
+                  min={0}
+                  max={maxTime}
+                  step={0.01}
+                  value={replay.timeSec}
+                  onChange={(e) => setTime(Number(e.target.value))}
+                />
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                {(() => {
+                  const active = visibleEventMarkers.find((event) => event.key === hoveredEventKey) ?? nearestEvent;
+                  if (!active) {
+                    return "No events on timeline";
+                  }
+                  return `Nearest event: ${active.label} (${active.tone}) @ ${formatReplayTime(active.t)}`;
+                })()}
+              </div>
+            </div>
+          </section>
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {speedPresets.map((preset) => (
-            <Button
-              key={preset}
-              variant={replay.speed === preset ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSpeed(preset)}
-            >
-              {preset}x
+        <section className="rounded-lg border border-border/70 bg-background/30 p-3">
+          <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">Camera and Filters</p>
+          <div className="flex flex-wrap items-center gap-2">
+            {speedPresets.map((preset) => (
+              <Button
+                key={preset}
+                variant={replay.speed === preset ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSpeed(preset)}
+              >
+                {preset}x
+              </Button>
+            ))}
+            <Button variant={replay.camera === "chase" ? "default" : "outline"} size="sm" onClick={() => setCamera("chase")}>
+              <Camera className="h-3.5 w-3.5" /> Chase
             </Button>
-          ))}
-          <Button variant={replay.camera === "chase" ? "default" : "outline"} size="sm" onClick={() => setCamera("chase")}>
-            <Camera className="h-3.5 w-3.5" /> Chase
-          </Button>
-          <Button variant={replay.camera === "fpv" ? "default" : "outline"} size="sm" onClick={() => setCamera("fpv")}>
-            <Camera className="h-3.5 w-3.5" /> FPV
-          </Button>
-          <Button variant={replay.camera === "free" ? "default" : "outline"} size="sm" onClick={() => setCamera("free")}>
-            <Move3D className="h-3.5 w-3.5" /> Free
-          </Button>
-          <Button variant={chaseStyle === "cinematic" ? "default" : "outline"} size="sm" onClick={() => setChaseStyle((prev) => (prev === "normal" ? "cinematic" : "normal"))}>
-            {chaseStyle === "cinematic" ? "Cinematic Chase" : "Normal Chase"}
-          </Button>
-          <Button variant={importantOnly ? "default" : "outline"} size="sm" onClick={() => setImportantOnly((prev) => !prev)}>
-            {importantOnly ? "Important Only" : "All Events"}
-          </Button>
-          <span className="text-[11px] text-rose-300">Critical</span>
-          <span className="text-[11px] text-amber-200">Warning</span>
-          <span className="text-[11px] text-sky-300">Info</span>
-          <span className="text-[11px] text-muted-foreground">Keys: Space, ←/→, Shift+←/→, 1/2/3, C, R</span>
-        </div>
+            <Button variant={replay.camera === "fpv" ? "default" : "outline"} size="sm" onClick={() => setCamera("fpv")}>
+              <Camera className="h-3.5 w-3.5" /> FPV
+            </Button>
+            <Button variant={replay.camera === "free" ? "default" : "outline"} size="sm" onClick={() => setCamera("free")}>
+              <Move3D className="h-3.5 w-3.5" /> Free
+            </Button>
+            <Button variant={chaseStyle === "cinematic" ? "default" : "outline"} size="sm" onClick={() => setChaseStyle((prev) => (prev === "normal" ? "cinematic" : "normal"))}>
+              {chaseStyle === "cinematic" ? "Cinematic Chase" : "Normal Chase"}
+            </Button>
+            <Button variant={importantOnly ? "default" : "outline"} size="sm" onClick={() => setImportantOnly((prev) => !prev)}>
+              {importantOnly ? "Important Only" : "All Events"}
+            </Button>
+            <span className="text-[11px] text-rose-300">Critical</span>
+            <span className="text-[11px] text-amber-200">Warning</span>
+            <span className="text-[11px] text-sky-300">Info</span>
+            <span className="text-[11px] text-muted-foreground">Keys: Space, ←/→, Shift+←/→, 1/2/3, C, R</span>
+          </div>
+        </section>
       </div>
     </div>
   );

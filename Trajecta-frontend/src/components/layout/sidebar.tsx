@@ -1,7 +1,9 @@
-import type { ComponentType } from "react";
+import { useState, type ComponentType } from "react";
 import {
   Activity,
   Bot,
+  ChevronDown,
+  ChevronUp,
   LayoutDashboard,
   Orbit,
   Radio,
@@ -72,6 +74,7 @@ export function Sidebar({ tasks, activeTaskId, loadingTasks = false, onTaskSelec
 
   const hasSelectedTask = Boolean(activeTaskId);
   const isAdmin = auth.user?.role?.toUpperCase() === "ADMIN";
+  const [tasksExpanded, setTasksExpanded] = useState(false);
 
   return (
     <aside className="panel-grid w-full border-b border-border/70 p-3 backdrop-blur md:h-screen md:w-80 md:border-b-0 md:border-r">
@@ -130,33 +133,48 @@ export function Sidebar({ tasks, activeTaskId, loadingTasks = false, onTaskSelec
         </div>
 
         <section className="surface-divider mt-4 pt-4">
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">My recent tasks</p>
-            {loadingTasks ? <RefreshCw className="h-3.5 w-3.5 animate-spin text-muted-foreground" /> : null}
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <button
+              className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+              onClick={() => setTasksExpanded((prev) => !prev)}
+              type="button"
+            >
+              <span>My recent tasks</span>
+              {tasksExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="rounded-md border border-border/70 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                {tasks.length}
+              </span>
+              {loadingTasks ? <RefreshCw className="h-3.5 w-3.5 animate-spin text-muted-foreground" /> : null}
+            </div>
           </div>
-          <div className="space-y-2">
-            {tasks.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No tasks yet.</p>
-            ) : (
-              tasks.map((task) => (
-                <button
-                  key={task.id}
-                  className={cn(
-                    "nav-item w-full rounded-md px-2 py-1.5 text-left transition",
-                    activeTaskId === task.id
-                      ? "nav-item-active"
-                      : "hover:border-accent/40"
-                  )}
-                  onClick={() => onTaskSelect(task)}
-                >
-                  <p className="truncate text-xs font-medium">#{task.id} {task.title}</p>
-                  <div className="mt-0.5 flex items-center justify-between">
-                    <p className={cn("text-[11px]", taskStatusClass(task.status))}>{task.status}</p>
-                    {activeTaskId === task.id ? <span className="text-[10px] text-foreground">Selected</span> : null}
-                  </div>
-                </button>
-              ))
-            )}
+
+          <div className={cn("overflow-hidden transition-all", tasksExpanded ? "max-h-[340px]" : "max-h-0")}>
+            <div className="max-h-[320px] space-y-2 overflow-auto pr-1">
+              {tasks.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No tasks yet.</p>
+              ) : (
+                tasks.map((task) => (
+                  <button
+                    key={task.id}
+                    className={cn(
+                      "nav-item w-full rounded-md px-2 py-1.5 text-left transition",
+                      activeTaskId === task.id
+                        ? "nav-item-active"
+                        : "hover:border-accent/40"
+                    )}
+                    onClick={() => onTaskSelect(task)}
+                  >
+                    <p className="truncate text-xs font-medium">#{task.id} {task.title}</p>
+                    <div className="mt-0.5 flex items-center justify-between">
+                      <p className={cn("text-[11px]", taskStatusClass(task.status))}>{task.status}</p>
+                      {activeTaskId === task.id ? <span className="text-[10px] text-foreground">Selected</span> : null}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
           </div>
         </section>
       </div>

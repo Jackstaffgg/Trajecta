@@ -26,6 +26,7 @@ def estimate_sampling_hz(timestamps: list[float]) -> float | None:
 def summarize_parsing(data: dict[str, Any]) -> dict[str, Any]:
     gps_hz = estimate_sampling_hz(data.get("gps", {}).get("t", []))
     imu_hz = estimate_sampling_hz(data.get("imu", {}).get("t", []))
+    bat_hz = estimate_sampling_hz(data.get("bat", {}).get("t", []))
 
     return {
         "messages": {
@@ -36,6 +37,13 @@ def summarize_parsing(data: dict[str, Any]) -> dict[str, Any]:
                     "lon": "deg",
                     "alt": "m",
                     "speed": "m/s",
+                    "vz": "m/s",
+                },
+            },
+            "bat": {
+                "samplingHz": bat_hz,
+                "units": {
+                    "remainingPct": "%",
                 },
             },
             "imu": {
@@ -52,8 +60,12 @@ def summarize_parsing(data: dict[str, Any]) -> dict[str, Any]:
         },
         "analysisDataFrame": {
             "gps": {
-                "columns": ["t", "lat", "lon", "alt", "speed"],
+                "columns": ["t", "lat", "lon", "alt", "speed", "vz"],
                 "rows": len(data.get("gps", {}).get("t", [])),
+            },
+            "bat": {
+                "columns": ["t", "remainingPct"],
+                "rows": len(data.get("bat", {}).get("t", [])),
             },
             "imu": {
                 "columns": ["t", "accx", "accy", "accz", "gyrx", "gyry", "gyrz"],
@@ -123,7 +135,7 @@ def build_uniform_timeline(data: dict[str, Any], dt: float) -> np.ndarray:
     starts: list[float] = []
     ends: list[float] = []
 
-    for key in ("gps", "att", "ctun", "imu", "vibe", "pid", "baro", "gpa", "mode"):
+    for key in ("gps", "att", "ctun", "bat", "imu", "vibe", "pid", "baro", "gpa", "mode"):
         t = data[key]["t"]
         if t:
             starts.append(float(np.min(t)))
@@ -345,6 +357,14 @@ def compute_extended_metrics(frames: list[dict[str, Any]]) -> dict[str, float | 
             distance += segment
         prev_lat, prev_lon = lat, lon
 
+    climb_rates = np.array(
+        [
+            float(frame.get("climbRate"))
+            for frame in frames
+            if frame.get("climbRate") is not None
+        ],
+        dtype=float,
+    )
     vz = velocity["vz"] if velocity["vz"].size else np.array([0.0], dtype=float)
     horizontal = velocity["horizontal"] if velocity["horizontal"].size else np.array([0.0], dtype=float)
     gps_speed = np.array(
@@ -362,9 +382,9 @@ def compute_extended_metrics(frames: list[dict[str, Any]]) -> dict[str, float | 
 
     return {
         "maxHorizontalSpeed": max_horizontal,
-        "maxVerticalSpeed": float(np.nanmax(np.abs(vz))) if vz.size else None,
+        "maxVerticalSpeed": float(np.nanmax(np.abs(climb_rates))) if climb_rates.size else (float(np.nanmax(np.abs(vz))) if vz.size else None),
         "maxAcceleration": float(np.nanmax(accel_norm)) if accel_norm else None,
-        "maxClimbRate": float(np.nanmax(vz)) if vz.size else None,
+        "maxClimbRate": float(np.nanmax(climb_rates)) if climb_rates.size else (float(np.nanmax(vz)) if vz.size else None),
         "totalFlightDuration": float(frames[-1]["t"] - frames[0]["t"]) if len(frames) >= 2 else 0.0,
         "totalDistance": float(distance),
     }
@@ -380,9 +400,11 @@ def build_frames(data: dict[str, Any], timeline: np.ndarray) -> list[dict[str, A
     baro_df = as_dataframe(data["baro"])
     gpa_df = as_dataframe(data["gpa"])
 
-    gps = interpolate_continuous(gps_df, timeline, ["lat", "lon", "alt", "speed"])
+    gps = interpolate_continuous(gps_df, timeline, ["lat", "lon", "alt", "speed", "vz"])
     att = interpolate_continuous(att_df, timeline, ["roll", "pitch", "yaw"], angle_columns=["yaw"])
-    ctun = interpolate_continuous(ctun_df, timeline, ["throttle", "alt", "dalt"])
+    ctun = interpolate_continuous(ctun_df, timeline, ["throttle", "alt", "dalt", "crt"])
+    bat_df = as_dataframe(data["bat"])
+    bat = interpolate_continuous(bat_df, timeline, ["remainingPct"])
     imu = interpolate_continuous(imu_df, timeline, ["accx", "accy", "accz", "gyrx", "gyry", "gyrz"])
     vibe = interpolate_continuous(vibe_df, timeline, ["x", "y", "z"])
     pid = interpolate_continuous(pid_df, timeline, ["roll", "pitch", "yaw"])
@@ -413,6 +435,8 @@ def build_frames(data: dict[str, Any], timeline: np.ndarray) -> list[dict[str, A
                     "yaw": maybe_float(att["yaw"][index]),
                 },
                 "vel": maybe_float(gps["speed"][index]),
+                "climbRate": maybe_float(ctun["crt"][index]) if maybe_float(ctun["crt"][index]) is not None else maybe_float(gps["vz"][index]),
+                "battery": maybe_float(bat["remainingPct"][index]),
                 "throttle": maybe_float(ctun["throttle"][index]),
                 "imu": {
                     "accel": [maybe_float(imu["accx"][index]), maybe_float(imu["accy"][index]), maybe_float(imu["accz"][index])],
@@ -458,7 +482,15 @@ def build_output(data: dict[str, Any], dt: float) -> dict[str, Any]:
         "frames": frames,
         "events": sorted(
             [
-                {"t": float(event["t"]), "type": str(event["type"]), **({"value": event["value"]} if event.get("value") is not None else {})}
+                {
+                    "t": float(event["t"]),
+                    "type": str(event.get("type") or "EVENT"),
+                    **({"eventId": int(event["eventId"])} if event.get("eventId") is not None else {}),
+                    **({"code": str(event["code"])} if event.get("code") is not None else {}),
+                    **({"description": str(event["description"])} if event.get("description") is not None else {}),
+                    **({"severity": str(event["severity"])} if event.get("severity") is not None else {}),
+                    **({"value": event["value"]} if event.get("value") is not None else {}),
+                }
                 for event in data["events"]
             ],
             key=lambda item: item["t"],

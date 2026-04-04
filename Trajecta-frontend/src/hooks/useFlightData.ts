@@ -8,6 +8,12 @@ import {
 import { useFlightStore } from "@/store/flight-store";
 import type { FlightLogData, TaskInfo } from "@/types/flight";
 
+const MAX_REASONABLE_SPEED_MPS = 80;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
 function asNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
@@ -23,6 +29,52 @@ function isFiniteNumber(value: number | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+function toRadians(value: number) {
+  return (value * Math.PI) / 180;
+}
+
+function haversineMeters(aLat: number, aLon: number, bLat: number, bLon: number) {
+  const radius = 6371000;
+  const dPhi = toRadians(bLat - aLat);
+  const dLambda = toRadians(bLon - aLon);
+  const phi1 = toRadians(aLat);
+  const phi2 = toRadians(bLat);
+  const h =
+    Math.sin(dPhi / 2) ** 2 +
+    Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLambda / 2) ** 2;
+  return 2 * radius * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+function normalizeLat(raw: number | undefined): number | undefined {
+  if (!isFiniteNumber(raw)) {
+    return undefined;
+  }
+  const normalized = Math.abs(raw) > 180 ? raw / 1e7 : raw;
+  return Math.abs(normalized) <= 90 ? normalized : undefined;
+}
+
+function normalizeLon(raw: number | undefined): number | undefined {
+  if (!isFiniteNumber(raw)) {
+    return undefined;
+  }
+  const normalized = Math.abs(raw) > 180 ? raw / 1e7 : raw;
+  return Math.abs(normalized) <= 180 ? normalized : undefined;
+}
+
+function normalizeAltitude(raw: number | undefined): number | undefined {
+  if (!isFiniteNumber(raw)) {
+    return undefined;
+  }
+  return Math.abs(raw) > 10000 ? raw / 100 : raw;
+}
+
+function normalizeSpeed(raw: number | undefined): number | undefined {
+  if (!isFiniteNumber(raw)) {
+    return undefined;
+  }
+  return Math.abs(raw) > MAX_REASONABLE_SPEED_MPS ? raw / 100 : raw;
+}
+
 function isValidCoordinate(lat: number | undefined, lon: number | undefined): boolean {
   return isFiniteNumber(lat) && isFiniteNumber(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
 }
@@ -36,11 +88,83 @@ function hasReplayCoordinates(frame: RawFrame): frame is RawFrame & { lat: numbe
   return isFiniteNumber(frame.t) && isValidCoordinate(frame.lat, frame.lon);
 }
 
+function filterKinematicOutliers(
+  frames: Array<RawFrame & { lat: number; lon: number }>
+): Array<RawFrame & { lat: number; lon: number }> {
+  if (frames.length <= 2) {
+    return frames;
+  }
+
+  const out: Array<RawFrame & { lat: number; lon: number }> = [frames[0]];
+  for (let i = 1; i < frames.length; i += 1) {
+    const prev = out[out.length - 1];
+    const current = frames[i];
+    const dt = Math.max(1e-3, (current.t ?? 0) - (prev.t ?? 0));
+    const dist = haversineMeters(prev.lat ?? 0, prev.lon ?? 0, current.lat ?? 0, current.lon ?? 0);
+    const impliedSpeed = dist / dt;
+    if (impliedSpeed > MAX_REASONABLE_SPEED_MPS * 2.5) {
+      continue;
+    }
+    out.push(current);
+  }
+
+  return out;
+}
+
+function deriveMetrics(frames: FlightLogData["frames"]) {
+  if (!frames.length) {
+    return {
+      maxAltitude: undefined,
+      maxSpeed: undefined,
+      flightDurationSec: 0,
+      totalDistanceMeters: 0,
+      maxVerticalSpeed: undefined
+    };
+  }
+
+  let distance = 0;
+  let maxSpeed = 0;
+  let maxVertical = 0;
+  let maxAltitude = frames[0].alt;
+
+  for (let i = 1; i < frames.length; i += 1) {
+    const a = frames[i - 1];
+    const b = frames[i];
+    const dt = Math.max(1e-3, b.t - a.t);
+    const segment = haversineMeters(a.lat, a.lon, b.lat, b.lon);
+    const speedFromTrack = segment / dt;
+    if (speedFromTrack <= MAX_REASONABLE_SPEED_MPS * 2) {
+      distance += segment;
+      maxSpeed = Math.max(maxSpeed, speedFromTrack);
+    }
+
+    if (isFiniteNumber(b.speed)) {
+      maxSpeed = Math.max(maxSpeed, clamp(b.speed, -MAX_REASONABLE_SPEED_MPS * 2, MAX_REASONABLE_SPEED_MPS * 2));
+    }
+    if (isFiniteNumber(b.climbRate)) {
+      maxVertical = Math.max(maxVertical, Math.abs(b.climbRate));
+    } else {
+      const verticalFromAlt = Math.abs((b.alt - a.alt) / dt);
+      if (Number.isFinite(verticalFromAlt)) {
+        maxVertical = Math.max(maxVertical, verticalFromAlt);
+      }
+    }
+    maxAltitude = Math.max(maxAltitude, b.alt);
+  }
+
+  return {
+    maxAltitude,
+    maxSpeed,
+    flightDurationSec: Math.max(0, frames[frames.length - 1].t - frames[0].t),
+    totalDistanceMeters: distance,
+    maxVerticalSpeed: maxVertical
+  };
+}
+
 function normalizeWorkerTrajectory(raw: unknown): FlightLogData {
   const input = asObject(raw) ?? {};
   const framesRaw = Array.isArray(input.frames) ? input.frames : [];
   const eventsRaw = Array.isArray(input.events) ? input.events : [];
-  const metricsRaw = asObject(input.metrics) ?? {};
   const metaRaw = asObject(input.meta) ?? {};
   const parsingRaw = asObject(metaRaw.parsing) ?? {};
   const messagesRaw = asObject(parsingRaw.messages) ?? {};
@@ -55,23 +179,26 @@ function normalizeWorkerTrajectory(raw: unknown): FlightLogData {
 
     return {
       t: asNumber(src.t) ?? Number.NaN,
-      lat: asNumber(pos.lat),
-      lon: asNumber(pos.lon),
-      alt: asNumber(pos.alt) ?? 0,
-      speed: asNumber(src.vel),
+      lat: normalizeLat(asNumber(pos.lat)),
+      lon: normalizeLon(asNumber(pos.lon)),
+      alt: normalizeAltitude(asNumber(pos.alt)) ?? 0,
+      speed: normalizeSpeed(asNumber(src.vel)),
+      battery: asNumber(src.battery),
       roll: asNumber(att.roll),
       pitch: asNumber(att.pitch),
       yaw: asNumber(att.yaw),
       accelX: asNumber(accel[0]),
       accelY: asNumber(accel[1]),
       accelZ: asNumber(accel[2]),
-      climbRate: asNumber(src.climbRate)
+      climbRate: normalizeSpeed(asNumber(src.climbRate))
     };
   });
 
-  const validFrames = parsedFrames
+  const validFrames = filterKinematicOutliers(
+    parsedFrames
     .filter(hasReplayCoordinates)
-    .sort((a, b) => a.t - b.t);
+    .sort((a, b) => a.t - b.t)
+  );
 
   const t0 = validFrames[0]?.t ?? 0;
   const frames: FlightLogData["frames"] = validFrames.map((frame, index, arr) => {
@@ -87,10 +214,22 @@ function normalizeWorkerTrajectory(raw: unknown): FlightLogData {
   const events = eventsRaw.map((event): FlightLogData["events"][number] => {
     const src = asObject(event) ?? {};
     const rawT = asNumber(src.t);
+    const description = typeof src.description === "string" ? src.description : undefined;
+    const fallbackValue =
+      typeof src.value === "string" ||
+      typeof src.value === "number" ||
+      typeof src.value === "boolean" ||
+      src.value === null
+        ? src.value
+        : undefined;
     return {
       t: isFiniteNumber(rawT) ? Math.max(0, rawT - t0) : 0,
       type: typeof src.type === "string" ? src.type : "EVENT",
-      message: typeof src.value === "string" ? src.value : undefined
+      eventId: asNumber(src.eventId),
+      code: typeof src.code === "string" ? src.code : undefined,
+      severity: typeof src.severity === "string" ? src.severity : undefined,
+      message: description ?? (typeof fallbackValue === "string" ? fallbackValue : undefined),
+      value: fallbackValue
     };
   });
 
@@ -99,17 +238,14 @@ function normalizeWorkerTrajectory(raw: unknown): FlightLogData {
       parserVersion: "trajecta-worker",
       source: "api",
       logName: typeof metaRaw.logName === "string" ? metaRaw.logName : undefined,
-      imuSamplingHz: asNumber(imuRaw.samplingHz)
+      imuSamplingHz: asNumber(imuRaw.samplingHz),
+      gpsUnits: "deg/WGS84, m, m/s"
     },
     frames,
     events,
     params: asObject(input.params) as FlightLogData["params"] ?? {},
     metrics: {
-      maxAltitude: asNumber(metricsRaw.maxAltitude),
-      maxSpeed: asNumber(metricsRaw.maxSpeed) ?? asNumber(metricsRaw.maxHorizontalSpeed),
-      flightDurationSec: asNumber(metricsRaw.flightDuration) ?? asNumber(metricsRaw.totalFlightDuration),
-      totalDistanceMeters: asNumber(metricsRaw.distance) ?? asNumber(metricsRaw.totalDistance),
-      maxVerticalSpeed: asNumber(metricsRaw.maxVerticalSpeed),
+      ...deriveMetrics(frames),
       imuRateHz: asNumber(imuRaw.samplingHz)
     },
     aiConclusion: typeof input.aiConclusion === "string" ? input.aiConclusion : undefined

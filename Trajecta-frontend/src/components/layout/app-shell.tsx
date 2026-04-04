@@ -130,7 +130,7 @@ export function AppShell({ children }: AppShellProps) {
         }
 
         const [myTasks, myNotifications] = await Promise.all([
-          getMyTasks({ token: auth.token, offset: 0, limit: 10 }),
+          getMyTasks({ token: auth.token, offset: 0, limit: 100 }),
           getNotifications({ token: auth.token })
         ]);
 

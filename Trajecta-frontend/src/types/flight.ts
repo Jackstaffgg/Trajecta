@@ -16,9 +16,13 @@ export type FlightFrame = {
 
 export type FlightEvent = {
   id?: string;
+  eventId?: number;
   t: number;
   type: string;
+  code?: string;
+  severity?: "info" | "warning" | "critical" | string;
   message?: string;
+  value?: string | number | boolean | null;
   lat?: number;
   lon?: number;
   alt?: number;
