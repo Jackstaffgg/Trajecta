@@ -36,16 +36,16 @@ It ingests raw `.bin` files, processes them asynchronously, stores artifacts, an
 From repository root on Windows:
 
 ```bat
-start-all-stacks.bat
+.\start-all-stacks.bat
 ```
 
 Optional actions:
 
 ```bat
-start-all-stacks.bat status
-start-all-stacks.bat logs
-start-all-stacks.bat validate
-start-all-stacks.bat down
+.\start-all-stacks.bat status
+.\start-all-stacks.bat logs
+.\start-all-stacks.bat validate
+.\start-all-stacks.bat down
 ```
 
 Then open:
