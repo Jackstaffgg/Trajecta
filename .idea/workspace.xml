@@ -4,13 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7e60ac53-03c3-493b-aa67-b1ef6b2f0543" name="Changes" comment="update cache configuration and references for task DTOs to version 3">
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/CacheConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/CacheConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/task/TaskResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/task/TaskResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/repo/UserRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/repo/UserRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/UserDetailsServiceImpl.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/UserServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/UserServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/UserDetailsServiceImplTest.java" beforeDir="false" />
+    <list default="true" id="7e60ac53-03c3-493b-aa67-b1ef6b2f0543" name="Changes" comment="implement UserDetailsService in UserDetailsServiceImpl and remove from UserServiceImpl">
+      <change afterPath="$PROJECT_DIR$/Trajecta-frontend/public/icons/project-icon.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/index.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -42,12 +38,29 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Batch.start-all-stacks.executor": "Run",
     "Batch.start-all.executor": "Run",
     "Gradle.Build Trajecta-api.executor": "Run",
     "git-widget-placeholder": "main"
   }
 }]]></component>
-  <component name="RunManager">
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="Z:\Trajecta\Trajecta-frontend\public\icons" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Batch.start-all-stacks">
+    <configuration name="start-all-stacks" type="BatchConfigurationType" factoryName="Batch" temporary="true">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="WORKING_DIRECTORY" value="Z:\Trajecta" />
+      <option name="PARENT_ENVS" value="true" />
+      <module name="" />
+      <option name="SCRIPT_NAME" value="start-all-stacks.bat" />
+      <option name="PARAMETERS" value="" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="start-all" type="BatchConfigurationType" factoryName="Batch" temporary="true">
       <module name="Trajecta-api" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -72,6 +85,7 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Batch.start-all-stacks" />
         <item itemvalue="Batch.start-all" />
       </list>
     </recent_temporary>
@@ -93,12 +107,30 @@
       <option name="project" value="LOCAL" />
       <updated>1775313271641</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="update cache configuration for task DTOs and implement UserDetailsService in UserServiceImpl">
+      <option name="closed" value="true" />
+      <created>1775314218162</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1775314218162</updated>
+    </task>
+    <task id="LOCAL-00004" summary="implement UserDetailsService in UserDetailsServiceImpl and remove from UserServiceImpl">
+      <option name="closed" value="true" />
+      <created>1775314475938</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1775314475938</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="add README documentation for Trajecta platform" />
     <MESSAGE value="update cache configuration and references for task DTOs to version 3" />
-    <option name="LAST_COMMIT_MESSAGE" value="update cache configuration and references for task DTOs to version 3" />
+    <MESSAGE value="update cache configuration for task DTOs and implement UserDetailsService in UserServiceImpl" />
+    <MESSAGE value="implement UserDetailsService in UserDetailsServiceImpl and remove from UserServiceImpl" />
+    <option name="LAST_COMMIT_MESSAGE" value="implement UserDetailsService in UserDetailsServiceImpl and remove from UserServiceImpl" />
   </component>
 </project>
