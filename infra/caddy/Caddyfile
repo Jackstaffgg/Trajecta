@@ -8,11 +8,13 @@
     @base path /trajecta
     redir @base /trajecta/ 308
 
-    handle_path /trajecta/api/* {
+    handle /trajecta/api/* {
+        uri strip_prefix /trajecta
         reverse_proxy backend:8080
     }
 
-    handle_path /trajecta/ws* {
+    handle /trajecta/ws* {
+        uri strip_prefix /trajecta
         reverse_proxy backend:8080
     }
 
