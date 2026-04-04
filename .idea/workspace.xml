@@ -4,9 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7e60ac53-03c3-493b-aa67-b1ef6b2f0543" name="Changes" comment="implement UserDetailsService in UserDetailsServiceImpl and remove from UserServiceImpl">
-      <change afterPath="$PROJECT_DIR$/Trajecta-frontend/public/icons/project-icon.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/index.html" afterDir="false" />
+    <list default="true" id="7e60ac53-03c3-493b-aa67-b1ef6b2f0543" name="Changes" comment="add project icon to index.html and update workspace configuration">
+      <change beforePath="$PROJECT_DIR$/.env.vps.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.vps.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.vps.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.vps.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -123,7 +123,15 @@
       <option name="project" value="LOCAL" />
       <updated>1775314475938</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="add project icon to index.html and update workspace configuration">
+      <option name="closed" value="true" />
+      <created>1775315170374</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1775315170374</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -131,6 +139,7 @@
     <MESSAGE value="update cache configuration and references for task DTOs to version 3" />
     <MESSAGE value="update cache configuration for task DTOs and implement UserDetailsService in UserServiceImpl" />
     <MESSAGE value="implement UserDetailsService in UserDetailsServiceImpl and remove from UserServiceImpl" />
-    <option name="LAST_COMMIT_MESSAGE" value="implement UserDetailsService in UserDetailsServiceImpl and remove from UserServiceImpl" />
+    <MESSAGE value="add project icon to index.html and update workspace configuration" />
+    <option name="LAST_COMMIT_MESSAGE" value="add project icon to index.html and update workspace configuration" />
   </component>
 </project>
