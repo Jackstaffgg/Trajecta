@@ -18,7 +18,7 @@ ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 ARG VITE_WS_PATH="/ws"
 ENV VITE_WS_PATH=${VITE_WS_PATH}
 
-RUN npm run build
+RUN npm run build -- --base=${VITE_APP_BASE_PATH}
 
 # Ensure Cesium runtime assets are shipped with production bundle.
 RUN mkdir -p /app/dist/cesium \
