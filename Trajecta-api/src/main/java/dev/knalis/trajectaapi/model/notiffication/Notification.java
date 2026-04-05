@@ -16,7 +16,9 @@ public class Notification {
     @Column
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
-    
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
     private NotificationType type;
     
     private String content;
@@ -35,5 +37,3 @@ public class Notification {
     private Instant createdAt;
     
 }
-
-

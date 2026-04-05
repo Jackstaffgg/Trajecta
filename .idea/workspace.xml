@@ -4,9 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7e60ac53-03c3-493b-aa67-b1ef6b2f0543" name="Changes" comment="add project icon to index.html and update workspace configuration">
-      <change beforePath="$PROJECT_DIR$/.env.vps.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.vps.example" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker-compose.vps.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.vps.yml" afterDir="false" />
+    <list default="true" id="7e60ac53-03c3-493b-aa67-b1ef6b2f0543" name="Changes" comment="add OpenAI configuration to .env and docker-compose files">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/model/notiffication/Notification.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/model/notiffication/Notification.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -33,26 +33,50 @@
       </state>
     </system>
   </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Enum" />
+        <option value="Interface" />
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="fetat/refactor" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "Batch.start-all-stacks.executor": "Run",
     "Batch.start-all.executor": "Run",
+    "Docker.Trajecta-api/compose.yaml.minio-init: Compose Deployment.executor": "Run",
     "Gradle.Build Trajecta-api.executor": "Run",
-    "git-widget-placeholder": "main"
+    "Gradle.Download Sources.executor": "Run",
+    "git-widget-placeholder": "main",
+    "ts.external.directory.path": "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2024.3.1.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external"
   }
 }]]></component>
   <component name="RecentsManager">
+    <key name="CreateClassDialog.RecentsKey">
+      <recent name="dev.knalis.trajectaapi.repo" />
+      <recent name="dev.knalis.trajectaapi.controller.rest.v1.admin" />
+      <recent name="dev.knalis.trajectaapi.service.intrf.user" />
+      <recent name="dev.knalis.trajectaapi.dto.user" />
+    </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="Z:\Trajecta\test-assets" />
       <recent name="Z:\Trajecta\Trajecta-frontend\public\icons" />
     </key>
   </component>
   <component name="RunManager" selected="Batch.start-all-stacks">
     <configuration name="start-all-stacks" type="BatchConfigurationType" factoryName="Batch" temporary="true">
       <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="WORKING_DIRECTORY" value="Z:\Trajecta" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
       <option name="PARENT_ENVS" value="true" />
       <module name="" />
       <option name="SCRIPT_NAME" value="start-all-stacks.bat" />
@@ -64,7 +88,7 @@
     <configuration name="start-all" type="BatchConfigurationType" factoryName="Batch" temporary="true">
       <module name="Trajecta-api" />
       <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="WORKING_DIRECTORY" value="Z:\Trajecta\Trajecta-api\scripts" />
+      <option name="WORKING_DIRECTORY" value="./Trajecta-api/scripts" />
       <option name="PARENT_ENVS" value="true" />
       <option name="SCRIPT_NAME" value="start-all.bat" />
       <option name="PARAMETERS" value="" />
@@ -83,9 +107,29 @@
       <option name="filePath" />
       <method v="2" />
     </configuration>
+    <configuration name="Trajecta-api/compose.yaml.minio-init: Compose Deployment" type="docker-deploy" factoryName="docker-compose.yml" temporary="true" server-name="Docker">
+      <deployment type="docker-compose.yml">
+        <settings>
+          <option name="services">
+            <list>
+              <option value="minio-init" />
+            </list>
+          </option>
+          <option name="sourceFilePath" value="Trajecta-api/compose.yaml" />
+        </settings>
+      </deployment>
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="docker-deploy" factoryName="docker-compose.yml" temporary="true">
+      <deployment type="docker-compose.yml" />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
         <item itemvalue="Batch.start-all-stacks" />
+        <item itemvalue="Batch.start-all" />
+        <item itemvalue="Batch.start-all-stacks" />
+        <item itemvalue="Docker.Trajecta-api/compose.yaml.minio-init: Compose Deployment" />
         <item itemvalue="Batch.start-all" />
       </list>
     </recent_temporary>
@@ -131,7 +175,15 @@
       <option name="project" value="LOCAL" />
       <updated>1775315170374</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="add OpenAI configuration to .env and docker-compose files">
+      <option name="closed" value="true" />
+      <created>1775317033115</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1775317033115</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -140,6 +192,7 @@
     <MESSAGE value="update cache configuration for task DTOs and implement UserDetailsService in UserServiceImpl" />
     <MESSAGE value="implement UserDetailsService in UserDetailsServiceImpl and remove from UserServiceImpl" />
     <MESSAGE value="add project icon to index.html and update workspace configuration" />
-    <option name="LAST_COMMIT_MESSAGE" value="add project icon to index.html and update workspace configuration" />
+    <MESSAGE value="add OpenAI configuration to .env and docker-compose files" />
+    <option name="LAST_COMMIT_MESSAGE" value="add OpenAI configuration to .env and docker-compose files" />
   </component>
 </project>
