@@ -248,17 +248,8 @@ body {
 }
 
 @media (max-width: 640px) {
-  .landing-team-footer {
-    width: 100%;
-    text-align: center;
-    animation-delay: 0s;
-  }
-
   .landing-team-typing {
-    max-width: 100%;
-    white-space: normal;
-    line-height: 1.35;
-    animation: landing-typewriter 1.6s steps(30, end) 0s forwards;
+    max-width: 88vw;
   }
 }
 
