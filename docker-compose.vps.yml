@@ -3,8 +3,6 @@ services:
     image: postgres:15-alpine
     container_name: trajecta_db
     restart: unless-stopped
-    cpus: ${DB_CPU_LIMIT:-0.5}
-    mem_limit: ${DB_MEM_LIMIT:-384m}
     environment:
       POSTGRES_DB: telemetry_db
       POSTGRES_USER: ${DB_USER}
@@ -24,8 +22,6 @@ services:
     container_name: trajecta_redis
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
-    cpus: ${REDIS_CPU_LIMIT:-0.25}
-    mem_limit: ${REDIS_MEM_LIMIT:-160m}
     volumes:
       - redis_data:/data
     healthcheck:
@@ -40,8 +36,6 @@ services:
     image: rabbitmq:3-management
     container_name: trajecta_broker
     restart: unless-stopped
-    cpus: ${RABBITMQ_CPU_LIMIT:-0.4}
-    mem_limit: ${RABBITMQ_MEM_LIMIT:-320m}
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBIT_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBIT_PASS}
@@ -61,8 +55,6 @@ services:
     image: minio/minio
     container_name: trajecta_minio
     restart: unless-stopped
-    cpus: ${MINIO_CPU_LIMIT:-0.35}
-    mem_limit: ${MINIO_MEM_LIMIT:-256m}
     environment:
       MINIO_ROOT_USER: ${MINIO_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_PASS}
@@ -103,8 +95,6 @@ services:
       dockerfile: Dockerfile
     container_name: trajecta_backend
     restart: unless-stopped
-    cpus: ${BACKEND_CPU_LIMIT:-1.0}
-    mem_limit: 2g
     depends_on:
       db:
         condition: service_healthy
@@ -151,8 +141,6 @@ services:
       context: ./Trajecta-worker
       dockerfile: Dockerfile
     restart: unless-stopped
-    cpus: ${WORKER_CPU_LIMIT:-0.7}
-    mem_limit: ${WORKER_MEM_LIMIT:-576m}
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -185,8 +173,6 @@ services:
         VITE_WS_PATH: ${VITE_WS_PATH:-/ws}
     container_name: trajecta_frontend
     restart: unless-stopped
-    cpus: ${FRONTEND_CPU_LIMIT:-0.3}
-    mem_limit: ${FRONTEND_MEM_LIMIT:-128m}
     depends_on:
       backend:
         condition: service_started
@@ -206,8 +192,6 @@ services:
     image: caddy:2-alpine
     container_name: trajecta_edge
     restart: unless-stopped
-    cpus: ${EDGE_CPU_LIMIT:-0.2}
-    mem_limit: ${EDGE_MEM_LIMIT:-128m}
     depends_on:
       frontend:
         condition: service_healthy
