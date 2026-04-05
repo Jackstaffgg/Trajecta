@@ -119,9 +119,6 @@ export function Sidebar({ tasks, activeTaskId, loadingTasks = false, deletingTas
               <span>{t(locale, "sidebar.currentUser")}: </span>
               <span className="font-semibold text-foreground">{auth.user?.username ?? "-"}</span>
             </div>
-          <div className="mt-2 hidden w-fit items-center gap-1 rounded-full border border-zinc-300/35 bg-zinc-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-200 md:inline-flex">
-            Online
-          </div>
         </div>
 
         <div className="space-y-3">
