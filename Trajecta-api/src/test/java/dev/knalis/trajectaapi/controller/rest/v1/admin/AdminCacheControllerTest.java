@@ -2,6 +2,8 @@ package dev.knalis.trajectaapi.controller.rest.v1.admin;
 
 import dev.knalis.trajectaapi.dto.admin.CacheClearResponse;
 import dev.knalis.trajectaapi.dto.admin.CacheHealthResponse;
+import dev.knalis.trajectaapi.dto.admin.ServiceHealthResponse;
+import dev.knalis.trajectaapi.dto.admin.ServiceRuntimeMetricsResponse;
 import dev.knalis.trajectaapi.service.intrf.user.CacheAdminService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,5 +63,25 @@ class AdminCacheControllerTest {
         assertThat(response.getBody().getData().getStatus()).isEqualTo("UP");
         verify(cacheAdminService).cacheHealth();
     }
-}
 
+    @Test
+    void serviceHealth_returnsServiceResponse() {
+        ServiceHealthResponse payload = ServiceHealthResponse.builder()
+                .status("UP")
+                .database("UP")
+                .redis("UP")
+                .databaseError(null)
+                .redisError(null)
+                .build();
+
+        when(cacheAdminService.serviceHealth()).thenReturn(payload);
+
+        var response = controller.serviceHealth();
+
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().isSuccess()).isTrue();
+        assertThat(response.getBody().getData().getStatus()).isEqualTo("UP");
+        verify(cacheAdminService).serviceHealth();
+    }
+    
+}

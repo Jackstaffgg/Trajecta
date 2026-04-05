@@ -11,10 +11,11 @@ spring:
     username: ${DB_USER:user}
     password: ${DB_PASSWORD:password123}
     hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
-      idle-timeout: 30000
+      maximum-pool-size: 30
+      minimum-idle: 5
+      idle-timeout: 60000
       max-lifetime: 600000
+      connection-timeout: 20000
 
   jpa:
     hibernate:
@@ -68,6 +69,11 @@ spring:
 
 server:
   tomcat:
+    threads:
+      max: 200
+      min-spare: 10
+    max-connections: 1024
+    accept-count: 100
     max-swallow-size: -1
   servlet:
     session:

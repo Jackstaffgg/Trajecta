@@ -34,7 +34,7 @@ def publish_result(channel: Any, result: AnalysisResult, properties: Any | None 
 
 def start_worker(dt: float) -> None:
     try:
-        import pika  # type: ignore[import-not-found]
+        import pika
     except ImportError as exc:
         raise RuntimeError("pika is required for RabbitMQ worker mode.") from exc
 
@@ -83,7 +83,7 @@ def start_worker(dt: float) -> None:
             finally:
                 ch.basic_ack(delivery_tag=method.delivery_tag)
 
-    channel.basic_qos(prefetch_count=1)
+    channel.basic_qos(prefetch_count=3)
     channel.basic_consume(queue=request_queue, on_message_callback=on_message)
-    print(f"Worker started. Listening queue={request_queue}, dt={dt}")
+    print(f"Worker started. Listening queue={request_queue}, dt={dt} (prefetch={3})")
     channel.start_consuming()

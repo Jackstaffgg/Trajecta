@@ -49,6 +49,13 @@ const sections: NavSection[] = [
   }
 ];
 
+function normalizeRole(role: string | null | undefined): string {
+  if (!role) {
+    return "";
+  }
+  return role.toUpperCase().replace(/^ROLE_/, "");
+}
+
 type SidebarProps = {
   tasks: TaskInfo[];
   activeTaskId: number | null;
@@ -72,7 +79,7 @@ export function Sidebar({ tasks, activeTaskId, loadingTasks = false, deletingTas
   const locale = useLocaleStore((s) => s.locale);
 
   const hasSelectedTask = Boolean(activeTaskId);
-  const role = auth.user?.role?.toUpperCase();
+  const role = normalizeRole(auth.user?.role);
   const canAccessAdmin = role === "ADMIN" || role === "OWNER";
   const [tasksExpanded, setTasksExpanded] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);

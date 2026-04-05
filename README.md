@@ -99,6 +99,20 @@ start-all-stacks.bat up tests
 start-all-stacks.bat down
 ```
 
+Host diagnostics (from repo root):
+
+```powershell
+.\check-system.ps1
+.\check-system.ps1 -ApiUrl "http://localhost:8080" -FrontendUrl "http://localhost:3000" -UsersCount 50
+.\check-system.ps1 -AdminToken "<jwt_admin_token>"
+.\check-system.ps1 -UsersCount 120 -ProbePath "/api/public/ping"
+```
+
+```bash
+./check-system.sh
+ADMIN_TOKEN="<jwt_admin_token>" ./check-system.sh "http://localhost:8080" 50 "http://localhost:3000"
+```
+
 Typical local URLs:
 - Frontend: `http://localhost:3000`
 - API Swagger UI: `http://localhost:8080/swagger-ui`

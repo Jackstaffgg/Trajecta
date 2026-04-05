@@ -60,6 +60,29 @@ type CacheHealthDto = {
   error: string | null;
 };
 
+type ServiceHealthDto = {
+  status: string;
+  database: string;
+  redis: string;
+  databaseError: string | null;
+  redisError: string | null;
+  checkedAt: string;
+};
+
+type ServiceRuntimeMetricsDto = {
+  status: string;
+  stability: string;
+  uptimeSeconds: number;
+  activeThreads: number;
+  heapUsedMb: number;
+  heapMaxMb: number;
+  usersTotal: number;
+  tasksTotal: number;
+  tasksFailed: number;
+  taskFailureRatePct: number;
+  checkedAt: string;
+};
+
 type CacheClearDto = {
   userId: number | null;
   userExists: boolean;
@@ -469,6 +492,22 @@ export async function getAdminCacheHealth(input: { token: string }): Promise<Cac
   });
 
   return readEnvelope<CacheHealthDto>(res);
+}
+
+export async function getAdminServiceHealth(input: { token: string }): Promise<ServiceHealthDto> {
+  const res = await fetch(buildUrl("/api/v1/admin/cache/service-health"), {
+    headers: withAuth({}, input.token)
+  });
+
+  return readEnvelope<ServiceHealthDto>(res);
+}
+
+export async function getAdminRuntimeMetrics(input: { token: string }): Promise<ServiceRuntimeMetricsDto> {
+  const res = await fetch(buildUrl("/api/v1/admin/cache/runtime-metrics"), {
+    headers: withAuth({}, input.token)
+  });
+
+  return readEnvelope<ServiceRuntimeMetricsDto>(res);
 }
 
 export async function clearAdminUserCache(input: { token: string; userId: number }): Promise<CacheClearDto> {
