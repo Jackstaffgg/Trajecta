@@ -17,13 +17,17 @@ type ReplayState = {
   camera: ReplayCameraMode;
 };
 
+type ErrorScope = "tasks" | "admin" | "profile" | "realtime" | "notifications" | null;
+
 type FlightState = {
   auth: AuthState;
   mode: AnalysisMode;
   loading: boolean;
   data: FlightLogData | null;
   currentTask: TaskInfo | null;
+  adminSelectedUserId: number | null;
   error: string | null;
+  errorScope: ErrorScope;
   replay: ReplayState;
   setAuthenticated: (token: string, user: AuthUser) => void;
   logout: () => void;
@@ -31,8 +35,9 @@ type FlightState = {
   setLoading: (loading: boolean) => void;
   setData: (data: FlightLogData | null) => void;
   setCurrentTask: (task: TaskInfo | null) => void;
+  setAdminSelectedUserId: (userId: number | null) => void;
   setTaskStatus: (status: TaskStatus, errorMessage?: string | null) => void;
-  setError: (error: string | null) => void;
+  setError: (error: string | null, scope?: Exclude<ErrorScope, null>) => void;
   setReplayTime: (timeSec: number) => void;
   setReplayPlaying: (isPlaying: boolean) => void;
   setReplaySpeed: (speed: number) => void;
@@ -94,12 +99,14 @@ export const useFlightStore = create<FlightState>()(
     loading: false,
     data: null,
     currentTask: null,
+    adminSelectedUserId: null,
     error: null,
+    errorScope: null,
     replay: replayInitial,
     setAuthenticated: (token, user) => {
       const auth = { isAuthenticated: true, token, user } as AuthState;
       persistAuthState(auth);
-      set({ auth, error: null });
+      set({ auth, error: null, errorScope: null });
     },
     logout: () => {
       persistAuthState({ isAuthenticated: false, token: "", user: null });
@@ -109,20 +116,24 @@ export const useFlightStore = create<FlightState>()(
         loading: false,
         data: null,
         currentTask: null,
+        adminSelectedUserId: null,
         error: null,
+        errorScope: null,
         replay: replayInitial
       });
     },
-    setMode: (mode) => set({ mode }),
+    setMode: (mode) => set({ mode, error: null, errorScope: null }),
     setLoading: (loading) => set({ loading }),
     setData: (data) =>
-      set({
+      set((state) => ({
         data,
         error: null,
-        mode: data ? "dashboard" : "tasks",
+        errorScope: null,
+        mode: data ? state.mode : "tasks",
         replay: { ...replayInitial }
-      }),
+      })),
     setCurrentTask: (currentTask) => set({ currentTask }),
+    setAdminSelectedUserId: (adminSelectedUserId) => set({ adminSelectedUserId }),
     setTaskStatus: (status, errorMessage) =>
       set((state) => {
         if (!state.currentTask) {
@@ -136,7 +147,7 @@ export const useFlightStore = create<FlightState>()(
           }
         };
       }),
-    setError: (error) => set({ error }),
+    setError: (error, scope) => set({ error, errorScope: error ? (scope ?? null) : null }),
     setReplayTime: (timeSec) =>
       set((state) => ({ replay: { ...state.replay, timeSec } })),
     setReplayPlaying: (isPlaying) =>
@@ -152,7 +163,9 @@ export const useFlightStore = create<FlightState>()(
         loading: false,
         data: null,
         currentTask: null,
+        adminSelectedUserId: null,
         error: null,
+        errorScope: null,
         replay: replayInitial
       })
   }))

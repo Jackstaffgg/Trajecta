@@ -1,10 +1,9 @@
-package dev.knalis.trajectaapi.service.intrf;
+package dev.knalis.trajectaapi.service.intrf.user;
 
 import dev.knalis.trajectaapi.dto.auth.RegisterRequest;
-import dev.knalis.trajectaapi.dto.user.UserCreateRequest;
-import dev.knalis.trajectaapi.dto.user.UserResponse;
 import dev.knalis.trajectaapi.dto.user.UserUpdateRequest;
-import dev.knalis.trajectaapi.model.User;
+import dev.knalis.trajectaapi.model.user.Role;
+import dev.knalis.trajectaapi.model.user.User;
 import org.springframework.security.core.Authentication;
 
 import java.util.List;
@@ -15,30 +14,27 @@ import java.util.List;
 public interface UserService {
     /** Registers a new self-service user account. */
     User register(RegisterRequest request);
-
-    /** Creates a new user account by administrator. */
-    User create(UserCreateRequest request, Authentication auth);
+    
+    /** Updates role of target user. */
+    User updateRole(long targetId, Role role, Authentication auth);
 
     /** Finds user by username. */
     User findByUsername(String username);
 
     /** Finds user by identifier. */
     User findById(long id);
-
-    /** Finds user DTO by identifier. */
-    UserResponse findResponseById(long id);
-
+    
     /** Returns all users. */
     List<User> findAll();
-
-    /** Returns all users as DTO view. */
-    List<UserResponse> findAllResponses();
-
+    
+    /** Returns all users with pagination. */
+    List<User> findAll(int page, int size);
+    
     /** Deletes user by identifier. */
-    void delete(long id);
+    void delete(long targetId, Authentication auth);
 
     /** Updates mutable fields of user profile. */
-    User update(long id, UserUpdateRequest userUpdateRequest);
+    User updateCurrentUser(Authentication auth, UserUpdateRequest userUpdateRequest);
 
     /** Performs case-insensitive username search. */
     List<User> findByUsernameContaining(String username);

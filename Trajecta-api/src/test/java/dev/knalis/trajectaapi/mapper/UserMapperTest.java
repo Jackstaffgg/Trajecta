@@ -2,8 +2,8 @@ package dev.knalis.trajectaapi.mapper;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.knalis.trajectaapi.dto.user.UserUpdateRequest;
-import dev.knalis.trajectaapi.model.Role;
-import dev.knalis.trajectaapi.model.User;
+import dev.knalis.trajectaapi.model.user.Role;
+import dev.knalis.trajectaapi.model.user.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,12 +32,10 @@ class UserMapperTest {
     void updateUserFromDto_updatesProvidedFieldsAndEncodesPassword() {
         User user = new User();
         user.setUsername("old");
-        user.setRole(Role.USER);
 
         UserUpdateRequest req = new UserUpdateRequest();
         req.setUsername("new");
         req.setPassword("password123");
-        req.setRole("ADMIN");
 
         when(passwordEncoder.encode("password123")).thenReturn("ENC");
 
@@ -45,7 +43,6 @@ class UserMapperTest {
 
         assertThat(user.getUsername()).isEqualTo("new");
         assertThat(user.getPassword()).isEqualTo("ENC");
-        assertThat(user.getRole()).isEqualTo(Role.ADMIN);
     }
 
     @Test
@@ -124,11 +121,7 @@ class UserMapperTest {
                         "username", "cached",
                         "email", "cached@example.com",
                         "role", "USER",
-                        "authorities", List.of(java.util.Map.of("authority", "ROLE_USER")),
-                        "accountNonExpired", true,
-                        "accountNonLocked", true,
-                        "credentialsNonExpired", true,
-                        "enabled", true
+                        "password", "secret"
                 )
         );
 

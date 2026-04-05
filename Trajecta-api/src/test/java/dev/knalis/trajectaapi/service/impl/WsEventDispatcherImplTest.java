@@ -2,7 +2,7 @@ package dev.knalis.trajectaapi.service.impl;
 
 import dev.knalis.trajectaapi.dto.ws.WsEventType;
 import dev.knalis.trajectaapi.dto.ws.WsPayload;
-import dev.knalis.trajectaapi.model.User;
+import dev.knalis.trajectaapi.model.user.User;
 import dev.knalis.trajectaapi.repo.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

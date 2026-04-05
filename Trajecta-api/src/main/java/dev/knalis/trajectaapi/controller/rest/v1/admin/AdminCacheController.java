@@ -3,7 +3,7 @@ package dev.knalis.trajectaapi.controller.rest.v1.admin;
 import dev.knalis.trajectaapi.dto.admin.CacheClearResponse;
 import dev.knalis.trajectaapi.dto.admin.CacheHealthResponse;
 import dev.knalis.trajectaapi.dto.common.ApiResponse;
-import dev.knalis.trajectaapi.service.intrf.CacheAdminService;
+import dev.knalis.trajectaapi.service.intrf.user.CacheAdminService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;

@@ -1,6 +1,6 @@
 package dev.knalis.trajectaapi.dto.messaging;
 
-import dev.knalis.trajectaapi.model.AnalysisStatus;
+import dev.knalis.trajectaapi.model.task.AnalysisStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 

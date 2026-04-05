@@ -3,7 +3,7 @@ package dev.knalis.trajectaapi.controller.rest.v1;
 import dev.knalis.trajectaapi.controller.rest.v1.support.CurrentUserResolver;
 import dev.knalis.trajectaapi.dto.common.ApiResponse;
 import dev.knalis.trajectaapi.dto.notification.NotificationResponse;
-import dev.knalis.trajectaapi.service.impl.NotificationDtoCacheService;
+import dev.knalis.trajectaapi.service.impl.cache.NotificationDtoCacheService;
 import dev.knalis.trajectaapi.service.intrf.NotificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

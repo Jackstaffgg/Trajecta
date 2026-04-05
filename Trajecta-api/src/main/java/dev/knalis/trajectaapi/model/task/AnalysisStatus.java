@@ -1,4 +1,4 @@
-package dev.knalis.trajectaapi.model;
+package dev.knalis.trajectaapi.model.task;
 
 public enum AnalysisStatus {
     COMPLETED,

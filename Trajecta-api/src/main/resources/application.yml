@@ -2,6 +2,10 @@ spring:
   application:
     name: trajecta-api
 
+  jackson:
+    mapper:
+      accept-case-insensitive-enums: true
+
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:5432/telemetry_db
     username: ${DB_USER:user}
@@ -50,6 +54,12 @@ spring:
       port: 6379
       timeout: 2s
 
+  flyway:
+    enabled: false
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+
   servlet:
     multipart:
       max-file-size: 50MB
@@ -92,6 +102,8 @@ application:
       max-attempts: ${AI_CONCLUSION_RATE_LIMIT_MAX_ATTEMPTS:5}
       window-seconds: ${AI_CONCLUSION_RATE_LIMIT_WINDOW_SECONDS:60}
       key-prefix: ${AI_CONCLUSION_RATE_LIMIT_KEY_PREFIX:rate_limit:ai_conclusion:}
+  seed:
+    enabled: ${APP_SEED_ENABLED:false}
 
 minio:
   endpoint: ${MINIO_URL:http://localhost:9000}

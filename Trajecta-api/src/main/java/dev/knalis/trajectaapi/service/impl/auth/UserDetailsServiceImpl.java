@@ -1,4 +1,4 @@
-package dev.knalis.trajectaapi.service.impl;
+package dev.knalis.trajectaapi.service.impl.auth;
 
 import dev.knalis.trajectaapi.repo.UserRepository;
 import lombok.RequiredArgsConstructor;

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef } from "react";
 import * as echarts from "echarts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLocaleStore } from "@/store/locale-store";
 import { useFlightStore } from "@/store/flight-store";
+import { tr } from "@/lib/i18n";
 
 type SeriesDef = {
   label: string;
@@ -91,6 +93,7 @@ function TimelineChart({
 
 export function FlightChartsView() {
   const data = useFlightStore((s) => s.data);
+  const locale = useLocaleStore((s) => s.locale);
   const scrubber = useFlightStore((s) => s.replay.timeSec);
   const setScrubber = useFlightStore((s) => s.setReplayTime);
 
@@ -103,10 +106,10 @@ export function FlightChartsView() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">Flight Dynamics</h2>
+      <h2 className="text-xl font-semibold">{tr(locale, "charts.title")}</h2>
       <Card>
         <CardHeader>
-          <CardTitle>Speed (m/s) and Altitude (m)</CardTitle>
+          <CardTitle>{tr(locale, "charts.card.speedAlt")}</CardTitle>
         </CardHeader>
         <CardContent>
           <TimelineChart
@@ -115,8 +118,8 @@ export function FlightChartsView() {
             scrubber={scrubber}
             onHover={setScrubber}
             lines={[
-              { label: "Speed", color: "#22d3ee", accessor: (i) => frames[i].speed ?? 0 },
-              { label: "Altitude", color: "#34d399", accessor: (i) => frames[i].alt ?? 0 }
+              { label: tr(locale, "charts.series.speed"), color: "#22d3ee", accessor: (i) => frames[i].speed ?? 0 },
+              { label: tr(locale, "charts.series.altitude"), color: "#34d399", accessor: (i) => frames[i].alt ?? 0 }
             ]}
           />
         </CardContent>
@@ -124,7 +127,7 @@ export function FlightChartsView() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Acceleration (m/s^2)</CardTitle>
+          <CardTitle>{tr(locale, "charts.card.accel")}</CardTitle>
         </CardHeader>
         <CardContent>
           <TimelineChart
@@ -133,9 +136,9 @@ export function FlightChartsView() {
             scrubber={scrubber}
             onHover={setScrubber}
             lines={[
-              { label: "Accel X", color: "#38bdf8", accessor: (i) => frames[i].accelX ?? 0 },
-              { label: "Accel Y", color: "#4ade80", accessor: (i) => frames[i].accelY ?? 0 },
-              { label: "Accel Z", color: "#f97316", accessor: (i) => frames[i].accelZ ?? 0 }
+              { label: tr(locale, "charts.series.accelX"), color: "#38bdf8", accessor: (i) => frames[i].accelX ?? 0 },
+              { label: tr(locale, "charts.series.accelY"), color: "#4ade80", accessor: (i) => frames[i].accelY ?? 0 },
+              { label: tr(locale, "charts.series.accelZ"), color: "#f97316", accessor: (i) => frames[i].accelZ ?? 0 }
             ]}
           />
         </CardContent>
@@ -143,7 +146,7 @@ export function FlightChartsView() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Attitude (Roll/Pitch/Yaw)</CardTitle>
+          <CardTitle>{tr(locale, "charts.card.attitude")}</CardTitle>
         </CardHeader>
         <CardContent>
           <TimelineChart

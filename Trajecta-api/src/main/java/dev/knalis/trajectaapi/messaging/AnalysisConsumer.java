@@ -1,7 +1,7 @@
 package dev.knalis.trajectaapi.messaging;
 
 import dev.knalis.trajectaapi.dto.messaging.AnalysisResult;
-import dev.knalis.trajectaapi.service.intrf.FlightTaskService;
+import dev.knalis.trajectaapi.service.intrf.task.FlightTaskService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;

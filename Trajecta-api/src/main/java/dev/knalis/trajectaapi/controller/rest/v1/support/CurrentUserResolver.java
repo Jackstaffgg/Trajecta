@@ -1,7 +1,7 @@
 package dev.knalis.trajectaapi.controller.rest.v1.support;
 
 import dev.knalis.trajectaapi.exception.PermissionDeniedException;
-import dev.knalis.trajectaapi.model.User;
+import dev.knalis.trajectaapi.model.user.User;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 

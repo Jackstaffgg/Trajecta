@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { AuthScreen } from "@/components/layout/auth-screen";
+import { BannedScreen } from "@/components/layout/banned-screen";
 import { ProcessingScreen } from "@/components/layout/processing-screen";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardView } from "@/modules/dashboard/dashboard-view";
@@ -10,17 +12,59 @@ import { AiDiagnosticsView } from "@/modules/diagnostics/ai-diagnostics-view";
 import { StartScreen } from "@/components/layout/start-screen";
 import { ProfileView } from "@/modules/profile/profile-view";
 import { AdminDashboardView } from "@/modules/admin/admin-dashboard-view";
+import { t } from "@/lib/i18n";
 import { useFlightStore } from "@/store/flight-store";
+import { useLocaleStore } from "@/store/locale-store";
+import type { UserBannedSocketPayload } from "@/types/flight";
+import { ApiClientError, getCurrentUserBanStatus } from "@/lib/api";
+
+type AnalyticsTab = "dashboard" | "replay" | "charts" | "params" | "diagnostics";
+
+function AnalyticsWorkspace() {
+  const locale = useLocaleStore((s) => s.locale);
+  const [tab, setTab] = useState<AnalyticsTab>("dashboard");
+
+  const tabs: Array<{ id: AnalyticsTab; label: string }> = [
+    { id: "dashboard", label: t(locale, "app.analytics.dashboard") },
+    { id: "replay", label: t(locale, "app.analytics.replay") },
+    { id: "charts", label: t(locale, "app.analytics.charts") },
+    { id: "params", label: t(locale, "app.analytics.params") },
+    { id: "diagnostics", label: t(locale, "app.analytics.diagnostics") }
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="surface-panel flex flex-wrap gap-2 rounded-xl p-2">
+        {tabs.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={`rounded-lg px-3 py-1.5 text-sm transition ${tab === item.id ? "bg-zinc-200 text-zinc-900" : "text-muted-foreground hover:text-foreground"}`}
+            onClick={() => setTab(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      {tab === "dashboard" ? <DashboardView /> : null}
+      {tab === "replay" ? <FlightReplayView /> : null}
+      {tab === "charts" ? <FlightChartsView /> : null}
+      {tab === "params" ? <ParamsTableView /> : null}
+      {tab === "diagnostics" ? <AiDiagnosticsView /> : null}
+    </div>
+  );
+}
 
 function NoTaskSelected() {
+  const locale = useLocaleStore((s) => s.locale);
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Select task first</CardTitle>
+        <CardTitle>{t(locale, "app.noTask.title")}</CardTitle>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">
-          Pick a completed task in the sidebar to open analytics.
+          {t(locale, "app.noTask.subtitle")}
         </p>
       </CardContent>
     </Card>
@@ -31,6 +75,9 @@ function MainContent() {
   const mode = useFlightStore((s) => s.mode);
   const data = useFlightStore((s) => s.data);
   const auth = useFlightStore((s) => s.auth);
+  const selectedAdminUserId = useFlightStore((s) => s.adminSelectedUserId);
+  const role = auth.user?.role?.toUpperCase();
+  const canAccessAdmin = role === "ADMIN" || role === "OWNER";
 
   if (mode === "tasks") {
     return <StartScreen />;
@@ -38,36 +85,80 @@ function MainContent() {
   if (mode === "profile") {
     return <ProfileView />;
   }
-  if (mode === "admin") {
-    return auth.user?.role?.toUpperCase() === "ADMIN" ? <AdminDashboardView /> : <NoTaskSelected />;
+  if (mode === "admin-users") {
+    return canAccessAdmin ? <AdminDashboardView section="users" /> : <NoTaskSelected />;
+  }
+  if (mode === "admin-user") {
+    if (!canAccessAdmin) {
+      return <NoTaskSelected />;
+    }
+    return selectedAdminUserId ? <AdminDashboardView section="user" /> : <AdminDashboardView section="users" />;
+  }
+  if (mode === "admin-notifications") {
+    return canAccessAdmin ? <AdminDashboardView section="notifications" /> : <NoTaskSelected />;
   }
 
-  if (!data) {
+  if (mode === "analytics" && !data) {
     return <NoTaskSelected />;
   }
 
-  if (mode === "dashboard") {
-    return <DashboardView />;
+  if (mode === "analytics") {
+    return <AnalyticsWorkspace />;
   }
-  if (mode === "replay") {
-    return <FlightReplayView />;
-  }
-  if (mode === "charts") {
-    return <FlightChartsView />;
-  }
-  if (mode === "params") {
-    return <ParamsTableView />;
-  }
-  return <AiDiagnosticsView />;
+
+  return <NoTaskSelected />;
 }
 
 export default function App() {
   const auth = useFlightStore((s) => s.auth);
   const loading = useFlightStore((s) => s.loading);
+  const logout = useFlightStore((s) => s.logout);
+  const setError = useFlightStore((s) => s.setError);
+  const locale = useLocaleStore((s) => s.locale);
+  const [banPayload, setBanPayload] = useState<UserBannedSocketPayload | null>(null);
+
+  useEffect(() => {
+    if (!auth.isAuthenticated || !auth.token) {
+      return;
+    }
+
+    let active = true;
+    const run = async () => {
+      try {
+        const status = await getCurrentUserBanStatus({ token: auth.token });
+        if (!active || !status) {
+          return;
+        }
+        setBanPayload({ ...status, userId: auth.user?.id ?? status.userId });
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+        if (error instanceof ApiClientError && error.status === 401) {
+          logout();
+          return;
+        }
+        setError(error instanceof Error ? error.message : (locale === "ru" ? "Не удалось проверить статус бана" : "Failed to verify ban status"), "realtime");
+      }
+    };
+
+    void run();
+    return () => {
+      active = false;
+    };
+  }, [auth.isAuthenticated, auth.token, auth.user?.id, locale, logout, setError]);
 
   if (!auth.isAuthenticated) {
     return <AuthScreen />;
   }
 
-  return <AppShell>{loading ? <ProcessingScreen /> : <MainContent />}</AppShell>;
+  if (banPayload) {
+    return <BannedScreen payload={banPayload} onLogout={logout} />;
+  }
+
+  return (
+    <AppShell onUserBanned={setBanPayload}>
+      {loading ? <ProcessingScreen /> : <MainContent />}
+    </AppShell>
+  );
 }
