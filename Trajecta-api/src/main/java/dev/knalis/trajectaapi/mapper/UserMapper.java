@@ -1,9 +1,10 @@
 package dev.knalis.trajectaapi.mapper;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.knalis.trajectaapi.dto.user.AdminUserDetailsResponse;
 import dev.knalis.trajectaapi.dto.user.UserResponse;
 import dev.knalis.trajectaapi.dto.user.UserUpdateRequest;
-import dev.knalis.trajectaapi.model.User;
+import dev.knalis.trajectaapi.model.user.User;
 import org.mapstruct.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,7 +18,7 @@ public abstract class UserMapper {
     
     @Autowired
     protected PasswordEncoder passwordEncoder;
-
+    
     @Autowired
     protected ObjectMapper objectMapper;
     
@@ -29,7 +30,7 @@ public abstract class UserMapper {
     public abstract void updateUserFromDto(UserUpdateRequest request, @MappingTarget User user);
     
     public abstract UserResponse toDto(User user);
-
+    
     public List<UserResponse> toDtoList(List<?> users) {
         if (users == null) {
             return null;
@@ -37,7 +38,7 @@ public abstract class UserMapper {
         if (users.isEmpty()) {
             return List.of();
         }
-
+        
         List<UserResponse> result = new ArrayList<>(users.size());
         for (Object entry : users) {
             User user;
@@ -60,4 +61,7 @@ public abstract class UserMapper {
         }
         return passwordEncoder.encode(rawPassword);
     }
+    
+    @Mapping(target = "activePunishments", ignore = true)
+    public abstract AdminUserDetailsResponse toAdminDetailsDto(User user);
 }

@@ -1,8 +1,12 @@
 import type {
+  AdminUserDetails,
+  AdminUsersPage,
   AuthUser,
   NotificationInfo,
   TaskInfo,
   TaskStatus,
+  UserBannedSocketPayload,
+  UserPunishmentInfo,
   UserProfileUpdateInput
 } from "@/types/flight";
 
@@ -65,6 +69,17 @@ type CacheClearDto = {
 type TaskBulkDeleteResult = {
   deletedTaskIds: number[];
   skippedTaskIds: number[];
+};
+
+type UserRole = "USER" | "ADMIN" | "OWNER";
+
+type BanStatusDto = {
+  banned: boolean;
+  punishmentId?: number | null;
+  reason?: string | null;
+  expiredAt?: string | null;
+  punishedById?: number | null;
+  punishedByName?: string | null;
 };
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ?? "";
@@ -265,16 +280,22 @@ export async function getNotifications(input: { token: string }): Promise<Notifi
 }
 
 export function mapNotificationDto(item: NotificationDto): NotificationInfo {
+  const safeType = typeof item.type === "string" && item.type.trim() ? item.type : "SYSTEM_NEWS";
+  const safeContent = typeof item.content === "string" && item.content.trim() ? item.content : "Notification";
+  const safeCreatedAt = typeof item.createdAt === "string" && item.createdAt.trim()
+    ? item.createdAt
+    : new Date().toISOString();
+
   return {
-    id: item.id,
-    type: item.type,
-    content: item.content,
-    senderId: item.senderId,
-    senderName: item.senderName,
-    recipientId: item.recipientId,
-    referenceId: item.referenceId,
-    isRead: item.isRead,
-    createdAt: item.createdAt
+    id: Number.isFinite(item.id) ? item.id : 0,
+    type: safeType,
+    content: safeContent,
+    senderId: Number.isFinite(item.senderId) ? item.senderId : null,
+    senderName: typeof item.senderName === "string" && item.senderName.trim() ? item.senderName : null,
+    recipientId: Number.isFinite(item.recipientId) ? item.recipientId : null,
+    referenceId: Number.isFinite(item.referenceId) ? item.referenceId : null,
+    isRead: Boolean(item.isRead),
+    createdAt: safeCreatedAt
   };
 }
 
@@ -284,6 +305,26 @@ export async function getCurrentUserProfile(input: { token: string }): Promise<A
   });
 
   return readEnvelope<AuthUser>(res);
+}
+
+export async function getCurrentUserBanStatus(input: { token: string }): Promise<UserBannedSocketPayload | null> {
+  const res = await fetch(buildUrl("/api/v1/users/me/ban-status"), {
+    headers: withAuth({}, input.token)
+  });
+
+  const status = await readEnvelope<BanStatusDto>(res);
+  if (!status.banned) {
+    return null;
+  }
+
+  return {
+    userId: 0,
+    punishmentId: status.punishmentId ?? 0,
+    reason: status.reason ?? "No reason provided",
+    expiredAt: status.expiredAt ?? null,
+    punishedById: status.punishedById ?? 0,
+    punishedByName: status.punishedByName ?? "Unknown moderator"
+  };
 }
 
 export async function updateCurrentUserProfile(input: {
@@ -299,12 +340,74 @@ export async function updateCurrentUserProfile(input: {
   return readEnvelope<AuthUser>(res);
 }
 
-export async function getAdminUsers(input: { token: string }): Promise<AuthUser[]> {
-  const res = await fetch(buildUrl("/api/v1/admin/users"), {
+export async function getAdminUsers(input: { token: string; page?: number; size?: number }): Promise<AdminUsersPage> {
+  const page = input.page ?? 0;
+  const size = input.size ?? 10;
+  const res = await fetch(buildUrl(`/api/v1/admin/users?page=${page}&size=${size}`), {
     headers: withAuth({}, input.token)
   });
 
-  return readEnvelope<AuthUser[]>(res);
+  const items = await readEnvelope<AuthUser[]>(res);
+  return { items, page, size, hasNext: items.length === size };
+}
+
+export async function getAdminUserDetails(input: { token: string; userId: number }): Promise<AdminUserDetails> {
+  const res = await fetch(buildUrl(`/api/v1/admin/users/${input.userId}`), {
+    headers: withAuth({}, input.token)
+  });
+
+  return readEnvelope<AdminUserDetails>(res);
+}
+
+export async function updateAdminUserRole(input: {
+  token: string;
+  userId: number;
+  role: UserRole;
+}): Promise<AuthUser> {
+  const res = await fetch(buildUrl(`/api/v1/admin/users/${input.userId}/role`), {
+    method: "PUT",
+    headers: withAuth({ "Content-Type": "application/json" }, input.token),
+    body: JSON.stringify({ role: input.role })
+  });
+
+  return readEnvelope<AuthUser>(res);
+}
+
+export async function deleteAdminUser(input: { token: string; userId: number }): Promise<void> {
+  const res = await fetch(buildUrl(`/api/v1/admin/users/${input.userId}`), {
+    method: "DELETE",
+    headers: withAuth({}, input.token)
+  });
+
+  await ensureSuccess(res);
+}
+
+export async function banAdminUser(input: {
+  token: string;
+  userId: number;
+  reason: string;
+  expiredAt?: string | null;
+}): Promise<UserPunishmentInfo> {
+  const res = await fetch(buildUrl("/api/v1/admin/punishments/ban"), {
+    method: "POST",
+    headers: withAuth({ "Content-Type": "application/json" }, input.token),
+    body: JSON.stringify({
+      userId: input.userId,
+      reason: input.reason,
+      expiredAt: input.expiredAt ?? null
+    })
+  });
+
+  return readEnvelope<UserPunishmentInfo>(res);
+}
+
+export async function unbanAdminUserByUserId(input: { token: string; userId: number }): Promise<void> {
+  const res = await fetch(buildUrl(`/api/v1/admin/punishments/users/${input.userId}/unban`), {
+    method: "POST",
+    headers: withAuth({}, input.token)
+  });
+
+  await ensureSuccess(res);
 }
 
 export async function sendAdminBroadcast(input: {

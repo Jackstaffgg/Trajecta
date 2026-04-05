@@ -1,4 +1,4 @@
-package dev.knalis.trajectaapi.service.impl;
+package dev.knalis.trajectaapi.service.impl.cache;
 
 import dev.knalis.trajectaapi.dto.notification.NotificationResponse;
 import dev.knalis.trajectaapi.service.intrf.NotificationService;

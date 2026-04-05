@@ -70,7 +70,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .orElseThrow(() -> new NotFoundException("Notification not found"));
 
         if (!notification.getRecipientId().equals(currentUserId)) {
-            throw new PermissionDeniedException("You do not have permission to update this notification");
+            throw new PermissionDeniedException("You do not have permission to updateCurrentUser this notification");
         }
 
         notification.setRead(true);

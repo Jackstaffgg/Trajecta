@@ -45,6 +45,28 @@ export type AuthUser = {
   role: string;
 };
 
+export type UserPunishmentInfo = {
+  id: number;
+  userId: number;
+  punishedById: number;
+  type: "BAN" | string;
+  reason: string;
+  createdAt: string;
+  expiredAt?: string | null;
+  expired: boolean;
+};
+
+export type AdminUserDetails = AuthUser & {
+  activePunishments: UserPunishmentInfo[];
+};
+
+export type AdminUsersPage = {
+  items: AuthUser[];
+  page: number;
+  size: number;
+  hasNext: boolean;
+};
+
 export type AuthState = {
   isAuthenticated: boolean;
   token: string;
@@ -87,8 +109,18 @@ export type NotificationSocketPayload = {
 };
 
 export type SocketEvent = {
-  type: "NEW_NOTIFICATION" | "TASK_STATUS_UPDATE";
+  type: "NEW_NOTIFICATION" | "TASK_STATUS_UPDATE" | "USER_BANNED";
   payload: unknown;
+};
+
+export type UserBannedSocketPayload = {
+  userId: number;
+  punishmentId: number;
+  reason: string;
+  expiredAt?: string | null;
+  punishedById: number;
+  punishedByName: string;
+  timestamp?: string;
 };
 
 export type UserProfileUpdateInput = {
@@ -122,10 +154,8 @@ export type ReplayCameraMode = "chase" | "fpv" | "free";
 
 export type AnalysisMode =
   | "tasks"
-  | "dashboard"
-  | "replay"
-  | "charts"
-  | "params"
-  | "diagnostics"
+  | "analytics"
   | "profile"
-  | "admin";
+  | "admin-users"
+  | "admin-user"
+  | "admin-notifications";

@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import java.net.UnknownHostException;
+
 @Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -108,6 +110,15 @@ public class GlobalExceptionHandler {
     
     @ExceptionHandler(InternalServerException.class)
     public ResponseEntity<ApiResponse<Void>> handleInternalServerException(InternalServerException ex) {
+        if (isCausedBy(ex, UnknownHostException.class)) {
+            log.warn("External dependency host is unreachable", ex.getCause());
+            return buildResponse(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "DEPENDENCY_UNAVAILABLE",
+                    "Required external service is temporarily unavailable. Please try again later."
+            );
+        }
+
         log.error("Internal server error occurred", ex.getCause());
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "Internal server error.");
     }
@@ -116,6 +127,17 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
         log.error("Unexpected error occurred", ex);
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "UNEXPECTED_ERROR", "An unexpected error occurred. Please try again later.");
+    }
+
+    private boolean isCausedBy(Throwable throwable, Class<? extends Throwable> type) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (type.isInstance(current)) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
 }

@@ -1,11 +1,16 @@
 package dev.knalis.trajectaapi.controller.rest.v1.user;
 
-import dev.knalis.trajectaapi.dto.user.UserCreateRequest;
+import dev.knalis.trajectaapi.dto.user.AdminUserDetailsResponse;
+import dev.knalis.trajectaapi.dto.user.UserPunishmentResponse;
 import dev.knalis.trajectaapi.dto.user.UserResponse;
-import dev.knalis.trajectaapi.dto.user.UserUpdateRequest;
+import dev.knalis.trajectaapi.dto.user.UserRoleUpdateRequest;
 import dev.knalis.trajectaapi.mapper.UserMapper;
-import dev.knalis.trajectaapi.model.User;
-import dev.knalis.trajectaapi.service.intrf.UserService;
+import dev.knalis.trajectaapi.mapper.UserPunishmentMapper;
+import dev.knalis.trajectaapi.model.user.Role;
+import dev.knalis.trajectaapi.model.user.User;
+import dev.knalis.trajectaapi.model.user.punishment.UserPunishment;
+import dev.knalis.trajectaapi.service.intrf.user.PunishmentService;
+import dev.knalis.trajectaapi.service.intrf.user.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,7 +31,11 @@ class AdminUserControllerTest {
     @Mock
     private UserService userService;
     @Mock
+    private PunishmentService punishmentService;
+    @Mock
     private UserMapper userMapper;
+    @Mock
+    private UserPunishmentMapper userPunishmentMapper;
     @Mock
     private Authentication authentication;
 
@@ -34,68 +43,66 @@ class AdminUserControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new AdminUserController(userService, userMapper);
+        controller = new AdminUserController(userService, punishmentService, userMapper, userPunishmentMapper);
     }
 
     @Test
-    void getAllUsers_returnsMappedList() {
-        when(userService.findAllResponses()).thenReturn(List.of(new UserResponse()));
+    void getAllUsers_returnsMappedUsers() {
+        User user = new User();
+        user.setId(1L);
+        UserResponse dto = new UserResponse();
+        dto.setId(1L);
 
-        var response = controller.getAllUsers();
+        when(userService.findAll(0, 10)).thenReturn(List.of(user));
+        when(userMapper.toDtoList(List.of(user))).thenReturn(List.of(dto));
+
+        var response = controller.getAllUsers(0, 10);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().getData()).hasSize(1);
     }
 
     @Test
-    void createUser_returnsCreated() {
-        UserCreateRequest req = new UserCreateRequest();
+    void updateUserRole_returnsMappedUser() {
+        UserRoleUpdateRequest request = new UserRoleUpdateRequest();
+        request.setRole(Role.ADMIN);
         User user = new User();
         UserResponse dto = new UserResponse();
 
-        when(userService.create(req, authentication)).thenReturn(user);
+        when(userService.updateRole(3L, Role.ADMIN, authentication)).thenReturn(user);
         when(userMapper.toDto(user)).thenReturn(dto);
 
-        var response = controller.createUser(req, authentication);
+        var response = controller.updateUserRole(3L, request, authentication);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        verify(userService).updateRole(3L, Role.ADMIN, authentication);
     }
 
     @Test
     void deleteUser_delegates() {
-        var response = controller.deleteUser(4L);
+        var response = controller.deleteUser(4L, authentication);
 
-        verify(userService).delete(4L);
+        verify(userService).delete(4L, authentication);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
-    void updateUser_returnsMappedDto() {
-        UserUpdateRequest req = new UserUpdateRequest();
-        req.setName("Updated");
-        User updated = new User();
-        UserResponse dto = new UserResponse();
-        dto.setName("Updated");
+    void getUserById_attachesActivePunishments() {
+        User user = new User();
+        user.setId(9L);
+        AdminUserDetailsResponse details = new AdminUserDetailsResponse();
+        UserPunishment punishment = new UserPunishment();
+        UserPunishmentResponse punishmentDto = new UserPunishmentResponse();
 
-        when(userService.update(3L, req)).thenReturn(updated);
-        when(userMapper.toDto(updated)).thenReturn(dto);
+        when(userService.findById(9L)).thenReturn(user);
+        when(userMapper.toAdminDetailsDto(user)).thenReturn(details);
+        when(punishmentService.getActivePunishments(9L)).thenReturn(List.of(punishment));
+        when(userPunishmentMapper.toDto(punishment)).thenReturn(punishmentDto);
 
-        var response = controller.updateUser(3L, req);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody().getData().getName()).isEqualTo("Updated");
-    }
-
-    @Test
-    void getUserById_returnsMappedDto() {
-        UserResponse dto = new UserResponse();
-        dto.setId(6L);
-
-        when(userService.findResponseById(6L)).thenReturn(dto);
-
-        var response = controller.getUserById(6L);
+        var response = controller.getUserById(9L);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody().getData().getId()).isEqualTo(6L);
+        assertThat(response.getBody().getData().getActivePunishments()).hasSize(1);
     }
 }
 

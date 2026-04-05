@@ -1,9 +1,9 @@
-package dev.knalis.trajectaapi.service.impl;
+package dev.knalis.trajectaapi.service.impl.cache;
 
 import dev.knalis.trajectaapi.dto.admin.CacheClearResponse;
 import dev.knalis.trajectaapi.dto.admin.CacheHealthResponse;
 import dev.knalis.trajectaapi.repo.UserRepository;
-import dev.knalis.trajectaapi.service.intrf.CacheAdminService;
+import dev.knalis.trajectaapi.service.intrf.user.CacheAdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;

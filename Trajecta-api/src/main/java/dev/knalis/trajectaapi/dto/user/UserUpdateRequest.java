@@ -9,12 +9,14 @@ import lombok.Data;
 @Data
 @Schema(description = "Payload for partial user profile updates.")
 public class UserUpdateRequest {
+    
     @Schema(description = "Display name.", example = "Jane Updated")
-    @Size(min = 3, max = 30, message = "Name must be between 3 and 30 characters")
+    @Size(min = 4, max = 40, message = "Name must be between 4 and 40 characters")
     private String name;
     
     @Schema(description = "Username.", example = "jane_updated")
-    @Size(min = 3, max = 30, message = "Username must be between 3 and 30 characters")
+    @Pattern(regexp = "^[a-zA-Z0-9_]+$", message = "Username must contain only letters, numbers, and underscores")
+    @Size(min = 4, max = 16, message = "Username must be between 4 and 16 characters")
     private String username;
     
     @Schema(description = "New password.", example = "NewStrongPass123")
@@ -23,15 +25,32 @@ public class UserUpdateRequest {
     
     @Schema(description = "Email address.", example = "jane.updated@example.com")
     @Email(message = "Email must be a valid email address")
+    @Size(max = 255, message = "Email must not exceed 255 characters")
     private String email;
     
-    @Schema(description = "Role value.", allowableValues = {"ADMIN", "USER"}, example = "USER")
-    @Pattern(
-            regexp = "^(?i)(ADMIN|USER)$",
-            message = "Role must be either 'ADMIN' or 'USER'"
-    )
-    private String role;
+    @JsonIgnore
+    @AssertTrue(message = "Name must not be blank when provided")
+    public boolean isNameValidWhenProvided() {
+        return isNullOrNotBlank(name);
+    }
     
+    @JsonIgnore
+    @AssertTrue(message = "Username must not be blank when provided")
+    public boolean isUsernameValidWhenProvided() {
+        return isNullOrNotBlank(username);
+    }
+    
+    @JsonIgnore
+    @AssertTrue(message = "Password must not be blank when provided")
+    public boolean isPasswordValidWhenProvided() {
+        return isNullOrNotBlank(password);
+    }
+    
+    @JsonIgnore
+    @AssertTrue(message = "Email must not be blank when provided")
+    public boolean isEmailValidWhenProvided() {
+        return isNullOrNotBlank(email);
+    }
     
     @JsonIgnore
     @AssertTrue(message = "At least one field must be provided")
@@ -39,13 +58,14 @@ public class UserUpdateRequest {
         return isNotBlank(name) ||
                 isNotBlank(username) ||
                 isNotBlank(password) ||
-                isNotBlank(email) ||
-                isNotBlank(role);
+                isNotBlank(email);
     }
     
     private boolean isNotBlank(String str) {
         return str != null && !str.trim().isEmpty();
     }
+    
+    private boolean isNullOrNotBlank(String str) {
+        return str == null || !str.trim().isEmpty();
+    }
 }
-
-

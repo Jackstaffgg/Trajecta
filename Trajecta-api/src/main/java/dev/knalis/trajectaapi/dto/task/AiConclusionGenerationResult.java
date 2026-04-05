@@ -1,4 +1,4 @@
-package dev.knalis.trajectaapi.service.intrf;
+package dev.knalis.trajectaapi.dto.task;
 
 import dev.knalis.trajectaapi.model.task.ai.AiModel;
 

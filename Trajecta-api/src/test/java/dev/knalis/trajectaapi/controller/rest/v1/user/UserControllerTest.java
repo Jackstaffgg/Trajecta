@@ -4,14 +4,18 @@ import dev.knalis.trajectaapi.controller.rest.v1.support.CurrentUserResolver;
 import dev.knalis.trajectaapi.dto.user.UserResponse;
 import dev.knalis.trajectaapi.dto.user.UserUpdateRequest;
 import dev.knalis.trajectaapi.mapper.UserMapper;
-import dev.knalis.trajectaapi.model.User;
-import dev.knalis.trajectaapi.service.intrf.UserService;
+import dev.knalis.trajectaapi.model.user.User;
+import dev.knalis.trajectaapi.model.user.punishment.UserPunishment;
+import dev.knalis.trajectaapi.service.intrf.user.PunishmentService;
+import dev.knalis.trajectaapi.service.intrf.user.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
+
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -24,6 +28,8 @@ class UserControllerTest {
     @Mock
     private UserMapper userMapper;
     @Mock
+    private PunishmentService punishmentService;
+    @Mock
     private CurrentUserResolver currentUserResolver;
     @Mock
     private Authentication authentication;
@@ -32,7 +38,7 @@ class UserControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new UserController(userService, userMapper, currentUserResolver);
+        controller = new UserController(userService, punishmentService, userMapper, currentUserResolver);
     }
 
     @Test
@@ -65,14 +71,36 @@ class UserControllerTest {
         dto.setId(2L);
         dto.setName("Updated");
 
-        when(currentUserResolver.requireUser(authentication)).thenReturn(current);
-        when(userService.update(2L, req)).thenReturn(updated);
+        when(userService.updateCurrentUser(authentication, req)).thenReturn(updated);
         when(userMapper.toDto(updated)).thenReturn(dto);
 
         var response = controller.updateCurrentUser(req, authentication);
 
         assertThat(response.getBody().getData().getId()).isEqualTo(2L);
         assertThat(response.getBody().getData().getName()).isEqualTo("Updated");
+    }
+
+    @Test
+    void getCurrentUserBanStatus_returnsBannedDetails() {
+        User current = new User();
+        current.setId(3L);
+
+        User moderator = new User();
+        moderator.setId(7L);
+        moderator.setName("Owner");
+
+        UserPunishment ban = new UserPunishment();
+        ban.setId(100L);
+        ban.setReason("Spam");
+        ban.setPunishedBy(moderator);
+
+        when(currentUserResolver.requireUser(authentication)).thenReturn(current);
+        when(punishmentService.getActiveBan(3L)).thenReturn(Optional.of(ban));
+
+        var response = controller.getCurrentUserBanStatus(authentication);
+
+        assertThat(response.getBody().getData().isBanned()).isTrue();
+        assertThat(response.getBody().getData().getPunishedByName()).isEqualTo("Owner");
     }
 }
 

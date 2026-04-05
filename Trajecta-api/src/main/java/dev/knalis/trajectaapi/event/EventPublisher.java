@@ -2,10 +2,13 @@ package dev.knalis.trajectaapi.event;
 
 import dev.knalis.trajectaapi.event.analys.AnalysisRequestedEvent;
 import dev.knalis.trajectaapi.event.task.TaskStatusChangedEvent;
+import dev.knalis.trajectaapi.event.user.UserBannedEvent;
 import dev.knalis.trajectaapi.model.task.TaskStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
+
+import java.time.Instant;
 
 @Component
 @RequiredArgsConstructor
@@ -23,6 +26,24 @@ public class EventPublisher {
     
     public void publishAnalysisRequested(Long taskId) {
         eventPublisher.publishEvent(new AnalysisRequestedEvent(taskId));
+    }
+    
+    public void publishUserBanned(
+            long userId,
+            long punishmentId,
+            String reason,
+            Instant expiredAt,
+            long punishedById,
+            String punishedByName
+    ) {
+        eventPublisher.publishEvent(new UserBannedEvent(
+                userId,
+                punishmentId,
+                reason,
+                expiredAt,
+                punishedById,
+                punishedByName
+        ));
     }
 }
 

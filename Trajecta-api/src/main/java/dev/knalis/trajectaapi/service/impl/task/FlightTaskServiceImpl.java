@@ -1,4 +1,4 @@
-package dev.knalis.trajectaapi.service.impl;
+package dev.knalis.trajectaapi.service.impl.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -11,8 +11,8 @@ import dev.knalis.trajectaapi.exception.PermissionDeniedException;
 import dev.knalis.trajectaapi.exception.RateLimitException;
 import dev.knalis.trajectaapi.factory.FlightTaskFactory;
 import dev.knalis.trajectaapi.mapper.FlightMetricMapper;
-import dev.knalis.trajectaapi.model.Role;
-import dev.knalis.trajectaapi.model.User;
+import dev.knalis.trajectaapi.model.user.Role;
+import dev.knalis.trajectaapi.model.user.User;
 import dev.knalis.trajectaapi.model.task.FlightMetrics;
 import dev.knalis.trajectaapi.model.task.FlightTask;
 import dev.knalis.trajectaapi.model.task.ai.AiConclusion;
@@ -21,10 +21,10 @@ import dev.knalis.trajectaapi.repo.FlightMetricsRepository;
 import dev.knalis.trajectaapi.repo.FlightTaskRepository;
 import dev.knalis.trajectaapi.security.AiConclusionRateLimiter;
 import dev.knalis.trajectaapi.security.TaskCreationRateLimiter;
-import dev.knalis.trajectaapi.service.intrf.AiConclusionGenerationResult;
-import dev.knalis.trajectaapi.service.intrf.AiConclusionService;
-import dev.knalis.trajectaapi.service.intrf.FileService;
-import dev.knalis.trajectaapi.service.intrf.FlightTaskService;
+import dev.knalis.trajectaapi.dto.task.AiConclusionGenerationResult;
+import dev.knalis.trajectaapi.service.intrf.task.AiConclusionService;
+import dev.knalis.trajectaapi.service.intrf.task.FileService;
+import dev.knalis.trajectaapi.service.intrf.task.FlightTaskService;
 import dev.knalis.trajectaapi.storage.ObjectKeyBuilder;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +43,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -278,7 +277,7 @@ public class FlightTaskServiceImpl implements FlightTaskService {
         List<Long> requestedIds = taskIds.stream()
                 .filter(id -> id != null && id > 0)
                 .distinct()
-                .collect(Collectors.toList());
+                .toList();
 
         if (requestedIds.isEmpty()) {
             throw new BadRequestException("Task ids must not be empty");
