@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as echarts from "echarts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useLocaleStore } from "@/store/locale-store";
 import { useFlightStore } from "@/store/flight-store";
 import { tr } from "@/lib/i18n";
@@ -18,12 +19,16 @@ function finiteOrZero(value: number | undefined) {
 function TimelineChart({
   id,
   x,
+  xMin,
+  xMax,
   lines,
   scrubber,
   onHover
 }: {
   id: string;
   x: number[];
+  xMin: number;
+  xMax: number;
   lines: SeriesDef[];
   scrubber: number;
   onHover: (t: number) => void;
@@ -40,13 +45,9 @@ function TimelineChart({
       animation: false,
       backgroundColor: "transparent",
       grid: { left: 40, right: 12, top: 14, bottom: 24 },
-      xAxis: { type: "value", axisLine: { lineStyle: { color: "#64748b" } } },
+      xAxis: { type: "value", min: xMin, max: xMax, axisLine: { lineStyle: { color: "#64748b" } } },
       yAxis: { type: "value", axisLine: { lineStyle: { color: "#64748b" } }, splitLine: { lineStyle: { color: "#1e293b" } } },
       tooltip: { trigger: "axis" },
-      dataZoom: [
-        { type: "inside", xAxisIndex: 0, filterMode: "none", zoomOnMouseWheel: true, moveOnMouseMove: true, moveOnMouseWheel: true },
-        { type: "slider", xAxisIndex: 0, filterMode: "none", height: 18, bottom: 0 }
-      ],
       series: lines.map((line) => ({
         name: line.label,
         type: "line",
@@ -72,7 +73,7 @@ function TimelineChart({
       window.removeEventListener("resize", handleResize);
       chart.dispose();
     };
-  }, [id, x, lines, onHover]);
+  }, [id, x, xMin, xMax, lines, onHover]);
 
   useEffect(() => {
     if (!ref.current) {
@@ -107,6 +108,51 @@ export function FlightChartsView() {
 
   const x = useMemo(() => data?.frames.map((f) => f.t) ?? [], [data?.frames]);
   const frames = data?.frames ?? [];
+  const [windowSize, setWindowSize] = useState(0);
+  const [startIndex, setStartIndex] = useState(0);
+
+  const totalPoints = frames.length;
+  const minWindow = useMemo(() => Math.max(20, Math.floor(totalPoints * 0.05)), [totalPoints]);
+
+  useEffect(() => {
+    if (totalPoints <= 0) {
+      setWindowSize(0);
+      setStartIndex(0);
+      return;
+    }
+    const initialWindow = Math.max(minWindow, Math.floor(totalPoints * 0.3));
+    setWindowSize(Math.min(totalPoints, initialWindow));
+    setStartIndex(0);
+  }, [totalPoints, minWindow]);
+
+  const safeWindowSize = Math.min(totalPoints, Math.max(1, windowSize || totalPoints));
+  const maxStart = Math.max(0, totalPoints - safeWindowSize);
+  const safeStart = Math.min(Math.max(0, startIndex), maxStart);
+  const endIndex = Math.min(totalPoints - 1, safeStart + safeWindowSize - 1);
+  const xMin = x[safeStart] ?? 0;
+  const xMax = x[endIndex] ?? x[x.length - 1] ?? 0;
+
+  function handleZoomIn() {
+    if (totalPoints <= 0) {
+      return;
+    }
+    const nextWindow = Math.max(minWindow, Math.floor(safeWindowSize * 0.75));
+    const center = safeStart + Math.floor(safeWindowSize / 2);
+    const nextStart = Math.max(0, Math.min(totalPoints - nextWindow, center - Math.floor(nextWindow / 2)));
+    setWindowSize(nextWindow);
+    setStartIndex(nextStart);
+  }
+
+  function handleZoomOut() {
+    if (totalPoints <= 0) {
+      return;
+    }
+    const nextWindow = Math.min(totalPoints, Math.ceil(safeWindowSize * 1.25));
+    const center = safeStart + Math.floor(safeWindowSize / 2);
+    const nextStart = Math.max(0, Math.min(totalPoints - nextWindow, center - Math.floor(nextWindow / 2)));
+    setWindowSize(nextWindow);
+    setStartIndex(nextStart);
+  }
 
   if (!data) {
     return null;
@@ -116,6 +162,27 @@ export function FlightChartsView() {
     <div className="space-y-4">
       <h2 className="text-xl font-semibold">{tr(locale, "charts.title")}</h2>
       <Card>
+        <CardContent className="space-y-3 pt-6">
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={handleZoomOut}>
+              -
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={handleZoomIn}>
+              +
+            </Button>
+            <span className="ml-2 text-xs text-muted-foreground">{safeWindowSize} / {totalPoints}</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={maxStart}
+            value={safeStart}
+            onChange={(e) => setStartIndex(Number(e.target.value))}
+            className="h-2 w-full cursor-pointer accent-zinc-200"
+          />
+        </CardContent>
+      </Card>
+      <Card>
         <CardHeader>
           <CardTitle>{tr(locale, "charts.card.speedAlt")}</CardTitle>
         </CardHeader>
@@ -123,6 +190,8 @@ export function FlightChartsView() {
           <TimelineChart
             id="speed-alt"
             x={x}
+            xMin={xMin}
+            xMax={xMax}
             scrubber={scrubber}
             onHover={setScrubber}
             lines={[
@@ -130,7 +199,6 @@ export function FlightChartsView() {
               { label: tr(locale, "charts.series.altitude"), color: "#34d399", accessor: (i) => frames[i].alt ?? 0 }
             ]}
           />
-          <p className="mt-2 text-xs text-muted-foreground">{tr(locale, "charts.zoomHint")}</p>
         </CardContent>
       </Card>
 
@@ -142,6 +210,8 @@ export function FlightChartsView() {
           <TimelineChart
             id="accel"
             x={x}
+            xMin={xMin}
+            xMax={xMax}
             scrubber={scrubber}
             onHover={setScrubber}
             lines={[
@@ -161,6 +231,8 @@ export function FlightChartsView() {
           <TimelineChart
             id="attitude"
             x={x}
+            xMin={xMin}
+            xMax={xMax}
             scrubber={scrubber}
             onHover={setScrubber}
             lines={[
@@ -180,6 +252,8 @@ export function FlightChartsView() {
           <TimelineChart
             id="vertical"
             x={x}
+            xMin={xMin}
+            xMax={xMax}
             scrubber={scrubber}
             onHover={setScrubber}
             lines={[
@@ -198,6 +272,8 @@ export function FlightChartsView() {
           <TimelineChart
             id="battery"
             x={x}
+            xMin={xMin}
+            xMax={xMax}
             scrubber={scrubber}
             onHover={setScrubber}
             lines={[
@@ -215,6 +291,8 @@ export function FlightChartsView() {
           <TimelineChart
             id="accel-norm"
             x={x}
+            xMin={xMin}
+            xMax={xMax}
             scrubber={scrubber}
             onHover={setScrubber}
             lines={[

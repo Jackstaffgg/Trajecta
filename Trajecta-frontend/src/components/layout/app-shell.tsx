@@ -590,7 +590,7 @@ export function AppShell({ children, onUserBanned, onGoHome }: AppShellProps) {
                                     </p>
                                   </div>
                                 </div>
-                                <span className="rounded-full border border-border/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                                <span className="inline-flex h-5 min-w-[96px] items-center justify-center rounded-full border border-border/60 px-2 text-[10px] uppercase tracking-wide text-muted-foreground whitespace-nowrap">
                                   {localizeNotificationType(notification.type, locale) || meta.label}
                                 </span>
                               </div>
