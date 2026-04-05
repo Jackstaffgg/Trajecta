@@ -1,6 +1,6 @@
 package dev.knalis.trajectaapi.security;
 
-import dev.knalis.trajectaapi.config.RequestLoggingProperties;
+import dev.knalis.trajectaapi.config.props.RequestLoggingProperties;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

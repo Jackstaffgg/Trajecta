@@ -85,6 +85,10 @@ cp .env.vps.example .env.vps
 - `MINIO_PASS=...`
 - `JWT_SECRET=...` (long random)
 - `INTERNAL_WORKER_TOKEN=...` (long random)
+- `OWNER_USERNAME=...` (admin user created on startup)
+- `OWNER_PASSWORD=...` (admin password created on startup)
+- `OWNER_MAIL=...` (admin email created on startup)
+- `APP_SEED_ENABLED=true` (creates admin user on startup with above credentials)
 
 5. Make helper script executable:
 

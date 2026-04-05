@@ -1,6 +1,6 @@
 package dev.knalis.trajectaapi.security;
 
-import dev.knalis.trajectaapi.config.RateLimitProperties;
+import dev.knalis.trajectaapi.config.props.RateLimitProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;

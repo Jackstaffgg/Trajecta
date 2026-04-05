@@ -1,4 +1,4 @@
-package dev.knalis.trajectaapi.config;
+package dev.knalis.trajectaapi.config.props;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
