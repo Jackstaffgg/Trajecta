@@ -125,7 +125,6 @@ export function StartScreen() {
             onDrop={(e) => {
               e.preventDefault();
               setDrag(false);
-              const file = e.dataTransfer.files?.[0];
               const files = Array.from(e.dataTransfer.files ?? []);
               if (files.length > 0) {
                 void handleFiles(files);

@@ -60,22 +60,26 @@ export function LandingScreen({
             <BrandLogo className="h-10 w-10 sm:h-12 sm:w-12" />
           </div>
 
-          <h1 className="landing-reveal mb-3 text-3xl font-semibold tracking-tight text-zinc-100 sm:mb-4 sm:text-4xl md:text-6xl">
+          <h1 className="landing-reveal landing-reveal-title mb-3 text-3xl font-semibold tracking-tight text-zinc-100 sm:mb-4 sm:text-4xl md:text-6xl">
             {t(locale, "landing.title")}
           </h1>
-          <p className="landing-reveal landing-reveal-delay mb-8 text-sm text-zinc-300 sm:mb-10 sm:text-base md:text-xl">
+          <p className="landing-reveal landing-reveal-text landing-reveal-delay mb-8 text-sm text-zinc-300 sm:mb-10 sm:text-base md:text-xl">
             {t(locale, "landing.slogan")}
           </p>
 
           <div className="landing-reveal landing-reveal-delay-2 flex items-center justify-center">
             <Button
               size="lg"
-              className="h-12 w-full max-w-xs bg-white px-6 text-base font-semibold text-zinc-900 hover:bg-zinc-200 sm:h-11 sm:w-auto sm:min-w-48 sm:text-sm"
+              className="landing-reveal-cta h-12 w-full max-w-xs bg-white px-6 text-base font-semibold text-zinc-900 hover:bg-zinc-200 sm:h-11 sm:w-auto sm:min-w-48 sm:text-sm"
               onClick={onStart}
             >
               {t(locale, "landing.workspace")}
             </Button>
           </div>
+
+          <p className="landing-team-tagline landing-reveal-delay-3 mt-10 text-[11px] tracking-wide text-zinc-500 sm:mt-12 sm:text-xs">
+            {t(locale, "landing.teamTagline")}
+          </p>
         </section>
       </main>
     </div>
