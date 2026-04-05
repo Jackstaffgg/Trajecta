@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 import math
+import os
 from typing import Any
 
 import numpy as np
 from pymavlink import mavutil
 
 from .config import TIME_FIELDS
+
+
+DATAFLASH_HEAD1 = 0xA3
+DATAFLASH_HEAD2 = 0x95
+_DATAFLASH_SIGNATURE = bytes((DATAFLASH_HEAD1, DATAFLASH_HEAD2))
+_HEADER_SCAN_BYTES = 64 * 1024
 
 
 # Common ArduPilot EV identifiers from AP_Logger::LogEvent.
@@ -190,7 +197,22 @@ def safe_json_value(value: Any) -> Any:
     return str(value)
 
 
+def _validate_dataflash_file(bin_path: str) -> None:
+    if not os.path.isfile(bin_path):
+        raise ValueError(f"Input file not found: {bin_path}")
+
+    with open(bin_path, "rb") as source:
+        header_window = source.read(_HEADER_SCAN_BYTES)
+
+    if len(header_window) < 3:
+        raise ValueError("Parse error: file is too short to be a DataFlash BIN log.")
+
+    if _DATAFLASH_SIGNATURE not in header_window:
+        raise ValueError("Parse error: invalid DataFlash BIN header (expected 0xA3 0x95 signature).")
+
+
 def parse_log(bin_path: str) -> dict[str, Any]:
+    _validate_dataflash_file(bin_path)
     log = mavutil.mavlink_connection(bin_path)
 
     data = {
