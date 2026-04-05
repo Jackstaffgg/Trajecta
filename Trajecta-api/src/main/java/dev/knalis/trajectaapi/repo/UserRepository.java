@@ -1,6 +1,8 @@
 package dev.knalis.trajectaapi.repo;
 
-import dev.knalis.trajectaapi.model.User;
+import dev.knalis.trajectaapi.model.user.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -16,6 +18,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByUsernameContainingIgnoreCase(String username);
     
     Optional<User> findByUsernameEqualsIgnoreCase(String username);
+    
+    boolean existsByEmail(String email);
+    
+    Page<User> findAll(Pageable pageable);
 }
 
 

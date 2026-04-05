@@ -1,6 +1,6 @@
 package dev.knalis.trajectaapi.service.impl.auth;
 
-import dev.knalis.trajectaapi.model.User;
+import dev.knalis.trajectaapi.model.user.User;
 import dev.knalis.trajectaapi.service.intrf.auth.JwtService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

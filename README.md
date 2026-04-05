@@ -1,136 +1,119 @@
 # Trajecta
 
-![Monorepo](https://img.shields.io/badge/repo-monorepo-2563eb)
-![Backend](https://img.shields.io/badge/backend-Spring_Boot_4-6db33f)
-![Frontend](https://img.shields.io/badge/frontend-React_18-61dafb)
-![Worker](https://img.shields.io/badge/worker-Python-3776ab)
-![Deployment](https://img.shields.io/badge/deploy-Docker_Compose-2496ed)
+![Repo](https://img.shields.io/badge/repo-monorepo-2563eb)
+![Backend](https://img.shields.io/badge/backend-Spring%20Boot%204.0.5-6db33f)
+![Frontend](https://img.shields.io/badge/frontend-React%2018-61dafb)
+![Worker](https://img.shields.io/badge/worker-Python%203.12-3776ab)
+![Deploy](https://img.shields.io/badge/deploy-Docker%20Compose-2496ed)
 
-Trajecta is an end-to-end telemetry analysis platform for ArduPilot flight logs.
+Trajecta is an end-to-end telemetry processing and visualization platform for ArduPilot flight logs.
 
-It ingests raw `.bin` files, processes them asynchronously, stores artifacts, and delivers a real-time web experience for replay, charts, diagnostics, and administration.
+It includes:
+- a Java backend API for auth, task orchestration, notifications, and admin operations
+- a Python worker for parsing `.bin` logs and producing normalized trajectories
+- a React frontend for upload, replay, analytics, diagnostics, and administration
 
-## Quick Links
+## Table of Contents
 
-- [Quick start](#quick-start)
+- [Platform Overview](#platform-overview)
 - [Architecture](#architecture)
-- [Services](#services)
-- [Feature highlights](#feature-highlights)
-- [Local development](#local-development)
+- [Repository Layout](#repository-layout)
+- [Quick Start](#quick-start)
+- [Run Modes](#run-modes)
 - [Configuration](#configuration)
-- [Testing](#testing-and-quality-checks)
-- [Production deployment](#production-deployment-vps)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
+- [Services and Ports](#services-and-ports)
+- [Quality Checks](#quality-checks)
+- [Deployment](#deployment)
+- [Operational Notes](#operational-notes)
+- [Troubleshooting](#troubleshooting)
+- [Documentation Map](#documentation-map)
 
-## Feature Highlights
+## Platform Overview
 
-- End-to-end telemetry pipeline from file upload to analysis output
-- Real-time task updates and notifications over WebSocket/STOMP
-- Clean separation of concerns across API, worker, frontend, and edge
-- Production-ready reverse proxy routing with HTTPS and `/trajecta` base path
-- Practical operations model for local development and VPS deployment
-
-## Quick start
-
-From repository root on Windows:
-
-```bat
-.\start-all-stacks.bat
-```
-
-Optional actions:
-
-```bat
-.\start-all-stacks.bat status
-.\start-all-stacks.bat logs
-.\start-all-stacks.bat validate
-.\start-all-stacks.bat down
-```
-
-Then open:
-
-- `http://localhost:3000` (frontend)
-- `http://localhost:8080/swagger-ui` (API docs)
+Core workflow:
+1. User uploads a telemetry `.bin` file from the web UI.
+2. Backend stores source file and creates an analysis task.
+3. Backend publishes a parse request to RabbitMQ.
+4. Worker downloads raw telemetry from internal API, parses it, and publishes a result.
+5. Backend stores trajectory output, updates task state, and emits WebSocket events.
+6. Frontend receives realtime updates and renders replay/charts/diagnostics.
 
 ## Architecture
 
 ```text
-Browser (React)
-   |
-   | HTTPS: /trajecta, /trajecta/api, /trajecta/ws
-   v
-Caddy edge (80/443)
-   |                    \
-   | /trajecta/*         \ /trajecta/api/* + /trajecta/ws*
-   v                      v
-Frontend (Nginx)        Backend (Spring Boot)
-                             |
-                             | publish/consume
-                             v
-                         RabbitMQ <----> Worker (Python)
-                             |
-                             +--> PostgreSQL
-                             +--> Redis
-                             +--> MinIO
+Browser (React + Vite)
+    |
+    | HTTP / WebSocket
+    v
+Frontend (Nginx, Trajecta-frontend)
+    |                             \
+    | /api/* and /ws proxied       \ static assets
+    v                               \
+Backend (Spring Boot, Trajecta-api)
+    |
+    | RabbitMQ request/result messages
+    v
+Worker (Python, Trajecta-worker)
+
+Data services used by backend:
+- PostgreSQL
+- Redis
+- MinIO
 ```
 
-## Services
+For VPS deployment, `docker-compose.vps.yml` also adds Caddy (`edge`) in front of frontend/backend.
 
-| Component | Stack | Responsibility |
-|---|---|---|
-| `Trajecta-api` | Java 21, Spring Boot, JPA, Flyway, Redis, AMQP, MinIO | Auth, task lifecycle, orchestration, REST API, WebSocket events |
-| `Trajecta-worker` | Python, `pymavlink`, `numpy`, `pandas`, `pika` | Telemetry parsing, queue processing, result publishing |
-| `Trajecta-frontend` | React 18, TypeScript, Vite, Tailwind, Zustand, ECharts, Resium/Cesium | UI flow, analytics views, replay, diagnostics |
-| `infra/caddy` | Caddy | TLS termination, reverse proxy, `/trajecta` routing |
-
-## Repository layout
+## Repository Layout
 
 ```text
 Trajecta/
   README.md
-  start-all-stacks.bat
-  docker-compose.vps.yml
   DEPLOY_VPS.md
+  deploy-vps.sh
+  docker-compose.vps.yml
+  start-all-stacks.bat
   infra/caddy/Caddyfile
   Trajecta-api/
   Trajecta-frontend/
   Trajecta-worker/
 ```
 
-## Local development
+## Quick Start
 
-### Prerequisites
+### Recommended (Windows)
 
-- Docker Desktop with Compose v2
-- Java 21
-- Node.js 18+ and npm
-- Python 3.10+
-
-### Option A (recommended): monorepo orchestrator
+From repository root:
 
 ```bat
 start-all-stacks.bat
 ```
 
-Useful actions:
+Useful commands:
 
 ```bat
 start-all-stacks.bat status
 start-all-stacks.bat logs
-start-all-stacks.bat down
 start-all-stacks.bat validate
-start-all-stacks.bat up skiptests
+start-all-stacks.bat down
 ```
 
-What it does:
+Typical local URLs:
+- Frontend: `http://localhost:3000`
+- API Swagger UI: `http://localhost:8080/swagger-ui`
+- RabbitMQ UI: `http://localhost:15672`
+- MinIO Console: `http://localhost:9001`
 
-1. Builds `Trajecta-api` with Gradle
-2. Starts `Trajecta-api/compose.yaml`
-3. Starts `Trajecta-worker/docker-compose.yml`
-4. Starts `Trajecta-frontend/docker-compose.yml`
+## Run Modes
 
-### Option B: run each service manually
+### Monorepo script mode
+
+`start-all-stacks.bat` performs:
+1. API Gradle build (`clean build`, optional `-x test`)
+2. API compose startup (`Trajecta-api/compose.yaml`, `backend`)
+3. Worker compose startup (`Trajecta-worker/docker-compose.yml`, `worker`)
+4. Frontend compose startup (`Trajecta-frontend/docker-compose.yml`, `frontend`)
+
+### Manual module mode
 
 Backend:
 
@@ -150,12 +133,6 @@ pip install -r requirements.txt
 python main.py --worker
 ```
 
-Worker local conversion mode:
-
-```powershell
-python main.py --input sample.bin --output out.json --pretty --gzip
-```
-
 Frontend:
 
 ```powershell
@@ -164,46 +141,57 @@ npm install
 npm run dev
 ```
 
-### Typical local endpoints
-
-- Frontend: `http://localhost:3000`
-- Backend: `http://localhost:8080`
-- Swagger UI: `http://localhost:8080/swagger-ui`
-- OpenAPI JSON: `http://localhost:8080/api-docs`
-- RabbitMQ UI: `http://localhost:15672`
-- MinIO Console: `http://localhost:9001`
-
 ## Configuration
 
-### Root VPS environment (`.env.vps`)
+### Local compose defaults
 
-Create from template:
+Each module compose file contains local defaults (for development only).
+
+### VPS environment
+
+VPS deploy uses:
+- `docker-compose.vps.yml`
+- `.env.vps` (required)
+- `deploy-vps.sh`
+
+Create `.env.vps` from template:
 
 ```bash
 cp .env.vps.example .env.vps
 ```
 
-Key variables:
+High-level variable groups:
+- TLS and domain: `DOMAIN`, `ACME_EMAIL`
+- Backend and security: `DB_*`, `RABBIT_*`, `MINIO_*`, `JWT_SECRET`, `INTERNAL_WORKER_TOKEN`
+- Frontend routing: `VITE_APP_BASE_PATH`, `VITE_API_BASE_URL`, `VITE_WS_PATH`
+- Worker runtime: `HTTP_TIMEOUT_SECONDS`
 
-| Group | Variables |
-|---|---|
-| Edge / TLS | `DOMAIN`, `ACME_EMAIL` |
-| Frontend routing | `VITE_APP_BASE_PATH`, `VITE_API_BASE_URL`, `VITE_WS_PATH` |
-| PostgreSQL | `DB_USER`, `DB_PASSWORD` |
-| RabbitMQ | `RABBIT_USER`, `RABBIT_PASS` |
-| MinIO | `MINIO_USER`, `MINIO_PASS` |
-| Security | `JWT_SECRET`, `INTERNAL_WORKER_TOKEN` |
-| Worker HTTP | `HTTP_TIMEOUT_SECONDS` |
+## Services and Ports
 
-### Security guidance
+### Local API compose (`Trajecta-api/compose.yaml`)
 
-- Do not commit real credentials or tokens
-- Rotate leaked secrets immediately
-- Keep production `.env.vps` only on the server
+- `backend`: `8080:8080`
+- `db`: `5432:5432`
+- `redis`: `6379:6379`
+- `rabbitmq`: `5672:5672`, `15672:15672`
+- `minio`: `9000:9000`, `9001:9001`
 
-## Testing and quality checks
+### Local frontend compose (`Trajecta-frontend/docker-compose.yml`)
 
-Backend tests and coverage:
+- `frontend`: `3000:80`
+
+### Local worker compose (`Trajecta-worker/docker-compose.yml`)
+
+- `worker` (no published host port)
+
+### VPS compose (`docker-compose.vps.yml`)
+
+- Public entry: Caddy `80:80`, `443:443`
+- RabbitMQ management and MinIO ports bound to localhost only
+
+## Quality Checks
+
+Backend:
 
 ```powershell
 Set-Location Z:\Trajecta\Trajecta-api
@@ -211,33 +199,24 @@ Set-Location Z:\Trajecta\Trajecta-api
 .\gradlew.bat jacocoTestReport
 ```
 
-Worker tests:
+Worker:
 
 ```powershell
 Set-Location Z:\Trajecta\Trajecta-worker
-python -m pytest
+python -m unittest discover -s tests -v
 ```
 
-Frontend lint:
+Frontend:
 
 ```powershell
 Set-Location Z:\Trajecta\Trajecta-frontend
 npm run lint
+npm run build
 ```
 
-## Production deployment (VPS)
+## Deployment
 
-Detailed guide: `DEPLOY_VPS.md`
-
-High-level flow:
-
-1. Prepare VPS (Docker, firewall, DNS)
-2. Create `.env.vps` from `.env.vps.example`
-3. Validate Compose configuration
-4. Start and build stack
-5. Verify `https://your-domain/trajecta/`
-
-Commands:
+### VPS helper script
 
 ```bash
 ./deploy-vps.sh validate
@@ -248,52 +227,32 @@ Commands:
 ./deploy-vps.sh down
 ```
 
-## Operations notes
+For full production notes and setup sequence, see `DEPLOY_VPS.md`.
 
-- Public internet exposure in VPS setup: Caddy only (`80`, `443`)
-- Core services run inside `telemetry-network`
-- RabbitMQ and MinIO admin endpoints are localhost-bound in VPS compose
-- WebSocket traffic is proxied via `/trajecta/ws`
+## Operational Notes
 
-## Roadmap
+- Keep secrets out of git.
+- Rotate credentials if leaked.
+- Keep production `.env.vps` only on the server.
+- Internal worker endpoint authorization depends on `INTERNAL_WORKER_TOKEN` and `X-Worker-Token` header.
+- WebSocket auth requires `Authorization: Bearer <JWT>` in STOMP `CONNECT` headers.
 
-- Improve observability with centralized logs and metrics dashboards
-- Expand task diagnostics and AI-assisted analysis quality checks
-- Add release automation for faster and safer VPS updates
-- Harden operational playbooks for backup, restore, and incident response
+## Troubleshooting
 
-## Contributing
+- Compose startup issues:
+  - verify Docker Desktop/daemon is running
+  - run `start-all-stacks.bat validate` or `./deploy-vps.sh validate`
+- Frontend loads but API calls fail:
+  - verify backend service is healthy
+  - verify `VITE_API_BASE_URL` and nginx upstream settings
+- Worker fails to process tasks:
+  - verify RabbitMQ connectivity and queue names
+  - verify `INTERNAL_WORKER_TOKEN` is set consistently
 
-Contributions are welcome.
+## Documentation Map
 
-1. Fork and create a feature branch.
-2. Keep changes focused and consistent with existing folder boundaries.
-3. Run relevant checks before opening a PR:
-
-```powershell
-Set-Location Z:\Trajecta\Trajecta-api
-.\gradlew.bat test
-
-Set-Location Z:\Trajecta\Trajecta-worker
-python -m pytest
-
-Set-Location Z:\Trajecta\Trajecta-frontend
-npm run lint
-```
-
-4. Open a pull request with a concise problem statement, change summary, and validation steps.
-
-## Documentation map
-
+- `Trajecta-api/README.md` - backend endpoints, config, run and tests
+- `Trajecta-frontend/README.md` - frontend architecture, env, docker and scripts
+- `Trajecta-worker/README.md` - worker CLI modes, env, docker and tests
 - `DEPLOY_VPS.md` - VPS deployment and operations
-- `Trajecta-api/README.md` - backend API and domain details
-- `Trajecta-frontend/README.md` - frontend modules and runtime notes
-- `Trajecta-worker/trajecta_worker/cli.py` - worker CLI entrypoint
-
----
-
-Trajecta is designed to keep ingestion, processing, and visualization clearly separated while remaining easy to run as a single platform.
-
-
-
 

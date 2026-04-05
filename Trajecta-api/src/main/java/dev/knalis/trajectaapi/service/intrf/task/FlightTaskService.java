@@ -1,4 +1,4 @@
-package dev.knalis.trajectaapi.service.intrf;
+package dev.knalis.trajectaapi.service.intrf.task;
 
 import dev.knalis.trajectaapi.dto.messaging.AnalysisResult;
 import dev.knalis.trajectaapi.dto.task.TaskBulkDeleteResponse;

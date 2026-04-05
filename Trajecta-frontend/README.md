@@ -1,99 +1,108 @@
 # Trajecta Frontend
 
-React + Vite application for ArduPilot flight log analysis.
+![Module](https://img.shields.io/badge/module-frontend-61dafb)
+![React](https://img.shields.io/badge/react-18-1f2937)
+![Vite](https://img.shields.io/badge/vite-5-646cff)
+
+React + Vite client for Trajecta telemetry workflows.
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Stack](#stack)
+- [Application Flow](#application-flow)
+- [Project Map](#project-map)
+- [Scripts](#scripts)
+- [Environment Variables](#environment-variables)
+- [UI Style Rules](#ui-style-rules)
+- [Docker](#docker)
+
+## Overview
+
+The frontend provides:
+
+- authentication and account screens
+- upload and task management flow
+- processing status and analytics workspace
+- modules for replay, charts, params, diagnostics
+- profile and admin screens (by role)
+- realtime updates and notifications via WebSocket/STOMP messages from backend
 
 ## Stack
 
-- React 18 + TypeScript + Vite
+- React 18 + TypeScript
+- Vite 5
 - Tailwind CSS
-- Zustand global state
-- Resium/Cesium for 3D replay
-- ECharts for telemetry timelines
-- Virtualized params table via @tanstack/react-virtual
+- Zustand
+- Cesium/Resium
+- ECharts
 
-## Project Structure
+## Application Flow
 
-- src/App.tsx: app flow (auth -> upload -> processing -> analysis modules)
-- src/hooks/useFlightData.ts: log loading/normalization and global data access
-- src/store/flight-store.ts: global store for auth, flight object, mode, replay state
-- src/modules/dashboard: summary cards and metadata
-- src/modules/replay: 3D replay with timeline, camera modes, HUD, event markers
-- src/modules/charts: synchronized time-series charts and shared scrubber
-- src/modules/params: searchable, virtualized parameters table
-- src/modules/diagnostics: AI diagnostics panel
-- src/components/layout: sidebar and flow screens
-- src/components/ui: shadcn-style primitives
+`src/App.tsx` controls top-level mode routing:
 
-## useFlightData Hook
+1. auth (`AuthScreen`)
+2. banned state (`BannedScreen`) when applicable
+3. shell (`AppShell`) with sidebar + content
+4. tasks/profile/admin/analytics module views
 
-The hook wraps data lifecycle:
+## Project Map
 
-- normalizeFlightJson(raw): normalizes JSON structure to metadata/frames/events/params/metrics
-- loadFromFile(file): reads JSON, parses it, normalizes, and stores in Zustand
-- maxTimeSec: derived value from the last frame timestamp
-- clear(): resets the current flight data
+- `src/App.tsx` - app flow and mode routing
+- `src/hooks/useFlightData.ts` - upload/select task flow, trajectory load, AI conclusion operations
+- `src/lib/api.ts` - typed API client
+- `src/components/layout/app-shell.tsx` - header/sidebar, realtime event handling, notifications panel
+- `src/modules/replay/*` - replay and timeline tools
+- `src/modules/charts/*` - telemetry charts
+- `src/modules/params/*` - params table
+- `src/modules/diagnostics/*` - AI diagnostics view
 
-This keeps UI modules focused on rendering and interaction, while ingestion logic remains centralized.
+## Scripts
 
-## Run
-
-1. npm install
-2. npm run dev
-3. open browser at localhost URL from Vite
+```bash
+npm run dev
+npm run build
+npm run preview
+npm run lint
+```
 
 ## Environment Variables
 
-- VITE_CESIUM_ION_TOKEN: optional token for Cesium terrain/imagery providers
-- VITE_APP_BASE_PATH: public app base path (for subpath deploys, e.g. /trajecta/)
-- VITE_API_BASE_URL: API prefix/base (for subpath deploys, e.g. /trajecta)
-- VITE_WS_PATH: websocket endpoint path suffix (default /ws)
+- `VITE_APP_BASE_PATH` (used in `vite.config.ts` as Vite `base`)
+- `VITE_API_BASE_URL` (used by `src/lib/api.ts`)
+- `VITE_WS_PATH` (used by app shell, default `/ws`)
+- `VITE_CESIUM_ION_TOKEN` (optional)
 
-## Docker (Production)
+## UI Style Rules
 
-Frontend is built into static assets and served by Nginx.
-Nginx proxies backend traffic over Docker network:
+- semantic tokens are defined in `src/styles.css`
+- prefer semantic classes (`bg-background`, `text-foreground`, `border-border`)
+- use `ui-field` for text fields and `textarea`
+- use `ui-select` for dropdowns
+- prefer shared primitives in `src/components/ui`
 
-- /api/* -> backend container
-- /ws -> backend WebSocket endpoint
+## Docker
 
 Files:
 
-- Dockerfile
-- docker-compose.yml
-- nginx/default.conf.template
+- `Dockerfile`
+- `docker-compose.yml`
+- `nginx/default.conf.template`
 
-### Start with existing API and Worker stack
+Runtime behavior:
 
-1. Start API infrastructure and backend first so telemetry-network exists.
-2. Start frontend compose from this folder.
+- static app is served by Nginx on container port `80`
+- compose exposes host `3000:80`
+- `/api/*` and `/ws` are proxied to `BACKEND_UPSTREAM` (default `backend:8080`)
 
-If telemetry-network does not exist yet, create it manually:
+Run:
 
-- docker network create telemetry-network
+```bash
+docker compose up --build -d frontend
+```
 
-Expected backend upstream in Docker network is `backend:8080` by default.
-You can override it with BACKEND_UPSTREAM.
+If `telemetry-network` does not exist:
 
-Example env values for consistency with current project:
-
-- BACKEND_UPSTREAM=backend:8080
-- VITE_CESIUM_ION_TOKEN=<optional>
-
-Frontend published port:
-
-- http://localhost:3000
-
-### Full stack deploy order (current project)
-
-1. Start API stack:
-	docker compose -f ../Trajecta-api/compose.yaml up -d
-2. Start worker:
-	docker compose -f ../Trajecta-worker/docker-compose.yml up -d
-3. Start frontend:
-	docker compose up -d
-
-Stop order:
-
-1. docker compose down
-2. docker compose -f ../Trajecta-worker/docker-compose.yml down
-3. docker compose -f ../Trajecta-api/compose.yaml down
+```bash
+docker network create telemetry-network
+```

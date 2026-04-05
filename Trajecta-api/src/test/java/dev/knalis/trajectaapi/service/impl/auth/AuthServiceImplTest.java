@@ -2,12 +2,14 @@ package dev.knalis.trajectaapi.service.impl.auth;
 
 import dev.knalis.trajectaapi.dto.auth.RegisterRequest;
 import dev.knalis.trajectaapi.dto.user.UserResponse;
+import dev.knalis.trajectaapi.exception.PermissionDeniedException;
 import dev.knalis.trajectaapi.exception.RateLimitException;
 import dev.knalis.trajectaapi.mapper.UserMapper;
-import dev.knalis.trajectaapi.model.User;
+import dev.knalis.trajectaapi.model.user.User;
 import dev.knalis.trajectaapi.security.LoginRateLimiter;
-import dev.knalis.trajectaapi.service.intrf.UserService;
+import dev.knalis.trajectaapi.service.intrf.user.UserService;
 import dev.knalis.trajectaapi.service.intrf.auth.JwtService;
+import dev.knalis.trajectaapi.service.intrf.user.PunishmentService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,7 +17,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetailsService;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,6 +36,8 @@ class AuthServiceImplTest {
     @Mock
     private LoginRateLimiter rateLimiter;
     @Mock
+    private PunishmentService punishmentService;
+    @Mock
     private UserService userService;
     @Mock
     private UserMapper userMapper;
@@ -43,7 +46,7 @@ class AuthServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new AuthServiceImpl(authenticationManager, jwtService, userDetailsService, rateLimiter, userService, userMapper);
+        service = new AuthServiceImpl(authenticationManager, jwtService, userDetailsService, rateLimiter, punishmentService, userService, userMapper);
     }
 
     @Test
@@ -84,6 +87,7 @@ class AuthServiceImplTest {
     @Test
     void login_success_returnsTokenAndUser() {
         User details = new User();
+        details.setId(5L);
         details.setUsername("pilot");
         UserResponse dto = new UserResponse();
         dto.setUsername("pilot");
@@ -91,6 +95,7 @@ class AuthServiceImplTest {
         when(rateLimiter.isAllowed("pilot")).thenReturn(true);
         when(userDetailsService.loadUserByUsername("pilot")).thenReturn(details);
         when(jwtService.generateToken(details)).thenReturn("jwt-token");
+        when(punishmentService.isUserBanned(5L)).thenReturn(false);
         when(userMapper.toDto(details)).thenReturn(dto);
 
         var response = service.login("pilot", "pass");
@@ -99,6 +104,23 @@ class AuthServiceImplTest {
         assertThat(response.getUser().getUsername()).isEqualTo("pilot");
         verify(rateLimiter).onSuccess("pilot");
         verify(userService, never()).findByUsername(any());
+    }
+
+    @Test
+    void login_throwsWhenUserIsBanned() {
+        User details = new User();
+        details.setId(55L);
+
+        when(rateLimiter.isAllowed("pilot")).thenReturn(true);
+        when(userDetailsService.loadUserByUsername("pilot")).thenReturn(details);
+        when(jwtService.generateToken(details)).thenReturn("jwt-token");
+        when(punishmentService.isUserBanned(55L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.login("pilot", "pass"))
+                .isInstanceOf(PermissionDeniedException.class)
+                .hasMessageContaining("banned");
+
+        verify(rateLimiter, never()).onSuccess("pilot");
     }
 }
 

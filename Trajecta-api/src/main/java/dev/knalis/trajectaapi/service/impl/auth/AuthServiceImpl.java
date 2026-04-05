@@ -2,13 +2,15 @@ package dev.knalis.trajectaapi.service.impl.auth;
 
 import dev.knalis.trajectaapi.dto.auth.AuthResponse;
 import dev.knalis.trajectaapi.dto.auth.RegisterRequest;
+import dev.knalis.trajectaapi.exception.PermissionDeniedException;
 import dev.knalis.trajectaapi.exception.RateLimitException;
 import dev.knalis.trajectaapi.mapper.UserMapper;
-import dev.knalis.trajectaapi.model.User;
+import dev.knalis.trajectaapi.model.user.User;
 import dev.knalis.trajectaapi.security.LoginRateLimiter;
-import dev.knalis.trajectaapi.service.intrf.UserService;
+import dev.knalis.trajectaapi.service.intrf.user.UserService;
 import dev.knalis.trajectaapi.service.intrf.auth.AuthService;
 import dev.knalis.trajectaapi.service.intrf.auth.JwtService;
+import dev.knalis.trajectaapi.service.intrf.user.PunishmentService;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +29,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
     private final LoginRateLimiter rateLimiter;
+    private final PunishmentService punishmentService;
     
     private final UserService userService;
     private final UserMapper userMapper;
@@ -56,8 +59,6 @@ public class AuthServiceImpl implements AuthService {
             throw new BadCredentialsException("Invalid username or password");
         }
         
-        rateLimiter.onSuccess(username);
-        incrementCounter("auth.login.success");
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         final var token = jwtService.generateToken(userDetails);
 
@@ -68,6 +69,13 @@ public class AuthServiceImpl implements AuthService {
 
             responseUser = userService.findByUsername(username);
         }
+
+        if (punishmentService.isUserBanned(responseUser.getId())) {
+            throw new PermissionDeniedException("User is banned");
+        }
+
+        rateLimiter.onSuccess(username);
+        incrementCounter("auth.login.success");
 
         return new AuthResponse(token, userMapper.toDto(responseUser));
     }

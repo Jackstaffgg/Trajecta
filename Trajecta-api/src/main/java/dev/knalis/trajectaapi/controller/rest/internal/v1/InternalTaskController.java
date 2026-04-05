@@ -1,7 +1,7 @@
 package dev.knalis.trajectaapi.controller.rest.internal.v1;
 
-import dev.knalis.trajectaapi.service.intrf.FileService;
-import dev.knalis.trajectaapi.service.intrf.FlightTaskService;
+import dev.knalis.trajectaapi.service.intrf.task.FileService;
+import dev.knalis.trajectaapi.service.intrf.task.FlightTaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;

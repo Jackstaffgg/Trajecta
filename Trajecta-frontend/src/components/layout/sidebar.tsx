@@ -1,54 +1,50 @@
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import {
   Activity,
-  Bot,
+  Bell,
   ChevronDown,
   ChevronUp,
-  LayoutDashboard,
-  Orbit,
   Radio,
   RefreshCw,
   Shield,
-  SlidersHorizontal,
   UserCog
 } from "lucide-react";
 import { useFlightStore } from "@/store/flight-store";
+import { useLocaleStore } from "@/store/locale-store";
+import { localizeTaskStatus, t } from "@/lib/i18n";
 import type { AnalysisMode, TaskInfo } from "@/types/flight";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
   mode: AnalysisMode;
-  label: string;
+  labelKey: string;
   icon: ComponentType<{ className?: string }>;
   requiresTask?: boolean;
   adminOnly?: boolean;
 };
 
 type NavSection = {
-  title: string;
+  titleKey: string;
   items: NavItem[];
 };
 
 const sections: NavSection[] = [
   {
-    title: "Workspace",
-    items: [{ mode: "tasks", label: "Tasks", icon: Radio }]
+    titleKey: "sidebar.section.workspace",
+    items: [{ mode: "tasks", labelKey: "sidebar.item.tasks", icon: Radio }]
   },
   {
-    title: "Analytics",
+    titleKey: "sidebar.section.analytics",
     items: [
-      { mode: "dashboard", label: "Dashboard", icon: LayoutDashboard, requiresTask: true },
-      { mode: "replay", label: "3D Replay", icon: Orbit, requiresTask: true },
-      { mode: "charts", label: "Dynamics", icon: Activity, requiresTask: true },
-      { mode: "params", label: "Parameters", icon: SlidersHorizontal, requiresTask: true },
-      { mode: "diagnostics", label: "AI Diagnostics", icon: Bot, requiresTask: true }
+      { mode: "analytics", labelKey: "sidebar.item.analyticsWorkspace", icon: Activity, requiresTask: true }
     ]
   },
   {
-    title: "Account",
+    titleKey: "sidebar.section.account",
     items: [
-      { mode: "profile", label: "Profile", icon: UserCog },
-      { mode: "admin", label: "Admin", icon: Shield, adminOnly: true }
+      { mode: "profile", labelKey: "sidebar.item.profile", icon: UserCog },
+      { mode: "admin-users", labelKey: "sidebar.item.adminUsers", icon: Shield, adminOnly: true },
+      { mode: "admin-notifications", labelKey: "sidebar.item.adminNotifications", icon: Bell, adminOnly: true }
     ]
   }
 ];
@@ -73,9 +69,11 @@ export function Sidebar({ tasks, activeTaskId, loadingTasks = false, deletingTas
   const mode = useFlightStore((s) => s.mode);
   const setMode = useFlightStore((s) => s.setMode);
   const auth = useFlightStore((s) => s.auth);
+  const locale = useLocaleStore((s) => s.locale);
 
   const hasSelectedTask = Boolean(activeTaskId);
-  const isAdmin = auth.user?.role?.toUpperCase() === "ADMIN";
+  const role = auth.user?.role?.toUpperCase();
+  const canAccessAdmin = role === "ADMIN" || role === "OWNER";
   const [tasksExpanded, setTasksExpanded] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -112,17 +110,20 @@ export function Sidebar({ tasks, activeTaskId, loadingTasks = false, deletingTas
   }
 
   return (
-    <aside className="panel-grid w-full border-b border-border/70 p-3 backdrop-blur md:h-screen md:w-80 md:border-b-0 md:border-r">
-      <div className="surface-panel h-full rounded-xl p-3">
+    <aside className="panel-grid w-full border-b border-border/70 p-3 backdrop-blur md:sticky md:left-0 md:top-0 md:h-screen md:w-80 md:border-b-0 md:border-r">
+      <div className="surface-panel h-full rounded-2xl p-3">
         <div className="mb-4 flex items-center justify-between md:block">
-          <h1 className="text-lg font-bold tracking-wide text-foreground">TRAJECTA</h1>
+          <h1 className="text-lg font-bold tracking-wider text-foreground">TRAJECTA</h1>
           <p className="text-xs text-muted-foreground md:mt-1">Flight Intelligence Suite</p>
+          <div className="mt-2 hidden w-fit items-center gap-1 rounded-full border border-zinc-300/35 bg-zinc-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-200 md:inline-flex">
+            Online
+          </div>
         </div>
 
         <div className="space-y-3">
           {sections.map((section, sectionIndex) => {
             const visibleItems = section.items.filter((item) => {
-              if (item.adminOnly && !isAdmin) {
+              if (item.adminOnly && !canAccessAdmin) {
                 return false;
               }
               if (item.requiresTask && !hasSelectedTask) {
@@ -136,9 +137,9 @@ export function Sidebar({ tasks, activeTaskId, loadingTasks = false, deletingTas
             }
 
             return (
-              <section key={section.title} className={cn(sectionIndex > 0 ? "surface-divider pt-3" : "")}>
+              <section key={section.titleKey} className={cn(sectionIndex > 0 ? "surface-divider pt-3" : "")}> 
                 <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {section.title}
+                  {t(locale, section.titleKey)}
                 </p>
                 <nav className="grid grid-cols-2 gap-2 md:grid-cols-1">
                   {visibleItems.map((item, idx) => {
@@ -148,7 +149,7 @@ export function Sidebar({ tasks, activeTaskId, loadingTasks = false, deletingTas
                       <button
                         key={item.mode}
                         className={cn(
-                          "nav-item animate-rise flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition",
+                           "nav-item animate-rise flex items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition",
                           active
                             ? "nav-item-active text-foreground"
                             : "text-muted-foreground hover:text-foreground"
@@ -157,7 +158,7 @@ export function Sidebar({ tasks, activeTaskId, loadingTasks = false, deletingTas
                         onClick={() => setMode(item.mode)}
                       >
                         <Icon className="h-4 w-4" />
-                        <span>{item.label}</span>
+                        <span>{t(locale, item.labelKey)}</span>
                       </button>
                     );
                   })}
@@ -174,7 +175,7 @@ export function Sidebar({ tasks, activeTaskId, loadingTasks = false, deletingTas
               onClick={() => setTasksExpanded((prev) => !prev)}
               type="button"
             >
-              <span>My recent tasks</span>
+              <span>{t(locale, "tasks.recent")}</span>
               {tasksExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </button>
             <div className="flex items-center gap-2">
@@ -185,7 +186,7 @@ export function Sidebar({ tasks, activeTaskId, loadingTasks = false, deletingTas
             </div>
           </div>
 
-          <div className={cn("overflow-hidden transition-all", tasksExpanded ? "max-h-[340px]" : "max-h-0")}>
+          <div className={cn("overflow-hidden transition-all", tasksExpanded ? "max-h-[360px]" : "max-h-0")}>
             <div className="max-h-[320px] space-y-2 overflow-auto pr-1">
               <div className="flex items-center justify-between px-1 pb-1">
                 <div className="flex items-center gap-2">
@@ -195,20 +196,20 @@ export function Sidebar({ tasks, activeTaskId, loadingTasks = false, deletingTas
                     onChange={toggleSelectAll}
                     disabled={tasks.length === 0 || deletingTasks}
                   />
-                  <span className="text-[11px] text-muted-foreground">Selected: {selectedTaskIds.length}</span>
+                  <span className="text-[11px] text-muted-foreground">{t(locale, "tasks.selected")}: {selectedTaskIds.length}</span>
                 </div>
                 <button
                   type="button"
-                  className="rounded border border-border/70 px-2 py-0.5 text-[11px] text-rose-300 disabled:opacity-50"
+                  className="rounded-lg border border-border/70 px-2 py-0.5 text-[11px] text-zinc-300 disabled:opacity-50"
                   disabled={deletingTasks || selectedTaskIds.length === 0}
                   onClick={() => setConfirmDeleteOpen(true)}
                 >
-                  {deletingTasks ? "Deleting..." : "Delete selected"}
+                  {deletingTasks ? t(locale, "tasks.deleting") : t(locale, "tasks.deleteSelected")}
                 </button>
               </div>
               {confirmDeleteOpen ? (
-                <div className="rounded-md border border-rose-400/40 bg-rose-500/10 p-2 text-[11px] text-rose-200">
-                  <p>Delete {selectedTaskIds.length} selected task(s)? This action cannot be undone.</p>
+                  <div className="rounded-lg border border-zinc-400/35 bg-zinc-500/10 p-2 text-[11px] text-zinc-200">
+                  <p>{t(locale, "tasks.deletePrompt", { count: selectedTaskIds.length })}</p>
                   <div className="mt-2 flex items-center gap-2">
                     <button
                       type="button"
@@ -216,30 +217,30 @@ export function Sidebar({ tasks, activeTaskId, loadingTasks = false, deletingTas
                       onClick={() => setConfirmDeleteOpen(false)}
                       disabled={deletingTasks}
                     >
-                      Cancel
+                      {t(locale, "tasks.cancel")}
                     </button>
                     <button
                       type="button"
-                      className="rounded border border-rose-400/50 px-2 py-0.5 text-[11px] text-rose-300 disabled:opacity-50"
+                      className="rounded border border-zinc-400/50 px-2 py-0.5 text-[11px] text-zinc-200 disabled:opacity-50"
                       onClick={deleteSelected}
                       disabled={deletingTasks}
                     >
-                      Confirm delete
+                      {t(locale, "tasks.confirmDelete")}
                     </button>
                   </div>
                 </div>
               ) : null}
               {tasks.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No tasks yet.</p>
+                <p className="text-xs text-muted-foreground">{t(locale, "tasks.noTasks")}</p>
               ) : (
                 tasks.map((task) => (
                   <div
                     key={task.id}
-                    className={cn(
-                      "nav-item w-full rounded-md px-2 py-1.5 text-left transition",
+                      className={cn(
+                        "nav-item w-full rounded-lg px-2 py-1.5 text-left transition",
                       activeTaskId === task.id
                         ? "nav-item-active"
-                        : "hover:border-accent/40"
+                        : "hover:border-zinc-300/40"
                     )}
                   >
                     <div className="flex items-start gap-2">
@@ -252,8 +253,8 @@ export function Sidebar({ tasks, activeTaskId, loadingTasks = false, deletingTas
                       <button type="button" className="w-full text-left" onClick={() => onTaskSelect(task)}>
                         <p className="truncate text-xs font-medium">#{task.id} {task.title}</p>
                         <div className="mt-0.5 flex items-center justify-between">
-                          <p className={cn("text-[11px]", taskStatusClass(task.status))}>{task.status}</p>
-                          {activeTaskId === task.id ? <span className="text-[10px] text-foreground">Selected</span> : null}
+                          <p className={cn("text-[11px]", taskStatusClass(task.status))}>{localizeTaskStatus(task.status, locale)}</p>
+                          {activeTaskId === task.id ? <span className="text-[10px] text-foreground">{t(locale, "tasks.selected")}</span> : null}
                         </div>
                       </button>
                     </div>

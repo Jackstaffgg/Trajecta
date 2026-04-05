@@ -2,8 +2,8 @@ package dev.knalis.trajectaapi.service.impl;
 
 import dev.knalis.trajectaapi.exception.BadRequestException;
 import dev.knalis.trajectaapi.exception.InternalServerException;
+import dev.knalis.trajectaapi.service.impl.task.FileServiceImpl;
 import io.minio.GetObjectArgs;
-import io.minio.GetObjectResponse;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;

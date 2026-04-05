@@ -6,10 +6,10 @@ import dev.knalis.trajectaapi.dto.notification.NotificationAudiencePreviewRespon
 import dev.knalis.trajectaapi.dto.notification.NotificationBroadcastRequest;
 import dev.knalis.trajectaapi.dto.notification.NotificationCreateRequest;
 import dev.knalis.trajectaapi.mapper.NotificationMapper;
-import dev.knalis.trajectaapi.model.User;
+import dev.knalis.trajectaapi.model.user.User;
 import dev.knalis.trajectaapi.dto.notification.NotificationResponse;
 import dev.knalis.trajectaapi.service.intrf.NotificationService;
-import dev.knalis.trajectaapi.service.intrf.UserService;
+import dev.knalis.trajectaapi.service.intrf.user.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -72,7 +72,7 @@ public class AdminNotificationController {
         List<User> allUsers = userService.findAll();
         List<Long> targetUserIds = resolveTargetUserIds(request, admin, allUsers);
 
-        List<Long> allIds = allUsers.stream().map(User::getId).collect(Collectors.toList());
+        List<Long> allIds = allUsers.stream().map(User::getId).toList();
         List<Long> requested = request.getRecipientIds() == null ? List.of() : request.getRecipientIds();
         List<Long> missing = requested.stream()
                 .filter(id -> id != null && !allIds.contains(id) && !id.equals(admin.getId()))

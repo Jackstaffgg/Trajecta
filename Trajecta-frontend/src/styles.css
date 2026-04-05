@@ -1,18 +1,18 @@
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Manrope:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: 221 24% 10%;
-  --foreground: 214 22% 94%;
-  --card: 222 21% 13%;
-  --card-foreground: 214 22% 94%;
-  --muted: 221 16% 19%;
-  --muted-foreground: 215 14% 71%;
-  --border: 220 16% 29%;
-  --accent: 213 82% 61%;
-  --ring: 213 78% 56%;
+  --background: 220 7% 10%;
+  --foreground: 220 11% 93%;
+  --card: 220 7% 14%;
+  --card-foreground: 220 11% 95%;
+  --muted: 220 6% 21%;
+  --muted-foreground: 220 7% 70%;
+  --border: 220 6% 31%;
+  --accent: 220 8% 74%;
+  --ring: 220 8% 66%;
 }
 
 * {
@@ -23,11 +23,11 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 14% 10%, rgba(96, 165, 250, 0.12), transparent 36%),
-    radial-gradient(circle at 86% 14%, rgba(129, 140, 248, 0.08), transparent 36%),
-    linear-gradient(160deg, #0d1320 0%, #121a29 55%, #152033 100%);
+    radial-gradient(circle at 14% 9%, rgba(255, 255, 255, 0.05), transparent 32%),
+    radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.03), transparent 38%),
+    linear-gradient(165deg, #121214 0%, #17181b 52%, #1d1f24 100%);
   color: hsl(var(--foreground));
-  font-family: Manrope, "Segoe UI", sans-serif;
+  font-family: Inter, "Segoe UI", sans-serif;
 }
 
 #root {
@@ -42,28 +42,48 @@ body {
 }
 
 .surface-panel {
-  background: linear-gradient(180deg, rgba(21, 29, 45, 0.9), rgba(18, 24, 38, 0.9));
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(34, 36, 42, 0.9), rgba(27, 29, 34, 0.95));
+  border: 1px solid rgba(158, 162, 171, 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 8px 28px rgba(5, 10, 21, 0.32);
+}
+
+.surface-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 26%);
 }
 
 .surface-divider {
-  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  border-top: 1px solid rgba(158, 162, 171, 0.18);
 }
 
 .nav-item {
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(15, 22, 34, 0.62);
+  border: 1px solid rgba(158, 162, 171, 0.24);
+  background: rgba(31, 33, 38, 0.72);
+  transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease;
+}
+
+.nav-item:hover {
+  border-color: rgba(171, 176, 186, 0.4);
+  background: rgba(40, 43, 50, 0.78);
+  transform: translateY(-1px);
 }
 
 .nav-item-active {
-  border-color: rgba(96, 165, 250, 0.52);
-  background: rgba(59, 130, 246, 0.14);
+  border-color: rgba(203, 207, 216, 0.5);
+  background: rgba(180, 186, 198, 0.14);
 }
 
 .telemetry-pill {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(9, 18, 32, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(22, 24, 29, 0.78);
   backdrop-filter: blur(6px);
 }
 
@@ -71,14 +91,14 @@ body {
   height: 8px;
   overflow: hidden;
   border-radius: 9999px;
-  background: rgba(148, 163, 184, 0.24);
+  background: rgba(158, 162, 171, 0.26);
 }
 
 .progress-bar {
   height: 100%;
   border-radius: 9999px;
-  background: linear-gradient(90deg, rgba(96, 165, 250, 0.78), rgba(59, 130, 246, 0.95));
-  box-shadow: 0 0 16px rgba(59, 130, 246, 0.32);
+  background: linear-gradient(90deg, rgba(164, 168, 177, 0.65), rgba(203, 207, 216, 0.86));
+  box-shadow: 0 0 14px rgba(203, 207, 216, 0.2);
   transition: width 420ms ease;
 }
 
@@ -139,12 +159,12 @@ body {
 /* ── Scrollbars ── */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.22) transparent;
+  scrollbar-color: rgba(158, 162, 171, 0.24) transparent;
 }
 
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -152,12 +172,73 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.22);
+  background: rgba(158, 162, 171, 0.32);
   border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.40);
+  background: rgba(171, 176, 186, 0.56);
+}
+
+.ui-field,
+select,
+textarea {
+  border: 1px solid hsl(var(--border));
+  background: color-mix(in oklab, hsl(var(--background)) 90%, black 10%);
+  color: hsl(var(--foreground));
+  border-radius: 0.5rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.ui-field {
+  min-height: 2.5rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+}
+
+.ui-select,
+select {
+  min-height: 2.5rem;
+  width: 100%;
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  padding-right: 1.75rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(203, 207, 216, 0.9) 50%),
+    linear-gradient(135deg, rgba(203, 207, 216, 0.9) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) calc(50% - 1px),
+    calc(100% - 8px) calc(50% - 1px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  appearance: none;
+  cursor: pointer;
+}
+
+.ui-select:focus,
+.ui-select:focus-visible,
+.ui-field:focus,
+.ui-field:focus-visible,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: hsl(var(--ring));
+  box-shadow: 0 0 0 3px color-mix(in oklab, hsl(var(--ring)) 28%, transparent);
+}
+
+.ui-select option,
+select option {
+  background-color: #1a1b1f;
+  color: hsl(var(--foreground));
+}
+
+.ui-select:disabled,
+.ui-field:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 /* ── Checkboxes ── */

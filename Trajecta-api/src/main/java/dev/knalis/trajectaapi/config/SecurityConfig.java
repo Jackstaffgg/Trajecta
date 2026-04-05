@@ -52,7 +52,7 @@ public class SecurityConfig {
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         
-                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "OWNER")
                         
                 )
                 .sessionManagement(session -> session

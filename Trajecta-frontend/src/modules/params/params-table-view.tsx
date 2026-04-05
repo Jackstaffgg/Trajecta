@@ -3,10 +3,13 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useLocaleStore } from "@/store/locale-store";
 import { useFlightStore } from "@/store/flight-store";
+import { tr } from "@/lib/i18n";
 
 export function ParamsTableView() {
   const data = useFlightStore((s) => s.data);
+  const locale = useLocaleStore((s) => s.locale);
   const [query, setQuery] = useState("");
 
   const rows = useMemo(() => {
@@ -30,17 +33,17 @@ export function ParamsTableView() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <CardTitle>Parameters Table</CardTitle>
+        <CardTitle>{tr(locale, "params.title")}</CardTitle>
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input className="pl-8" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search param" />
+          <Input className="pl-8" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tr(locale, "params.search")} />
         </div>
       </CardHeader>
       <CardContent>
         <div className="mb-2 grid grid-cols-[2fr_1fr_2fr] gap-2 border-b border-border pb-2 text-xs uppercase text-muted-foreground">
-          <span>Name</span>
-          <span>Value</span>
-          <span>Description</span>
+          <span>{tr(locale, "params.column.name")}</span>
+          <span>{tr(locale, "params.column.value")}</span>
+          <span>{tr(locale, "params.column.description")}</span>
         </div>
         <div ref={(el) => (parentRef.current = el)} className="h-[62vh] overflow-auto rounded-md border border-border bg-background/40">
           <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}>
@@ -54,7 +57,7 @@ export function ParamsTableView() {
                 >
                   <span className="font-mono text-accent">{row.name}</span>
                   <span>{String(row.value)}</span>
-                  <span className="text-muted-foreground">ArduPilot standard description placeholder</span>
+                  <span className="text-muted-foreground">{tr(locale, "params.description.placeholder")}</span>
                 </div>
               );
             })}

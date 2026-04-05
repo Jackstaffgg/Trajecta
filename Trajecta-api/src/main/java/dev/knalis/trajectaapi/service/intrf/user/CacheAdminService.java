@@ -1,4 +1,4 @@
-package dev.knalis.trajectaapi.service.intrf;
+package dev.knalis.trajectaapi.service.intrf.user;
 
 import dev.knalis.trajectaapi.dto.admin.CacheClearResponse;
 import dev.knalis.trajectaapi.dto.admin.CacheHealthResponse;

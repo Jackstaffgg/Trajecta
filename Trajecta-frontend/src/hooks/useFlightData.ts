@@ -353,7 +353,7 @@ export function useFlightData() {
 
   async function loadFromBin(file: File, title: string) {
     if (!auth.isAuthenticated || !auth.token) {
-      setError("Authentication required");
+      setError("Authentication required", "tasks");
       return;
     }
 
@@ -368,7 +368,7 @@ export function useFlightData() {
       return created;
     } catch (error) {
       const message = apiErrorMessage(error);
-      setError(message);
+      setError(message, "tasks");
       if (error instanceof ApiClientError && error.status === 401) {
         logout();
       }
@@ -380,7 +380,7 @@ export function useFlightData() {
 
   async function selectTask(task: TaskInfo) {
     if (!auth.isAuthenticated || !auth.token) {
-      setError("Authentication required");
+      setError("Authentication required", "tasks");
       return false;
     }
 
@@ -405,10 +405,11 @@ export function useFlightData() {
       normalized.aiConclusion = normalized.aiConclusion ?? freshTask.aiConclusion ?? undefined;
       normalized.aiModel = normalized.aiModel ?? freshTask.aiModel ?? undefined;
       setData(normalized);
+      setMode("analytics");
       return true;
     } catch (error) {
       const message = apiErrorMessage(error);
-      setError(message);
+      setError(message, "tasks");
       if (error instanceof ApiClientError && error.status === 401) {
         logout();
       }
@@ -441,7 +442,7 @@ export function useFlightData() {
       return true;
     } catch (error) {
       const message = apiErrorMessage(error);
-      setError(message);
+      setError(message, "tasks");
       if (error instanceof ApiClientError && error.status === 401) {
         logout();
       }

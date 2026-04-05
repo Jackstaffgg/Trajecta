@@ -1,8 +1,8 @@
-package dev.knalis.trajectaapi.service.impl;
+package dev.knalis.trajectaapi.service.impl.cache;
 
 import dev.knalis.trajectaapi.dto.task.TaskResponse;
 import dev.knalis.trajectaapi.mapper.task.TaskResponseMapper;
-import dev.knalis.trajectaapi.service.intrf.FlightTaskService;
+import dev.knalis.trajectaapi.service.intrf.task.FlightTaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.Authentication;

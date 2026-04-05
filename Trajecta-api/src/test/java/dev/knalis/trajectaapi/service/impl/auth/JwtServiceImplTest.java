@@ -1,7 +1,7 @@
 package dev.knalis.trajectaapi.service.impl.auth;
 
-import dev.knalis.trajectaapi.model.Role;
-import dev.knalis.trajectaapi.model.User;
+import dev.knalis.trajectaapi.model.user.Role;
+import dev.knalis.trajectaapi.model.user.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;

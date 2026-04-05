@@ -2,8 +2,8 @@ package dev.knalis.trajectaapi.controller.rest.v1;
 
 import dev.knalis.trajectaapi.controller.rest.v1.support.CurrentUserResolver;
 import dev.knalis.trajectaapi.dto.notification.NotificationResponse;
-import dev.knalis.trajectaapi.model.User;
-import dev.knalis.trajectaapi.service.impl.NotificationDtoCacheService;
+import dev.knalis.trajectaapi.model.user.User;
+import dev.knalis.trajectaapi.service.impl.cache.NotificationDtoCacheService;
 import dev.knalis.trajectaapi.service.intrf.NotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

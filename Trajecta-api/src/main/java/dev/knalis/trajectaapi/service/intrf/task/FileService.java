@@ -1,4 +1,4 @@
-package dev.knalis.trajectaapi.service.intrf;
+package dev.knalis.trajectaapi.service.intrf.task;
 
 import org.springframework.web.multipart.MultipartFile;
 

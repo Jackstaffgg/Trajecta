@@ -21,8 +21,3 @@ public class UserResponse {
     @Schema(description = "Role name.", example = "USER")
     private String role;
 }
-
-
-
-
-

@@ -17,7 +17,7 @@ const config: Config = {
         ring: "hsl(var(--ring))"
       },
       boxShadow: {
-        glow: "0 0 0 1px rgba(61, 177, 248, 0.2), 0 8px 24px rgba(0, 0, 0, 0.35)"
+        glow: "0 0 0 1px rgba(203, 207, 216, 0.18), 0 8px 24px rgba(0, 0, 0, 0.35)"
       },
       fontFamily: {
         sans: ["Manrope", "Segoe UI", "sans-serif"],

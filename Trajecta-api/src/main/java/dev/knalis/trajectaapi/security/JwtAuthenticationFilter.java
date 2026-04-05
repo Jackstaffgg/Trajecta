@@ -1,12 +1,16 @@
 package dev.knalis.trajectaapi.security;
 
 import dev.knalis.trajectaapi.service.intrf.auth.JwtService;
+import dev.knalis.trajectaapi.model.user.User;
+import dev.knalis.trajectaapi.model.user.punishment.PunishmentType;
+import dev.knalis.trajectaapi.repo.PunishmentRepository;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -19,6 +23,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.Instant;
 
 @Component
 @RequiredArgsConstructor
@@ -26,6 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final PunishmentRepository punishmentRepository;
 
     @Override
     protected boolean shouldNotFilterAsyncDispatch() {
@@ -35,8 +41,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
         final String authHeader = request.getHeader("Authorization");
@@ -62,6 +68,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
                 if (jwtService.isTokenValid(jwt, userDetails)) {
+                    if (shouldRejectBanned(request, userDetails)) {
+                        SecurityContextHolder.clearContext();
+                        writeForbidden(response);
+                        return;
+                    }
+
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,
@@ -85,6 +97,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.sendError(HttpStatus.UNAUTHORIZED.value());
+    }
+
+    private void writeForbidden(HttpServletResponse response) throws IOException {
+        response.setStatus(HttpStatus.FORBIDDEN.value());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.sendError(HttpStatus.FORBIDDEN.value());
+    }
+
+    private boolean shouldRejectBanned(HttpServletRequest request, UserDetails userDetails) {
+        if (!(userDetails instanceof User user) || user.getId() == null) {
+            return false;
+        }
+
+        String uri = request.getRequestURI();
+        if (!(uri.startsWith("/api/v1/") || uri.startsWith("/ws"))) {
+            return false;
+        }
+
+        if (uri.startsWith("/api/v1/auth/")) {
+            return false;
+        }
+
+        return punishmentRepository.existsActivePunishment(user, PunishmentType.BAN, Instant.now());
     }
 }
 

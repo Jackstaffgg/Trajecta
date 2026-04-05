@@ -3,6 +3,8 @@ import { AlertTriangle, CheckCircle2, FileArchive, LoaderCircle, UploadCloud } f
 import { useFlightData } from "@/hooks/useFlightData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { localizeTaskStatus, t } from "@/lib/i18n";
+import { useLocaleStore } from "@/store/locale-store";
 import { useFlightStore } from "@/store/flight-store";
 import type { TaskStatus } from "@/types/flight";
 
@@ -21,8 +23,8 @@ export function StartScreen() {
   const { loadFromBin } = useFlightData();
   const currentTask = useFlightStore((s) => s.currentTask);
   const loading = useFlightStore((s) => s.loading);
-  const error = useFlightStore((s) => s.error);
   const setError = useFlightStore((s) => s.setError);
+  const locale = useLocaleStore((s) => s.locale);
 
   function safeText(value: unknown, fallback = "") {
     if (typeof value === "string") return value;
@@ -32,25 +34,28 @@ export function StartScreen() {
 
   async function handleFile(file: File) {
     if (!file.name.toLowerCase().endsWith(".bin")) {
-      setError("Only .bin telemetry files are supported");
+      setError("Only .bin telemetry files are supported", "tasks");
       return;
     }
-    setError(null);
+    setError(null, "tasks");
     await loadFromBin(file, title.trim() || file.name);
   }
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center p-4">
-      <Card className="w-full max-w-3xl">
-        <CardHeader>
-          <CardTitle className="text-xl">Start Flight Analysis</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Upload ArduPilot BIN log and monitor task status in realtime.
+      <Card className="w-full max-w-4xl border-white/10 bg-card/90">
+        <CardHeader className="space-y-2">
+          <p className="inline-flex w-fit items-center rounded-full border border-zinc-300/30 bg-zinc-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-200">
+            Mission Upload
+          </p>
+          <CardTitle className="text-2xl">{t(locale, "tasks.startTitle")}</CardTitle>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {t(locale, "tasks.startSubtitle")}
           </p>
         </CardHeader>
         <CardContent>
           <div className="mb-4 space-y-2">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Task title</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">{t(locale, "tasks.taskTitle")}</p>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -58,10 +63,10 @@ export function StartScreen() {
             />
           </div>
           <button
-            className={`group w-full rounded-xl border-2 border-dashed p-10 text-center transition ${
+            className={`group w-full rounded-2xl border-2 border-dashed p-10 text-center transition ${
               drag
                 ? "border-accent/70 bg-accent/10"
-                : "border-border bg-background/55 hover:border-accent/55 hover:bg-background/70"
+                : "border-border/80 bg-background/40 hover:border-zinc-300/45 hover:bg-background/60"
             }`}
             onClick={() => inputRef.current?.click()}
             onDragOver={(e) => {
@@ -78,9 +83,9 @@ export function StartScreen() {
               }
             }}
           >
-            <UploadCloud className="mx-auto mb-2 h-8 w-8 text-accent transition group-hover:scale-105" />
-            <p className="text-sm font-semibold">Drag and drop flight log BIN</p>
-            <p className="mt-1 text-xs text-muted-foreground">Backend accepts multipart upload with .bin extension</p>
+            <UploadCloud className="mx-auto mb-2 h-8 w-8 text-zinc-300 transition group-hover:scale-105" />
+            <p className="text-base font-semibold">{t(locale, "tasks.dragTitle")}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t(locale, "tasks.dragHint")}</p>
             <div className="mt-4 inline-flex items-center gap-2 rounded-md bg-muted px-3 py-1 text-xs text-muted-foreground">
               <FileArchive className="h-3.5 w-3.5" />
               .bin
@@ -88,10 +93,10 @@ export function StartScreen() {
           </button>
 
           {currentTask ? (
-            <div className="animate-rise mt-4 rounded-lg border border-border bg-background/45 p-3">
+            <div className="animate-rise mt-4 rounded-xl border border-border/80 bg-background/35 p-4">
               <div className="mb-2 flex items-center justify-between text-xs">
                 <p className="font-medium text-foreground">Task #{currentTask.id}</p>
-                <p className="text-muted-foreground">{currentTask.status}</p>
+                <p className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] text-muted-foreground">{localizeTaskStatus(currentTask.status, locale)}</p>
               </div>
               <div className="progress-track">
                 <div
@@ -103,7 +108,7 @@ export function StartScreen() {
                 {currentTask.status === "COMPLETED" ? (
                   <>
                     <CheckCircle2 className="h-4 w-4 text-emerald-300" />
-                    <span className="text-emerald-200">Completed. Open task from sidebar to view analytics.</span>
+                    <span className="text-emerald-200">{t(locale, "tasks.completedHint")}</span>
                   </>
                 ) : currentTask.status === "FAILED" || currentTask.status === "CANCELLED" ? (
                   <>
@@ -112,8 +117,8 @@ export function StartScreen() {
                   </>
                 ) : (
                   <>
-                    <LoaderCircle className="h-4 w-4 animate-spin text-accent" />
-                    <span className="text-foreground">Processing in progress. Updates arrive over websocket.</span>
+                    <LoaderCircle className="h-4 w-4 animate-spin text-zinc-300" />
+                    <span className="text-foreground">{t(locale, "tasks.processingHint")}</span>
                   </>
                 )}
               </div>
@@ -122,12 +127,8 @@ export function StartScreen() {
 
           {loading ? (
             <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted/80">
-              <div className="h-full w-1/3 rounded-full bg-accent animate-shimmer" />
+              <div className="h-full w-1/3 rounded-full bg-zinc-300 animate-shimmer" />
             </div>
-          ) : null}
-
-          {error ? (
-            <p className="error-banner mt-3 text-xs text-rose-200">{safeText(error, "Unknown error")}</p>
           ) : null}
 
           <input

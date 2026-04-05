@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Bell, CheckCheck, LoaderCircle, LogOut, Wifi, WifiOff } from "lucide-react";
+import { Bell, CheckCheck, CheckCircle2, Info, LoaderCircle, LogOut, Siren, Wifi, WifiOff, XCircle } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
+import { formatDateByLocale, localizeErrorMessage, localizeErrorScope, localizeNotificationType, t } from "@/lib/i18n";
 import {
   ApiClientError,
   deleteMyTasks,
@@ -13,13 +14,15 @@ import {
   markNotificationAsRead
 } from "@/lib/api";
 import { useFlightData } from "@/hooks/useFlightData";
+import { useLocaleStore } from "@/store/locale-store";
 import { useFlightStore } from "@/store/flight-store";
 import type {
   NotificationInfo,
   NotificationSocketPayload,
   SocketEvent,
   TaskInfo,
-  TaskSocketPayload
+  TaskSocketPayload,
+  UserBannedSocketPayload
 } from "@/types/flight";
 
 function toText(value: unknown, fallback = "-"): string {
@@ -30,14 +33,6 @@ function toText(value: unknown, fallback = "-"): string {
     return String(value);
   }
   return fallback;
-}
-
-function formatTime(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return "just now";
-  }
-  return date.toLocaleString();
 }
 
 function parseStompMessage(rawFrame: string): { command: string; body: string } | null {
@@ -94,11 +89,44 @@ function resolveWsEndpoint(): string {
 
 type AppShellProps = {
   children: ReactNode;
+  onUserBanned: (payload: UserBannedSocketPayload) => void;
 };
 
 type WsState = "connecting" | "connected" | "reconnecting" | "offline";
 
-export function AppShell({ children }: AppShellProps) {
+function normalizeNotificationType(type: unknown): string {
+  return typeof type === "string" ? type.toUpperCase() : "SYSTEM_NEWS";
+}
+
+function notificationTypeClass(type: unknown) {
+  const normalized = normalizeNotificationType(type);
+  if (normalized === "SYSTEM_ALERT" || normalized === "TASK_FAILED") {
+    return "border-rose-400/30 bg-rose-500/10";
+  }
+  if (normalized === "TASK_COMPLETED") {
+    return "border-zinc-300/25 bg-zinc-300/10";
+  }
+  return "border-zinc-400/25 bg-zinc-400/10";
+}
+
+function notificationTypeMeta(type: unknown) {
+  const normalized = normalizeNotificationType(type);
+  if (normalized === "SYSTEM_ALERT") {
+    return { label: "System Alert", group: "Alerts", icon: Siren };
+  }
+  if (normalized === "TASK_FAILED") {
+    return { label: "Task Failed", group: "Tasks", icon: XCircle };
+  }
+  if (normalized === "TASK_COMPLETED") {
+    return { label: "Task Completed", group: "Tasks", icon: CheckCircle2 };
+  }
+  if (normalized === "SYSTEM_NEWS") {
+    return { label: "System News", group: "News", icon: Info };
+  }
+  return { label: "Notification", group: "News", icon: Info };
+}
+
+export function AppShell({ children, onUserBanned }: AppShellProps) {
   const auth = useFlightStore((s) => s.auth);
   const currentTask = useFlightStore((s) => s.currentTask);
   const setCurrentTask = useFlightStore((s) => s.setCurrentTask);
@@ -106,7 +134,11 @@ export function AppShell({ children }: AppShellProps) {
   const setMode = useFlightStore((s) => s.setMode);
   const setTaskStatus = useFlightStore((s) => s.setTaskStatus);
   const setError = useFlightStore((s) => s.setError);
+  const error = useFlightStore((s) => s.error);
+  const errorScope = useFlightStore((s) => s.errorScope);
   const logout = useFlightStore((s) => s.logout);
+  const locale = useLocaleStore((s) => s.locale);
+  const setLocale = useLocaleStore((s) => s.setLocale);
   const { selectTask } = useFlightData();
 
   const [tasks, setTasks] = useState<TaskInfo[]>([]);
@@ -122,11 +154,27 @@ export function AppShell({ children }: AppShellProps) {
   const manualCloseRef = useRef(false);
   const currentTaskRef = useRef<TaskInfo | null>(null);
   const selectTaskRef = useRef(selectTask);
+  const notificationsAnchorRef = useRef<HTMLDivElement | null>(null);
+  const notificationsPanelRef = useRef<HTMLDivElement | null>(null);
+  const [notificationsPanelPos, setNotificationsPanelPos] = useState<{ top: number; left: number; width: number }>({
+    top: 64,
+    left: 16,
+    width: 320
+  });
 
   const unreadCount = useMemo(
     () => notifications.reduce((acc, n) => acc + (n.isRead ? 0 : 1), 0),
     [notifications]
   );
+
+  const groupedNotifications = useMemo(() => {
+    const groups: Record<string, NotificationInfo[]> = { Alerts: [], Tasks: [], News: [] };
+    for (const item of notifications) {
+      const meta = notificationTypeMeta(item.type);
+      groups[meta.group] = [...(groups[meta.group] ?? []), item];
+    }
+    return groups;
+  }, [notifications]);
 
   useEffect(() => {
     currentTaskRef.current = currentTask;
@@ -165,7 +213,7 @@ export function AppShell({ children }: AppShellProps) {
           return;
         }
         if (error instanceof ApiClientError && error.status === 401) {
-          setError("Session expired. Please log in again.");
+          setError("Session expired. Please log in again.", "notifications");
         }
       } finally {
         if (active) {
@@ -323,11 +371,21 @@ export function AppShell({ children }: AppShellProps) {
               return [normalized, ...rest].slice(0, 15);
             });
           }
+
+          if (envelope.type === "USER_BANNED") {
+            const payload = envelope.payload as UserBannedSocketPayload;
+            if (!payload?.userId) {
+              continue;
+            }
+            onUserBanned(payload);
+            manualCloseRef.current = true;
+            socketRef.current?.close();
+          }
         }
       };
 
       ws.onerror = () => {
-        setError("Realtime connection issue. Trying to reconnect...");
+        setError("Realtime connection issue. Trying to reconnect...", "realtime");
       };
 
       ws.onclose = () => {
@@ -351,29 +409,29 @@ export function AppShell({ children }: AppShellProps) {
       socketRef.current = null;
       setWsState("offline");
     };
-  }, [auth.isAuthenticated, auth.token, setError, setTaskStatus]);
+  }, [auth.isAuthenticated, auth.token, onUserBanned, setError, setTaskStatus]);
 
   const wsBadge = useMemo(() => {
     if (wsState === "connected") {
       return {
         icon: Wifi,
-        label: "Realtime connected",
-        className: "text-emerald-200 border-emerald-400/40 bg-emerald-500/10"
+        label: t(locale, "ws.connected"),
+        className: "text-zinc-100 border-zinc-300/35 bg-zinc-400/10"
       };
     }
     if (wsState === "reconnecting") {
       return {
         icon: LoaderCircle,
-        label: "Reconnecting",
-        className: "text-amber-200 border-amber-400/40 bg-amber-500/10"
+        label: t(locale, "ws.reconnecting"),
+        className: "text-zinc-200 border-zinc-300/35 bg-zinc-400/10"
       };
     }
     return {
       icon: WifiOff,
-      label: "Realtime offline",
-      className: "text-rose-200 border-rose-400/40 bg-rose-500/10"
+      label: t(locale, "ws.offline"),
+      className: "text-zinc-300 border-zinc-400/35 bg-zinc-500/10"
     };
-  }, [wsState]);
+  }, [locale, wsState]);
 
   const activeTaskId = currentTask?.id ?? null;
 
@@ -400,13 +458,13 @@ export function AppShell({ children }: AppShellProps) {
       }
 
       if (result.skippedTaskIds.length > 0) {
-        setError(`Some tasks were skipped: ${result.skippedTaskIds.join(", ")}`);
+        setError(`Some tasks were skipped: ${result.skippedTaskIds.join(", ")}`, "tasks");
       }
     } catch (error) {
       if (error instanceof ApiClientError) {
-        setError(error.message);
+        setError(error.message, "tasks");
       } else {
-        setError("Failed to delete selected tasks");
+        setError("Failed to delete selected tasks", "tasks");
       }
     } finally {
       setDeletingTasks(false);
@@ -425,7 +483,7 @@ export function AppShell({ children }: AppShellProps) {
         )
       );
     } catch {
-      setError("Failed to update notification state");
+      setError("Failed to update notification state", "notifications");
     }
   }
 
@@ -437,19 +495,70 @@ export function AppShell({ children }: AppShellProps) {
       await markAllNotificationsAsRead({ token: auth.token });
       setNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
     } catch {
-      setError("Failed to mark notifications as read");
+      setError("Failed to mark notifications as read", "notifications");
     }
   }
+
+
+  useEffect(() => {
+    if (!openNotifications) {
+      return;
+    }
+
+    const updatePosition = () => {
+      const anchor = notificationsAnchorRef.current;
+      if (!anchor) {
+        return;
+      }
+
+      const rect = anchor.getBoundingClientRect();
+      const width = Math.min(360, Math.max(240, window.innerWidth - 32));
+      const left = Math.max(16, Math.min(window.innerWidth - width - 16, rect.right - width));
+      const top = Math.max(8, rect.bottom + 8);
+      setNotificationsPanelPos({ top, left, width });
+    };
+
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) {
+        return;
+      }
+      if (notificationsPanelRef.current?.contains(target) || notificationsAnchorRef.current?.contains(target)) {
+        return;
+      }
+      setOpenNotifications(false);
+    };
+
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpenNotifications(false);
+      }
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("mousedown", onPointerDown);
+    window.addEventListener("keydown", onEscape);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("mousedown", onPointerDown);
+      window.removeEventListener("keydown", onEscape);
+    };
+  }, [openNotifications]);
 
   const WsIcon = wsBadge.icon;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-30 border-b border-border/70 bg-card/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1600px] items-center justify-between px-4 py-3 md:px-6">
+      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur-2xl">
+        <div className="flex items-center justify-between px-4 py-3 md:px-6">
           <div>
-            <h1 className="text-base font-semibold tracking-wide text-foreground">Trajecta Control Panel</h1>
-            <p className="text-xs text-muted-foreground">Telemetry analysis workspace</p>
+            <h1 className="text-base font-semibold tracking-wide text-foreground">{t(locale, "header.title")}</h1>
+            <p className="text-xs text-muted-foreground">{t(locale, "header.subtitle")}</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">{t(locale, "header.user")}: <span className="font-semibold text-foreground">{auth.user?.username ?? "-"}</span></p>
             <div className={`mt-1 inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] ${wsBadge.className}`}>
               <WsIcon className={`h-3 w-3 ${wsState === "reconnecting" ? "animate-spin" : ""}`} />
               {wsBadge.label}
@@ -457,51 +566,98 @@ export function AppShell({ children }: AppShellProps) {
           </div>
 
           <div className="relative flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setOpenNotifications((v) => !v)}>
-              <Bell className="h-4 w-4" />
-              <span className="hidden md:inline">Notifications</span>
-              {unreadCount > 0 ? (
-                <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-slate-950">
-                  {unreadCount}
-                </span>
-              ) : null}
-            </Button>
+            <label className="flex items-center gap-2 rounded-md border border-border/70 bg-background/40 px-2 py-1 text-xs text-muted-foreground">
+              <span className="hidden sm:inline">{t(locale, "header.locale")}</span>
+              <select
+                className="ui-select min-h-0 w-auto border-transparent bg-transparent py-1 pl-2 pr-6 text-foreground"
+                value={locale}
+                onChange={(e) => setLocale(e.target.value === "ru" ? "ru" : e.target.value === "uk" ? "uk" : "en")}
+              >
+                <option value="en">EN</option>
+                <option value="ru">RU</option>
+                <option value="uk">UK</option>
+              </select>
+            </label>
+
+            <div ref={notificationsAnchorRef}>
+              <Button variant="outline" size="sm" type="button" onClick={() => setOpenNotifications((v) => !v)}>
+                <Bell className="h-4 w-4" />
+                <span className="hidden md:inline">{t(locale, "header.notifications")}</span>
+                {unreadCount > 0 ? (
+                  <span className="rounded-full border border-zinc-300/40 bg-zinc-200 px-1.5 py-0.5 text-[10px] font-bold text-zinc-900">
+                    {unreadCount}
+                  </span>
+                ) : null}
+              </Button>
+            </div>
 
             <Button variant="ghost" size="sm" onClick={logout}>
               <LogOut className="h-4 w-4" />
-              <span className="hidden md:inline">Logout</span>
+              <span className="hidden md:inline">{t(locale, "header.logout")}</span>
             </Button>
 
             {openNotifications ? (
-              <div className="surface-panel absolute right-0 top-9 mt-2 w-[360px] rounded-lg p-3 shadow-2xl animate-rise">
+              <div
+                ref={notificationsPanelRef}
+                className="surface-panel fixed z-50 max-h-[min(70vh,560px)] overflow-hidden rounded-lg p-3 shadow-2xl animate-rise"
+                style={{ top: notificationsPanelPos.top, left: notificationsPanelPos.left, width: notificationsPanelPos.width }}
+              >
                 <div className="mb-3 flex items-center justify-between">
-                  <p className="text-sm font-semibold">Notifications</p>
-                  <Button variant="ghost" size="sm" onClick={() => void handleMarkAllAsRead()}>
+                  <p className="text-sm font-semibold">{t(locale, "header.notifications")}</p>
+                  <Button variant="ghost" size="sm" type="button" onClick={() => void handleMarkAllAsRead()}>
                     <CheckCheck className="h-4 w-4" />
-                    Mark all
+                    {t(locale, "header.markAll")}
                   </Button>
                 </div>
 
-                <div className="max-h-72 space-y-2 overflow-auto pr-1">
+                <div className="max-h-72 space-y-3 overflow-auto pr-1">
                   {notifications.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No notifications yet.</p>
+                    <p className="text-xs text-muted-foreground">{t(locale, "header.noNotifications")}</p>
                   ) : (
-                    notifications.map((notification) => (
-                      <button
-                        key={notification.id}
-                        className={`w-full rounded-md border p-2 text-left text-xs transition ${
-                          notification.isRead
-                            ? "border-border/50 bg-background/40 text-muted-foreground"
-                            : "border-accent/40 bg-accent/10 text-foreground"
-                        }`}
-                        onClick={() => void handleMarkAsRead(notification)}
-                      >
-                        <p className="font-medium">{toText(notification.content, "Notification")}</p>
-                        <p className="mt-1 text-[11px] opacity-80">
-                          {toText(notification.senderName, "System")} • {formatTime(notification.createdAt)}
-                        </p>
-                      </button>
-                    ))
+                    Object.entries(groupedNotifications)
+                      .filter(([, items]) => items.length > 0)
+                      .map(([group, items]) => (
+                        <div key={group} className="space-y-2">
+                          <p className="px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            {group === "Alerts"
+                              ? t(locale, "notif.group.alerts")
+                              : group === "Tasks"
+                              ? t(locale, "notif.group.tasks")
+                              : t(locale, "notif.group.news")}
+                          </p>
+                          {items.map((notification) => {
+                            const meta = notificationTypeMeta(notification.type);
+                            const TypeIcon = meta.icon;
+                            return (
+                              <button
+                                key={notification.id}
+                                type="button"
+                                className={`w-full rounded-md border p-2 text-left text-xs transition hover:border-zinc-300/45 hover:bg-zinc-200/10 ${notificationTypeClass(notification.type)} ${
+                                  notification.isRead
+                                    ? "opacity-70 text-muted-foreground"
+                                    : "text-foreground"
+                                }`}
+                                onClick={() => void handleMarkAsRead(notification)}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex items-start gap-2">
+                                    <TypeIcon className="mt-0.5 h-3.5 w-3.5" />
+                                    <div>
+                                      <p className="font-medium">{toText(notification.content, t(locale, "header.notifications"))}</p>
+                                      <p className="mt-1 text-[11px] opacity-80">
+                                        {toText(notification.senderName, "System")} • {formatDateByLocale(notification.createdAt, locale)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <span className="rounded-full border border-border/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                                    {localizeNotificationType(notification.type, locale) || meta.label}
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ))
                   )}
                 </div>
               </div>
@@ -510,7 +666,27 @@ export function AppShell({ children }: AppShellProps) {
         </div>
       </header>
 
-      <div className="mx-auto flex max-w-[1600px] flex-col md:flex-row">
+      {error ? (
+        <div className="mx-4 mt-3 rounded-xl border border-zinc-400/35 bg-zinc-500/10 px-4 py-3 text-sm text-zinc-100 md:mx-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              {errorScope ? (
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-zinc-300">{localizeErrorScope(errorScope, locale)}</p>
+              ) : null}
+              <p>{localizeErrorMessage(error, locale)}</p>
+            </div>
+            <button
+              type="button"
+              className="text-xs font-semibold uppercase tracking-wide text-zinc-300 transition hover:text-white"
+              onClick={() => setError(null)}
+            >
+              {t(locale, "common.dismiss")}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="flex min-h-[calc(100vh-120px)] flex-col md:flex-row">
         <Sidebar
           tasks={tasks}
           activeTaskId={activeTaskId}
@@ -519,11 +695,11 @@ export function AppShell({ children }: AppShellProps) {
           onTaskSelect={handleTaskSelect}
           onDeleteTasks={handleDeleteTasks}
         />
-        <main className="min-h-[calc(100vh-120px)] flex-1 p-4 md:p-6">{children}</main>
+        <main className="min-h-[calc(100vh-120px)] flex-1 p-4 md:p-6 lg:p-8">{children}</main>
       </div>
 
-      <footer className="border-t border-border/70 bg-card/70 px-4 py-2 text-center text-xs text-muted-foreground md:px-6">
-        Trajecta · Real-time flight analytics · {new Date().getFullYear()}
+      <footer className="border-t border-border/60 bg-background/70 px-4 py-2 text-center text-xs text-muted-foreground md:px-6">
+        {t(locale, "footer.tagline")} · {new Date().getFullYear()}
       </footer>
     </div>
   );

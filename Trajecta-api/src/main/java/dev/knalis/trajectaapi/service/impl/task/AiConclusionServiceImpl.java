@@ -1,12 +1,12 @@
-package dev.knalis.trajectaapi.service.impl;
+package dev.knalis.trajectaapi.service.impl.task;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.knalis.trajectaapi.model.task.ai.AiModel;
-import dev.knalis.trajectaapi.service.intrf.AiConclusionGenerationResult;
-import dev.knalis.trajectaapi.service.intrf.AiConclusionService;
+import dev.knalis.trajectaapi.dto.task.AiConclusionGenerationResult;
+import dev.knalis.trajectaapi.service.intrf.task.AiConclusionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
