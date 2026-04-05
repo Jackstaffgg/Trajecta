@@ -19,21 +19,62 @@ function finiteOrZero(value: number | undefined) {
 function TimelineChart({
   id,
   x,
-  xMin,
-  xMax,
   lines,
   scrubber,
   onHover
 }: {
   id: string;
   x: number[];
-  xMin: number;
-  xMax: number;
   lines: SeriesDef[];
   scrubber: number;
   onHover: (t: number) => void;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
+  const [windowSize, setWindowSize] = useState(0);
+  const [startIndex, setStartIndex] = useState(0);
+
+  const totalPoints = x.length;
+  const minWindow = useMemo(() => Math.max(20, Math.floor(totalPoints * 0.05)), [totalPoints]);
+
+  useEffect(() => {
+    if (totalPoints <= 0) {
+      setWindowSize(0);
+      setStartIndex(0);
+      return;
+    }
+    const initialWindow = Math.max(minWindow, Math.floor(totalPoints * 0.3));
+    setWindowSize(Math.min(totalPoints, initialWindow));
+    setStartIndex(0);
+  }, [totalPoints, minWindow]);
+
+  const safeWindowSize = Math.min(totalPoints, Math.max(1, windowSize || totalPoints));
+  const maxStart = Math.max(0, totalPoints - safeWindowSize);
+  const safeStart = Math.min(Math.max(0, startIndex), maxStart);
+  const endIndex = Math.min(totalPoints - 1, safeStart + safeWindowSize - 1);
+  const xMin = x[safeStart] ?? 0;
+  const xMax = x[endIndex] ?? x[x.length - 1] ?? 0;
+
+  function handleZoomIn() {
+    if (totalPoints <= 0) {
+      return;
+    }
+    const nextWindow = Math.max(minWindow, Math.floor(safeWindowSize * 0.75));
+    const center = safeStart + Math.floor(safeWindowSize / 2);
+    const nextStart = Math.max(0, Math.min(totalPoints - nextWindow, center - Math.floor(nextWindow / 2)));
+    setWindowSize(nextWindow);
+    setStartIndex(nextStart);
+  }
+
+  function handleZoomOut() {
+    if (totalPoints <= 0) {
+      return;
+    }
+    const nextWindow = Math.min(totalPoints, Math.ceil(safeWindowSize * 1.25));
+    const center = safeStart + Math.floor(safeWindowSize / 2);
+    const nextStart = Math.max(0, Math.min(totalPoints - nextWindow, center - Math.floor(nextWindow / 2)));
+    setWindowSize(nextWindow);
+    setStartIndex(nextStart);
+  }
 
   useEffect(() => {
     if (!ref.current) {
@@ -97,7 +138,28 @@ function TimelineChart({
     });
   }, [scrubber, lines]);
 
-  return <div ref={ref} className="h-64 w-full" />;
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={handleZoomOut}>
+          -
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={handleZoomIn}>
+          +
+        </Button>
+        <span className="ml-2 text-xs text-muted-foreground">{safeWindowSize} / {totalPoints}</span>
+      </div>
+      <div ref={ref} className="h-64 w-full" />
+      <input
+        type="range"
+        min={0}
+        max={maxStart}
+        value={safeStart}
+        onChange={(e) => setStartIndex(Number(e.target.value))}
+        className="h-2 w-full cursor-pointer accent-zinc-200"
+      />
+    </div>
+  );
 }
 
 export function FlightChartsView() {
@@ -108,51 +170,6 @@ export function FlightChartsView() {
 
   const x = useMemo(() => data?.frames.map((f) => f.t) ?? [], [data?.frames]);
   const frames = data?.frames ?? [];
-  const [windowSize, setWindowSize] = useState(0);
-  const [startIndex, setStartIndex] = useState(0);
-
-  const totalPoints = frames.length;
-  const minWindow = useMemo(() => Math.max(20, Math.floor(totalPoints * 0.05)), [totalPoints]);
-
-  useEffect(() => {
-    if (totalPoints <= 0) {
-      setWindowSize(0);
-      setStartIndex(0);
-      return;
-    }
-    const initialWindow = Math.max(minWindow, Math.floor(totalPoints * 0.3));
-    setWindowSize(Math.min(totalPoints, initialWindow));
-    setStartIndex(0);
-  }, [totalPoints, minWindow]);
-
-  const safeWindowSize = Math.min(totalPoints, Math.max(1, windowSize || totalPoints));
-  const maxStart = Math.max(0, totalPoints - safeWindowSize);
-  const safeStart = Math.min(Math.max(0, startIndex), maxStart);
-  const endIndex = Math.min(totalPoints - 1, safeStart + safeWindowSize - 1);
-  const xMin = x[safeStart] ?? 0;
-  const xMax = x[endIndex] ?? x[x.length - 1] ?? 0;
-
-  function handleZoomIn() {
-    if (totalPoints <= 0) {
-      return;
-    }
-    const nextWindow = Math.max(minWindow, Math.floor(safeWindowSize * 0.75));
-    const center = safeStart + Math.floor(safeWindowSize / 2);
-    const nextStart = Math.max(0, Math.min(totalPoints - nextWindow, center - Math.floor(nextWindow / 2)));
-    setWindowSize(nextWindow);
-    setStartIndex(nextStart);
-  }
-
-  function handleZoomOut() {
-    if (totalPoints <= 0) {
-      return;
-    }
-    const nextWindow = Math.min(totalPoints, Math.ceil(safeWindowSize * 1.25));
-    const center = safeStart + Math.floor(safeWindowSize / 2);
-    const nextStart = Math.max(0, Math.min(totalPoints - nextWindow, center - Math.floor(nextWindow / 2)));
-    setWindowSize(nextWindow);
-    setStartIndex(nextStart);
-  }
 
   if (!data) {
     return null;
@@ -162,27 +179,6 @@ export function FlightChartsView() {
     <div className="space-y-4">
       <h2 className="text-xl font-semibold">{tr(locale, "charts.title")}</h2>
       <Card>
-        <CardContent className="space-y-3 pt-6">
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={handleZoomOut}>
-              -
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={handleZoomIn}>
-              +
-            </Button>
-            <span className="ml-2 text-xs text-muted-foreground">{safeWindowSize} / {totalPoints}</span>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={maxStart}
-            value={safeStart}
-            onChange={(e) => setStartIndex(Number(e.target.value))}
-            className="h-2 w-full cursor-pointer accent-zinc-200"
-          />
-        </CardContent>
-      </Card>
-      <Card>
         <CardHeader>
           <CardTitle>{tr(locale, "charts.card.speedAlt")}</CardTitle>
         </CardHeader>
@@ -190,8 +186,6 @@ export function FlightChartsView() {
           <TimelineChart
             id="speed-alt"
             x={x}
-            xMin={xMin}
-            xMax={xMax}
             scrubber={scrubber}
             onHover={setScrubber}
             lines={[
@@ -210,8 +204,6 @@ export function FlightChartsView() {
           <TimelineChart
             id="accel"
             x={x}
-            xMin={xMin}
-            xMax={xMax}
             scrubber={scrubber}
             onHover={setScrubber}
             lines={[
@@ -231,8 +223,6 @@ export function FlightChartsView() {
           <TimelineChart
             id="attitude"
             x={x}
-            xMin={xMin}
-            xMax={xMax}
             scrubber={scrubber}
             onHover={setScrubber}
             lines={[
@@ -252,8 +242,6 @@ export function FlightChartsView() {
           <TimelineChart
             id="vertical"
             x={x}
-            xMin={xMin}
-            xMax={xMax}
             scrubber={scrubber}
             onHover={setScrubber}
             lines={[
@@ -272,8 +260,6 @@ export function FlightChartsView() {
           <TimelineChart
             id="battery"
             x={x}
-            xMin={xMin}
-            xMax={xMax}
             scrubber={scrubber}
             onHover={setScrubber}
             lines={[
@@ -291,8 +277,6 @@ export function FlightChartsView() {
           <TimelineChart
             id="accel-norm"
             x={x}
-            xMin={xMin}
-            xMax={xMax}
             scrubber={scrubber}
             onHover={setScrubber}
             lines={[
