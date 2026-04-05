@@ -4,17 +4,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7e60ac53-03c3-493b-aa67-b1ef6b2f0543" name="Changes" comment="enhance system diagnostics script with detailed health checks and performance metrics">
-      <change beforePath="$PROJECT_DIR$/.env.vps.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.vps.example" afterDir="false" />
+    <list default="true" id="7e60ac53-03c3-493b-aa67-b1ef6b2f0543" name="Changes" comment="update resource limits and health check conditions in Docker configuration">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DEPLOY_VPS.md" beforeDir="false" afterPath="$PROJECT_DIR$/DEPLOY_VPS.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-worker/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-worker/.env.example" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-worker/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-worker/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-worker/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-worker/docker-compose.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deploy-vps.sh" beforeDir="false" afterPath="$PROJECT_DIR$/deploy-vps.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker-compose.vps.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.vps.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/start-all-stacks.bat" beforeDir="false" afterPath="$PROJECT_DIR$/start-all-stacks.bat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/exception/handler/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/exception/handler/GlobalExceptionHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/task/FileServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/task/FileServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/nginx/default.conf.template" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/nginx/default.conf.template" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/components/layout/start-screen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/components/layout/start-screen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/lib/i18n.ts" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/lib/i18n.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/infra/caddy/Caddyfile" beforeDir="false" afterPath="$PROJECT_DIR$/infra/caddy/Caddyfile" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -25,6 +23,9 @@
     <persistenceIdMap>
       <entry key="_Z:/Trajecta/Trajecta-api" value="3BwCq6DWS300z6KH23kgk5FkhVq" />
     </persistenceIdMap>
+  </component>
+  <component name="CopilotUserSelectedChatMode">
+    <option name="chatModeId" value="Agent" />
   </component>
   <component name="CopilotUserSelectedModel">
     <selectedModels>
@@ -125,7 +126,7 @@
       <recent name="Z:\Trajecta\Trajecta-frontend\public\icons" />
     </key>
   </component>
-  <component name="RunManager" selected="Batch.start-all-stacks">
+  <component name="RunManager" selected="Batch.start-all">
     <configuration name="start-all-stacks" type="BatchConfigurationType" factoryName="Batch" temporary="true">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
@@ -180,8 +181,8 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Batch.start-all-stacks" />
         <item itemvalue="Batch.start-all" />
+        <item itemvalue="Batch.start-all-stacks" />
         <item itemvalue="PowerShell.check-system.ps1" />
         <item itemvalue="Batch.start-all-stacks" />
         <item itemvalue="Docker.Trajecta-api/compose.yaml.minio-init: Compose Deployment" />
@@ -283,7 +284,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1775397058834</updated>
-      <workItem from="1775397059887" duration="14572000" />
+      <workItem from="1775397059887" duration="19976000" />
     </task>
     <task id="LOCAL-00011" summary="implement user ban and unban functionality with history tracking in admin dashboard">
       <option name="closed" value="true" />
@@ -317,7 +318,39 @@
       <option name="project" value="LOCAL" />
       <updated>1775418080037</updated>
     </task>
-    <option name="localTasksCounter" value="15" />
+    <task id="LOCAL-00015" summary="add resource limits and scaling options for worker services in Docker configuration">
+      <option name="closed" value="true" />
+      <created>1775419153234</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1775419153234</updated>
+    </task>
+    <task id="LOCAL-00016" summary="update MinIO service conditions for improved startup handling in Docker configuration">
+      <option name="closed" value="true" />
+      <created>1775420136561</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1775420136561</updated>
+    </task>
+    <task id="LOCAL-00017" summary="remove default memory high watermark setting for RabbitMQ in Docker configuration">
+      <option name="closed" value="true" />
+      <created>1775423064220</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1775423064220</updated>
+    </task>
+    <task id="LOCAL-00018" summary="update resource limits and health check conditions in Docker configuration">
+      <option name="closed" value="true" />
+      <created>1775426591555</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1775426591555</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -350,7 +383,11 @@
     <MESSAGE value="add batch file upload support with progress tracking and deduplication" />
     <MESSAGE value="add service health and runtime metrics endpoints with admin dashboard integration" />
     <MESSAGE value="enhance system diagnostics script with detailed health checks and performance metrics" />
-    <option name="LAST_COMMIT_MESSAGE" value="enhance system diagnostics script with detailed health checks and performance metrics" />
+    <MESSAGE value="add resource limits and scaling options for worker services in Docker configuration" />
+    <MESSAGE value="update MinIO service conditions for improved startup handling in Docker configuration" />
+    <MESSAGE value="remove default memory high watermark setting for RabbitMQ in Docker configuration" />
+    <MESSAGE value="update resource limits and health check conditions in Docker configuration" />
+    <option name="LAST_COMMIT_MESSAGE" value="update resource limits and health check conditions in Docker configuration" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>

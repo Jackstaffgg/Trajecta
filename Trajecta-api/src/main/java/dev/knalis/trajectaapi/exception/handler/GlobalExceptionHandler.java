@@ -16,6 +16,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MultipartException;
 
 import java.net.UnknownHostException;
 
@@ -106,6 +107,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidationExceptions() {
         return buildResponse(HttpStatus.BAD_REQUEST, ApiErrorCodes.VALIDATION_FAILED, "Validation failed for request payload.");
+    }
+
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMultipartException(MultipartException ex) {
+        log.warn("Multipart upload failed or was interrupted: {}", ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, ApiErrorCodes.BAD_REQUEST, "Upload failed or was interrupted. Please retry.");
     }
     
     @ExceptionHandler(InternalServerException.class)
