@@ -94,6 +94,8 @@ Useful commands:
 start-all-stacks.bat status
 start-all-stacks.bat logs
 start-all-stacks.bat validate
+start-all-stacks.bat up build
+start-all-stacks.bat up tests
 start-all-stacks.bat down
 ```
 
@@ -108,17 +110,19 @@ Typical local URLs:
 ### Monorepo script mode
 
 `start-all-stacks.bat` performs:
-1. API Gradle build (`clean build`, optional `-x test`)
+1. Optional API Gradle build (`build` or `tests` flags)
 2. API compose startup (`Trajecta-api/compose.yaml`, `backend`)
 3. Worker compose startup (`Trajecta-worker/docker-compose.yml`, `worker`)
 4. Frontend compose startup (`Trajecta-frontend/docker-compose.yml`, `frontend`)
+
+By default, script starts all stacks via Docker Compose without Gradle build.
 
 ### Manual module mode
 
 Backend:
 
 ```powershell
-Set-Location Z:\Trajecta\Trajecta-api
+Set-Location .\Trajecta-api
 .\gradlew.bat clean build
 .\gradlew.bat bootRun
 ```
@@ -126,7 +130,7 @@ Set-Location Z:\Trajecta\Trajecta-api
 Worker:
 
 ```powershell
-Set-Location Z:\Trajecta\Trajecta-worker
+Set-Location .\Trajecta-worker
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
@@ -136,7 +140,7 @@ python main.py --worker
 Frontend:
 
 ```powershell
-Set-Location Z:\Trajecta\Trajecta-frontend
+Set-Location .\Trajecta-frontend
 npm install
 npm run dev
 ```
@@ -194,7 +198,7 @@ High-level variable groups:
 Backend:
 
 ```powershell
-Set-Location Z:\Trajecta\Trajecta-api
+Set-Location .\Trajecta-api
 .\gradlew.bat test
 .\gradlew.bat jacocoTestReport
 ```
@@ -202,14 +206,14 @@ Set-Location Z:\Trajecta\Trajecta-api
 Worker:
 
 ```powershell
-Set-Location Z:\Trajecta\Trajecta-worker
+Set-Location .\Trajecta-worker
 python -m unittest discover -s tests -v
 ```
 
 Frontend:
 
 ```powershell
-Set-Location Z:\Trajecta\Trajecta-frontend
+Set-Location .\Trajecta-frontend
 npm run lint
 npm run build
 ```
@@ -225,6 +229,7 @@ npm run build
 ./deploy-vps.sh logs
 ./deploy-vps.sh restart
 ./deploy-vps.sh down
+./deploy-vps.sh wipe --yes
 ```
 
 For full production notes and setup sequence, see `DEPLOY_VPS.md`.

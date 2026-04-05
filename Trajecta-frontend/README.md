@@ -41,10 +41,11 @@ The frontend provides:
 
 `src/App.tsx` controls top-level mode routing:
 
-1. auth (`AuthScreen`)
-2. banned state (`BannedScreen`) when applicable
-3. shell (`AppShell`) with sidebar + content
-4. tasks/profile/admin/analytics module views
+1. landing (`LandingScreen`)
+2. auth (`AuthScreen`) for unauthenticated users
+3. banned state (`BannedScreen`) when applicable
+4. shell (`AppShell`) with sidebar + content
+5. tasks/profile/admin/analytics module views
 
 ## Project Map
 
