@@ -89,6 +89,10 @@ API integration:
 - `WORKER_TOKEN_HEADER` (default `X-Worker-Token`)
 - `INTERNAL_WORKER_TOKEN` (required)
 - `HTTP_TIMEOUT_SECONDS`
+- `MAX_RAW_DOWNLOAD_BYTES` (hard limit for downloaded raw BIN size)
+- `DOWNLOAD_CHUNK_SIZE_BYTES` (download chunk size)
+- `MAX_PARSE_MESSAGES` (maximum parser messages per file)
+- `MAX_TIMELINE_FRAMES` (maximum generated timeline frames)
 
 ## Docker
 

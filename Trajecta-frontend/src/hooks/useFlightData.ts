@@ -7,6 +7,7 @@ import {
   getTask,
   regenerateAiConclusion
 } from "@/lib/api";
+import { API_ERROR_CODES } from "@/lib/error-codes";
 import { useFlightStore } from "@/store/flight-store";
 import type { FlightLogData, TaskInfo } from "@/types/flight";
 
@@ -297,6 +298,9 @@ function normalizeWorkerTrajectory(raw: unknown): FlightLogData {
 
 function apiErrorMessage(error: unknown): string {
   if (error instanceof ApiClientError) {
+    if (error.code === API_ERROR_CODES.FILE_TOO_LARGE || error.status === 413) {
+      return "BIN file exceeds maximum size of 50MB";
+    }
     return error.message;
   }
   if (error instanceof Error) {

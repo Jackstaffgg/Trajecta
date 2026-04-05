@@ -8,6 +8,8 @@ import { useLocaleStore } from "@/store/locale-store";
 import { useFlightStore } from "@/store/flight-store";
 import type { TaskStatus } from "@/types/flight";
 
+const MAX_BIN_UPLOAD_BYTES = 50 * 1024 * 1024;
+
 function statusProgress(status: TaskStatus): number {
   if (status === "PENDING") return 22;
   if (status === "PROCESSING") return 64;
@@ -55,11 +57,20 @@ export function StartScreen() {
 
   async function handleFiles(files: File[]) {
     const deduped = uniqueFiles(files);
-    const valid = deduped.filter((file) => file.name.toLowerCase().endsWith(".bin"));
-    const skipped = deduped.length - valid.length;
+    const wrongExtension = deduped.filter((file) => !file.name.toLowerCase().endsWith(".bin"));
+    const tooLarge = deduped.filter(
+      (file) => file.name.toLowerCase().endsWith(".bin") && file.size > MAX_BIN_UPLOAD_BYTES
+    );
+    const valid = deduped.filter(
+      (file) => file.name.toLowerCase().endsWith(".bin") && file.size <= MAX_BIN_UPLOAD_BYTES
+    );
 
     if (valid.length === 0) {
-      setError("Only .bin telemetry files are supported", "tasks");
+      if (tooLarge.length > 0) {
+        setError("BIN file exceeds maximum size of 50MB", "tasks");
+      } else {
+        setError("Only .bin telemetry files are supported", "tasks");
+      }
       return;
     }
 
@@ -84,8 +95,15 @@ export function StartScreen() {
       currentFileName: ""
     });
 
-    if (skipped > 0) {
-      setError(`Skipped ${skipped} non-bin file(s)`, "tasks");
+    const skipMessages: string[] = [];
+    if (wrongExtension.length > 0) {
+      skipMessages.push(`Skipped ${wrongExtension.length} non-bin file(s)`);
+    }
+    if (tooLarge.length > 0) {
+      skipMessages.push(`Skipped ${tooLarge.length} oversized file(s) (>50MB)`);
+    }
+    if (skipMessages.length > 0) {
+      setError(skipMessages.join(". "), "tasks");
     }
   }
 

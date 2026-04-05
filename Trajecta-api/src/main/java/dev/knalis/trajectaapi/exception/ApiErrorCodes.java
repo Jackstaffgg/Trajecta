@@ -18,6 +18,7 @@ public final class ApiErrorCodes {
     public static final String INTERNAL_SERVER_ERROR = "INTERNAL_SERVER_ERROR";
     public static final String UNEXPECTED_ERROR = "UNEXPECTED_ERROR";
     public static final String USER_BANNED = "USER_BANNED";
+    public static final String FILE_TOO_LARGE = "FILE_TOO_LARGE";
 
     private ApiErrorCodes() {
     }

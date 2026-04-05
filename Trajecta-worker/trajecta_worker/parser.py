@@ -7,6 +7,7 @@ import numpy as np
 from pymavlink import mavutil
 
 from .config import TIME_FIELDS
+from .models import WorkerError
 
 
 # Common ArduPilot EV identifiers from AP_Logger::LogEvent.
@@ -190,7 +191,7 @@ def safe_json_value(value: Any) -> Any:
     return str(value)
 
 
-def parse_log(bin_path: str) -> dict[str, Any]:
+def parse_log(bin_path: str, max_messages: int | None = None) -> dict[str, Any]:
     log = mavutil.mavlink_connection(bin_path)
 
     data = {
@@ -210,10 +211,17 @@ def parse_log(bin_path: str) -> dict[str, Any]:
         "params": {},
     }
 
+    message_count = 0
     while True:
         msg = log.recv_match(blocking=False)
         if msg is None:
             break
+
+        message_count += 1
+        if max_messages is not None and message_count > max_messages:
+            raise WorkerError(
+                f"BIN file is too large or too dense: parsed messages exceeded limit of {max_messages}."
+            )
 
         mtype = msg.get_type()
         if mtype in ("FMT", "FMTU", "UNIT", "MULT", "MSG"):
@@ -332,4 +340,13 @@ def parse_log(bin_path: str) -> dict[str, Any]:
             data["pm_rows"].append(row)
 
     data["events"] = sorted(data["events"], key=lambda item: item["t"])
+
+    has_timestamped_series = any(
+        bool(data[topic]["t"])
+        for topic in ("gps", "att", "ctun", "bat", "imu", "vibe", "pid", "baro", "gpa", "mode")
+    )
+    has_other_timestamped_data = bool(data["stat_rows"] or data["pm_rows"] or data["events"])
+    if not has_timestamped_series and not has_other_timestamped_data:
+        raise WorkerError("Unsupported or corrupted BIN file: no recognizable telemetry records found.")
+
     return data
