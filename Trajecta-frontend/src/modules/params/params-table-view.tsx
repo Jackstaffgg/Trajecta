@@ -40,19 +40,20 @@ export function ParamsTableView() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="mb-2 grid min-w-[760px] grid-cols-[minmax(180px,2fr)_minmax(130px,1fr)_minmax(220px,2fr)] gap-2 border-b border-border pb-2 text-xs uppercase text-muted-foreground">
-          <span>{tr(locale, "params.column.name")}</span>
-          <span>{tr(locale, "params.column.value")}</span>
-          <span>{tr(locale, "params.column.description")}</span>
-        </div>
         <div ref={(el) => (parentRef.current = el)} className="h-[62vh] overflow-auto rounded-md border border-border bg-background/40">
-          <div className="min-w-[760px]" style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}>
+          <div className="min-w-[620px] md:min-w-[760px]">
+            <div className="sticky top-0 z-10 grid grid-cols-[minmax(140px,1.8fr)_minmax(100px,1fr)_minmax(160px,1.8fr)] gap-2 border-b border-border bg-card/95 px-3 py-2 text-xs uppercase text-muted-foreground backdrop-blur md:grid-cols-[minmax(180px,2fr)_minmax(130px,1fr)_minmax(220px,2fr)]">
+              <span className="truncate">{tr(locale, "params.column.name")}</span>
+              <span className="truncate">{tr(locale, "params.column.value")}</span>
+              <span className="truncate">{tr(locale, "params.column.description")}</span>
+            </div>
+            <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}>
             {rowVirtualizer.getVirtualItems().map((item) => {
               const row = rows[item.index];
               return (
                 <div
                   key={item.key}
-                  className="absolute left-0 top-0 grid w-full grid-cols-[minmax(180px,2fr)_minmax(130px,1fr)_minmax(220px,2fr)] gap-2 border-b border-border/50 px-3 py-2 text-sm"
+                  className="absolute left-0 top-0 grid w-full grid-cols-[minmax(140px,1.8fr)_minmax(100px,1fr)_minmax(160px,1.8fr)] gap-2 border-b border-border/50 px-3 py-2 text-sm md:grid-cols-[minmax(180px,2fr)_minmax(130px,1fr)_minmax(220px,2fr)]"
                   style={{ transform: `translateY(${item.start}px)` }}
                 >
                   <span className="truncate font-mono text-accent" title={row.name}>{row.name}</span>
@@ -61,6 +62,7 @@ export function ParamsTableView() {
                 </div>
               );
             })}
+            </div>
           </div>
         </div>
       </CardContent>
