@@ -104,7 +104,7 @@ services:
     container_name: trajecta_backend
     restart: unless-stopped
     cpus: ${BACKEND_CPU_LIMIT:-1.0}
-    mem_limit: ${BACKEND_MEM_LIMIT:-768m}
+    mem_limit: 2g
     depends_on:
       db:
         condition: service_healthy
@@ -210,7 +210,7 @@ services:
     mem_limit: ${EDGE_MEM_LIMIT:-128m}
     depends_on:
       frontend:
-        condition: service_started
+        condition: service_healthy
       backend:
         condition: service_started
     ports:
