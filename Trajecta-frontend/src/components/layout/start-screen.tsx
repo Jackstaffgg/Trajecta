@@ -20,11 +20,18 @@ export function StartScreen() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [drag, setDrag] = useState(false);
   const [title, setTitle] = useState("Flight analysis");
-  const { loadFromBin } = useFlightData();
+  const { loadFromBinBatch } = useFlightData();
   const currentTask = useFlightStore((s) => s.currentTask);
   const loading = useFlightStore((s) => s.loading);
   const setError = useFlightStore((s) => s.setError);
   const locale = useLocaleStore((s) => s.locale);
+  const [queueState, setQueueState] = useState<{
+    running: boolean;
+    total: number;
+    submitted: number;
+    failed: number;
+    currentFileName: string;
+  }>({ running: false, total: 0, submitted: 0, failed: 0, currentFileName: "" });
 
   function safeText(value: unknown, fallback = "") {
     if (typeof value === "string") return value;
@@ -32,13 +39,54 @@ export function StartScreen() {
     return fallback;
   }
 
-  async function handleFile(file: File) {
-    if (!file.name.toLowerCase().endsWith(".bin")) {
+  function uniqueFiles(files: File[]) {
+    const seen = new Set<string>();
+    const out: File[] = [];
+    for (const file of files) {
+      const key = `${file.name}:${file.size}:${file.lastModified}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      out.push(file);
+    }
+    return out;
+  }
+
+  async function handleFiles(files: File[]) {
+    const deduped = uniqueFiles(files);
+    const valid = deduped.filter((file) => file.name.toLowerCase().endsWith(".bin"));
+    const skipped = deduped.length - valid.length;
+
+    if (valid.length === 0) {
       setError("Only .bin telemetry files are supported", "tasks");
       return;
     }
+
     setError(null, "tasks");
-    await loadFromBin(file, title.trim() || file.name);
+    setQueueState({ running: true, total: valid.length, submitted: 0, failed: 0, currentFileName: "" });
+
+    const result = await loadFromBinBatch(valid, title.trim(), (progress) => {
+      setQueueState({
+        running: true,
+        total: progress.total,
+        submitted: progress.submitted,
+        failed: progress.failed,
+        currentFileName: progress.currentFileName
+      });
+    });
+
+    setQueueState({
+      running: false,
+      total: result.total,
+      submitted: result.submitted,
+      failed: result.failed.length,
+      currentFileName: ""
+    });
+
+    if (skipped > 0) {
+      setError(`Skipped ${skipped} non-bin file(s)`, "tasks");
+    }
   }
 
   return (
@@ -78,14 +126,15 @@ export function StartScreen() {
               e.preventDefault();
               setDrag(false);
               const file = e.dataTransfer.files?.[0];
-              if (file) {
-                void handleFile(file);
+              const files = Array.from(e.dataTransfer.files ?? []);
+              if (files.length > 0) {
+                void handleFiles(files);
               }
             }}
           >
             <UploadCloud className="mx-auto mb-2 h-8 w-8 text-zinc-300 transition group-hover:scale-105" />
             <p className="text-base font-semibold">{t(locale, "tasks.dragTitle")}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{t(locale, "tasks.dragHint")}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t(locale, "tasks.dragHintMulti")}</p>
             <div className="mt-4 inline-flex items-center gap-2 rounded-md bg-muted px-3 py-1 text-xs text-muted-foreground">
               <FileArchive className="h-3.5 w-3.5" />
               .bin
@@ -131,15 +180,31 @@ export function StartScreen() {
             </div>
           ) : null}
 
+          {(queueState.running || queueState.total > 0) ? (
+            <div className="mt-3 rounded-lg border border-border/70 bg-background/30 p-3 text-xs text-muted-foreground">
+              <p>
+                {t(locale, "tasks.batchProgress", {
+                  submitted: queueState.submitted,
+                  total: queueState.total,
+                  failed: queueState.failed
+                })}
+              </p>
+              {queueState.running && queueState.currentFileName ? (
+                <p className="mt-1 text-[11px]">{t(locale, "tasks.batchCurrent", { file: queueState.currentFileName })}</p>
+              ) : null}
+            </div>
+          ) : null}
+
           <input
             ref={inputRef}
             type="file"
             accept=".bin,application/octet-stream"
+            multiple
             className="hidden"
             onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                void handleFile(file);
+              const files = Array.from(e.target.files ?? []);
+              if (files.length > 0) {
+                void handleFiles(files);
               }
               e.currentTarget.value = "";
             }}

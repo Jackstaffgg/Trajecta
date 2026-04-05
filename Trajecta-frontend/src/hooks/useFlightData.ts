@@ -330,6 +330,30 @@ function parseTrajectory(content: string): FlightLogData {
   }
 }
 
+type BatchProgress = {
+  total: number;
+  submitted: number;
+  failed: number;
+  currentFileName: string;
+};
+
+type BatchResult = {
+  total: number;
+  submitted: number;
+  failed: string[];
+};
+
+function buildTaskTitle(baseTitle: string, file: File, index: number, total: number) {
+  const normalizedBase = baseTitle.trim();
+  if (!normalizedBase) {
+    return file.name;
+  }
+  if (total === 1) {
+    return normalizedBase;
+  }
+  return `${normalizedBase} (${index + 1}/${total})`;
+}
+
 export function useFlightData() {
   const auth = useFlightStore((s) => s.auth);
   const data = useFlightStore((s) => s.data);
@@ -375,6 +399,59 @@ export function useFlightData() {
       return;
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadFromBinBatch(
+    files: File[],
+    titleBase: string,
+    onProgress?: (progress: BatchProgress) => void
+  ): Promise<BatchResult> {
+    if (!auth.isAuthenticated || !auth.token) {
+      setError("Authentication required", "tasks");
+      return { total: files.length, submitted: 0, failed: files.map((file) => file.name) };
+    }
+
+    setLoading(true);
+    setError(null);
+
+    const failed: string[] = [];
+    let submitted = 0;
+
+    try {
+      for (let i = 0; i < files.length; i += 1) {
+        const file = files[i];
+        onProgress?.({ total: files.length, submitted, failed: failed.length, currentFileName: file.name });
+
+        try {
+          const created = await createTask({
+            token: auth.token,
+            file,
+            title: buildTaskTitle(titleBase, file, i, files.length)
+          });
+          submitted += 1;
+          setCurrentTask({ id: created.id, title: created.title, status: created.status });
+          setTaskStatus(created.status);
+        } catch (error) {
+          failed.push(file.name);
+          if (error instanceof ApiClientError && error.status === 401) {
+            logout();
+            break;
+          }
+        }
+      }
+
+      setData(null);
+      setMode("tasks");
+
+      if (failed.length > 0) {
+        setError(`Failed to queue ${failed.length} file(s): ${failed.join(", ")}`, "tasks");
+      }
+
+      return { total: files.length, submitted, failed };
+    } finally {
+      setLoading(false);
+      onProgress?.({ total: files.length, submitted, failed: failed.length, currentFileName: "" });
     }
   }
 
@@ -457,6 +534,7 @@ export function useFlightData() {
     loading,
     maxTimeSec,
     loadFromBin,
+    loadFromBinBatch,
     selectTask,
     requestAiConclusion,
     clear: () => setData(null)
