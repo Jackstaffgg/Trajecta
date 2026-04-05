@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Bell, CheckCheck, CheckCircle2, Info, LogOut, Siren, Wifi, WifiOff, XCircle } from "lucide-react";
+import { Bell, CheckCheck, CheckCircle2, Info, LogOut, Siren, Trash2, Wifi, WifiOff, XCircle } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,8 @@ import {
   getNotifications,
   mapNotificationDto,
   markAllNotificationsAsRead,
-  markNotificationAsRead
+  markNotificationAsRead,
+  deleteNotification
 } from "@/lib/api";
 import { useFlightData } from "@/hooks/useFlightData";
 import { useLocaleStore } from "@/store/locale-store";
@@ -496,6 +497,18 @@ export function AppShell({ children, onUserBanned, onGoHome }: AppShellProps) {
     }
   }
 
+  async function handleDeleteNotification(notification: NotificationInfo) {
+    if (!auth.token) {
+      return;
+    }
+    try {
+      await deleteNotification({ token: auth.token, id: notification.id });
+      setNotifications((prev) => prev.filter((item) => item.id !== notification.id));
+    } catch {
+      setError("Failed to delete notification", "notifications");
+    }
+  }
+
 
   useEffect(() => {
     if (!openNotifications) {
@@ -539,7 +552,7 @@ export function AppShell({ children, onUserBanned, onGoHome }: AppShellProps) {
           <div className="fixed inset-0 z-40" onClick={() => setOpenNotifications(false)}>
             <div
               ref={notificationsPanelRef}
-              className="surface-panel fixed z-50 max-h-[min(68vh,520px)] overflow-hidden rounded-lg p-3 shadow-2xl animate-rise"
+              className="surface-panel notifications-panel fixed z-50 max-h-[min(68vh,520px)] overflow-hidden rounded-lg p-3 shadow-2xl animate-rise"
               style={{ top: notificationsDropdownPos.top, left: notificationsDropdownPos.left, width: notificationsDropdownPos.width }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -570,15 +583,22 @@ export function AppShell({ children, onUserBanned, onGoHome }: AppShellProps) {
                           const meta = notificationTypeMeta(notification.type);
                           const TypeIcon = meta.icon;
                           return (
-                            <button
+                            <div
                               key={notification.id}
-                              type="button"
                               className={`w-full rounded-md border p-2 text-left text-xs transition hover:border-zinc-300/45 hover:bg-zinc-200/10 ${notificationTypeClass(notification.type)} ${
                                 notification.isRead
                                   ? "opacity-70 text-muted-foreground"
                                   : "text-foreground"
                               }`}
                               onClick={() => void handleMarkAsRead(notification)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                  event.preventDefault();
+                                  void handleMarkAsRead(notification);
+                                }
+                              }}
+                              role="button"
+                              tabIndex={0}
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex items-start gap-2">
@@ -590,11 +610,25 @@ export function AppShell({ children, onUserBanned, onGoHome }: AppShellProps) {
                                     </p>
                                   </div>
                                 </div>
-                                <span className="inline-flex h-5 min-w-[96px] items-center justify-center rounded-full border border-border/60 px-2 text-[10px] uppercase tracking-wide text-muted-foreground whitespace-nowrap">
-                                  {localizeNotificationType(notification.type, locale) || meta.label}
-                                </span>
+                                <div className="flex items-center gap-1">
+                                  <span className="inline-flex h-5 min-w-[96px] items-center justify-center rounded-full border border-border/60 px-2 text-[10px] uppercase tracking-wide text-muted-foreground whitespace-nowrap">
+                                    {localizeNotificationType(notification.type, locale) || meta.label}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border/60 text-muted-foreground transition hover:border-zinc-300/45 hover:text-foreground"
+                                    aria-label={t(locale, "header.deleteNotification")}
+                                    title={t(locale, "header.deleteNotification")}
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      void handleDeleteNotification(notification);
+                                    }}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
                               </div>
-                            </button>
+                            </div>
                           );
                         })}
                       </div>

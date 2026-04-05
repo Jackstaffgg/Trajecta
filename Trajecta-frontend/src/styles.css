@@ -60,6 +60,14 @@ body {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 26%);
 }
 
+.notifications-panel {
+  background: hsl(var(--card));
+}
+
+.notifications-panel::before {
+  display: none;
+}
+
 .surface-divider {
   border-top: 1px solid rgba(158, 162, 171, 0.18);
 }

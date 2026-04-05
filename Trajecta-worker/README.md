@@ -14,6 +14,7 @@ Python worker for telemetry parsing and result publishing.
 - [Environment Variables](#environment-variables)
 - [Docker](#docker)
 - [Tests](#tests)
+- [Theoretical Justification](#theoretical-justification)
 
 ## Overview
 
@@ -108,3 +109,35 @@ Unit tests are in `tests/`.
 ```powershell
 python -m unittest discover -s tests -v
 ```
+
+## Theoretical Justification
+
+This section documents mathematical choices that are already implemented in code.
+
+1. Uniform timeline and interpolation (`trajecta_worker/timeline.py`)
+- A uniform timeline is built with step `dt`, then numeric channels are interpolated.
+- For continuous values (position, speed, battery, IMU) linear interpolation is used.
+- For mode/state channels, forward-fill is used instead of interpolation.
+- Yaw is interpolated with angle unwrapping to avoid jumps near `-180/180` degrees.
+
+2. GPS outlier rejection (`sanitize_gps_dataframe`)
+- Segment speed is estimated as `v = distance / dt` using haversine distance.
+- If implied speed is unrealistically high (`MAX_REASONABLE_GPS_SPEED_MPS`), that sample is treated as a spike and removed from position/speed channels.
+- This protects distance and speed metrics from single-point GPS teleports.
+
+3. Why we do not use raw IMU double integration for headline speed metrics
+- Accelerometer measurements contain bias and noise.
+- Velocity from acceleration is computed as `v(t) = integral(a(t) dt)`; position requires a second integration.
+- Even small bias accumulates over time (drift), and the error grows rapidly for long trajectories.
+- For this reason, worker computes `maxSpeed/maxHorizontalSpeed/totalDistance` primarily from GPS track geometry and time deltas, with outlier filtering.
+- IMU integration is still useful for diagnostic signals, but not as the primary source for public KPI speed values.
+
+4. Vertical metrics consistency (`compute_extended_metrics`)
+- `maxVerticalSpeed` and `maxClimbRate` are taken from bounded climb-rate data when available.
+- Fallback is altitude derivative `(alt2 - alt1) / dt` with finite/reasonable bounds.
+- This keeps vertical metrics physically plausible and consistent with timeline duration/distance.
+
+5. About quaternions vs Euler angles
+- Current log format already provides attitude as Euler (`roll/pitch/yaw`), and current pipeline keeps this representation.
+- To reduce discontinuity artifacts, yaw unwrapping is applied before interpolation.
+- Quaternions are beneficial in 3D orientation pipelines to avoid gimbal lock and improve composition stability; they can be introduced later if raw quaternion channels are added to parsing/output contracts.

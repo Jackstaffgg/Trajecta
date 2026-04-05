@@ -492,3 +492,12 @@ export async function markAllNotificationsAsRead(input: { token: string }): Prom
 
   await ensureSuccess(res);
 }
+
+export async function deleteNotification(input: { token: string; id: number }): Promise<void> {
+  const res = await fetch(buildUrl(`/api/v1/notifications/${input.id}`), {
+    method: "DELETE",
+    headers: withAuth({}, input.token)
+  });
+
+  await ensureSuccess(res);
+}
