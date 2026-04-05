@@ -201,7 +201,7 @@ body {
 .landing-team-footer {
   opacity: 0;
   transform: translateY(4px);
-  animation: landing-footer-appear 600ms ease-out 1.45s forwards;
+  animation: landing-footer-appear 540ms ease-out 1s forwards;
 }
 
 .landing-team-typing {
@@ -212,8 +212,8 @@ body {
   white-space: nowrap;
   border-right: 1px solid rgba(161, 161, 170, 0.85);
   animation:
-    landing-typewriter 4.6s steps(54, end) 1.65s forwards,
-    landing-caret 700ms steps(1, end) 1.65s 12;
+    landing-typewriter 3.5s steps(40, end) 1.42s forwards,
+    landing-caret 650ms steps(1, end) 1.42s 10;
 }
 
 @keyframes landing-reveal {
@@ -245,7 +245,7 @@ body {
     width: 0;
   }
   to {
-    width: 54ch;
+    width: 40ch;
   }
 }
 
