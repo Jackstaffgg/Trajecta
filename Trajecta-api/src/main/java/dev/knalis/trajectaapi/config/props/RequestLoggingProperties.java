@@ -1,4 +1,4 @@
-package dev.knalis.trajectaapi.config;
+package dev.knalis.trajectaapi.config.props;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

@@ -104,6 +104,9 @@ application:
       key-prefix: ${AI_CONCLUSION_RATE_LIMIT_KEY_PREFIX:rate_limit:ai_conclusion:}
   seed:
     enabled: ${APP_SEED_ENABLED:false}
+    username: ${OWNER_USERNAME:Owner}
+    password: ${OWNER_PASSWORD:Owner123}
+    mail: ${OWNER_MAIL:owner@ownermail.own}
 
 minio:
   endpoint: ${MINIO_URL:http://localhost:9000}
