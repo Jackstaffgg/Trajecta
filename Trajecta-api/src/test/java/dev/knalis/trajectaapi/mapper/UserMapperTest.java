@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.knalis.trajectaapi.dto.user.UserUpdateRequest;
 import dev.knalis.trajectaapi.model.user.Role;
 import dev.knalis.trajectaapi.model.user.User;
+import dev.knalis.trajectaapi.model.user.punishment.UserPunishment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -110,6 +111,22 @@ class UserMapperTest {
         mapper.updateUserFromDto(req, user);
 
         assertThat(user.getEmail()).isEqualTo("new@example.com");
+    }
+
+    @Test
+    void updateUserFromDto_doesNotTouchRoleAndPunishments() {
+        User user = new User();
+        user.setRole(Role.ADMIN);
+        UserPunishment punishment = new UserPunishment();
+        user.getPunishments().add(punishment);
+
+        UserUpdateRequest req = new UserUpdateRequest();
+        req.setName("Updated Name");
+
+        mapper.updateUserFromDto(req, user);
+
+        assertThat(user.getRole()).isEqualTo(Role.ADMIN);
+        assertThat(user.getPunishments()).hasSize(1).containsExactly(punishment);
     }
 
     @Test

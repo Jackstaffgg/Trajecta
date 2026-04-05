@@ -129,6 +129,7 @@ export type UserProfileUpdateInput = {
   email?: string;
   role?: string;
   password?: string;
+  oldPassword?: string;
 };
 
 export type FlightMetadata = {

@@ -35,9 +35,7 @@ public interface UserService {
 
     /** Updates mutable fields of user profile. */
     User updateCurrentUser(Authentication auth, UserUpdateRequest userUpdateRequest);
-
-    /** Performs case-insensitive username search. */
-    List<User> findByUsernameContaining(String username);
+    
 }
 
 

@@ -19,7 +19,9 @@ export function ProfileView() {
   const [username, setUsername] = useState(auth.user?.username ?? "");
   const [email, setEmail] = useState(auth.user?.email ?? "");
   const [password, setPassword] = useState("");
+  const [oldPassword, setOldPassword] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saveResult, setSaveResult] = useState<{ kind: "success" | "error"; message: string } | null>(null);
 
   const currentName = auth.user?.name ?? "";
   const currentUsername = auth.user?.username ?? "";
@@ -29,6 +31,7 @@ export function ProfileView() {
   const normalizedUsername = username.trim();
   const normalizedEmail = email.trim();
   const normalizedPassword = password.trim();
+  const normalizedOldPassword = oldPassword.trim();
 
   const hasChanges =
     (normalizedName.length > 0 && normalizedName !== currentName) ||
@@ -50,6 +53,7 @@ export function ProfileView() {
     }
     if (normalizedPassword.length > 0) {
       update.password = normalizedPassword;
+      update.oldPassword = normalizedOldPassword;
     }
 
     return update;
@@ -63,11 +67,27 @@ export function ProfileView() {
     const updatePayload = buildUpdatePayload();
     if (Object.keys(updatePayload).length === 0) {
       setError("No changes to save", "profile");
+      setSaveResult(null);
+      return;
+    }
+
+    if (normalizedPassword.length > 0 && normalizedOldPassword.length === 0) {
+      const message = t(locale, "profile.oldPasswordRequired");
+      setError(message, "profile");
+      setSaveResult({ kind: "error", message });
+      return;
+    }
+
+    if (normalizedPassword.length > 0 && normalizedPassword.length < 8) {
+      const message = t(locale, "profile.passwordTooShort");
+      setError(message, "profile");
+      setSaveResult({ kind: "error", message });
       return;
     }
 
     setSaving(true);
     setError(null, "profile");
+    setSaveResult(null);
     try {
       const updated = await updateCurrentUserProfile({
         token: auth.token,
@@ -78,11 +98,16 @@ export function ProfileView() {
       setUsername(updated.username ?? "");
       setEmail(updated.email ?? "");
       setPassword("");
+      setOldPassword("");
+      setSaveResult({ kind: "success", message: t(locale, "profile.saved") });
     } catch (error) {
       if (error instanceof ApiClientError) {
         setError(error.message, "profile");
+        setSaveResult({ kind: "error", message: error.message });
       } else {
-        setError("Failed to save profile", "profile");
+        const message = "Failed to save profile";
+        setError(message, "profile");
+        setSaveResult({ kind: "error", message });
       }
     } finally {
       setSaving(false);
@@ -100,21 +125,71 @@ export function ProfileView() {
         <div className="grid gap-3 md:grid-cols-2">
           <div>
             <p className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">{t(locale, "profile.name")}</p>
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
+            <Input
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                setSaveResult(null);
+              }}
+            />
           </div>
           <div>
             <p className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">{t(locale, "profile.username")}</p>
-            <Input value={username} onChange={(e) => setUsername(e.target.value)} />
+            <Input
+              value={username}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                setSaveResult(null);
+              }}
+            />
           </div>
         </div>
         <div>
           <p className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">{t(locale, "profile.email")}</p>
-          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setSaveResult(null);
+            }}
+          />
         </div>
         <div>
           <p className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">{t(locale, "profile.password")}</p>
-          <Input type="password" placeholder={t(locale, "profile.passwordHint")} value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Input
+            type="password"
+            placeholder={t(locale, "profile.passwordHint")}
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setSaveResult(null);
+            }}
+          />
         </div>
+        <div>
+          <p className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">{t(locale, "profile.oldPassword")}</p>
+          <Input
+            type="password"
+            placeholder={t(locale, "profile.oldPasswordHint")}
+            value={oldPassword}
+            onChange={(e) => {
+              setOldPassword(e.target.value);
+              setSaveResult(null);
+            }}
+          />
+        </div>
+        {saveResult ? (
+          <p
+            className={`rounded-lg border px-3 py-2 text-xs ${
+              saveResult.kind === "success"
+                ? "border-zinc-400/35 bg-zinc-500/10 text-zinc-200"
+                : "border-rose-400/35 bg-rose-500/10 text-rose-200"
+            }`}
+          >
+            {saveResult.message}
+          </p>
+        ) : null}
         <div className="flex items-center justify-between rounded-xl border border-border/80 bg-background/30 px-3 py-2 text-xs text-muted-foreground">
           <span className="rounded-full border border-border/70 px-2 py-0.5">{t(locale, "profile.role")}: {auth.user?.role ?? "USER"}</span>
           <span className="rounded-full border border-border/70 px-2 py-0.5">{t(locale, "profile.userId")}: {auth.user?.id ?? "-"}</span>

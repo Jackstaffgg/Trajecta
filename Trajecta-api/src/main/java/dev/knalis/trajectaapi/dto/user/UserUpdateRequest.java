@@ -23,10 +23,23 @@ public class UserUpdateRequest {
     @Size(min = 8, message = "Password must be at least 8 characters long")
     private String password;
     
+    @Schema(description = "Old password.", example = "OldStrongPass123")
+    @Size(message = "Password must be at least 8 characters long")
+    private String oldPassword;
+    
     @Schema(description = "Email address.", example = "jane.updated@example.com")
     @Email(message = "Email must be a valid email address")
     @Size(max = 255, message = "Email must not exceed 255 characters")
     private String email;
+    
+    @JsonIgnore
+    @AssertTrue
+    public boolean isPasswordChangeValid() {
+        if (password != null) {
+            return oldPassword != null && !oldPassword.trim().isEmpty();
+        }
+        return true;
+    }
     
     @JsonIgnore
     @AssertTrue(message = "Name must not be blank when provided")

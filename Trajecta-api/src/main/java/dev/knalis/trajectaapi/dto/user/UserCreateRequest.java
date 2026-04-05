@@ -1,5 +1,6 @@
 package dev.knalis.trajectaapi.dto.user;
 
+import dev.knalis.trajectaapi.model.user.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -34,11 +35,7 @@ public class UserCreateRequest {
     
     @Schema(description = "Account role.", allowableValues = {"ADMIN", "USER"}, example = "USER")
     @NotBlank(message = "Role must not be blank")
-    @Pattern(
-            regexp = "^(?i)(ADMIN|USER)$",
-            message = "Role must be either 'ADMIN' or 'USER'"
-    )
-    private String role;
+    private Role role;
 }
 
 

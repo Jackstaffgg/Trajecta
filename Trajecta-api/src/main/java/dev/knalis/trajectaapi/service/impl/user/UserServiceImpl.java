@@ -140,14 +140,15 @@ public class UserServiceImpl implements UserService {
             }
         }
         
+        if (userUpdateRequest.getPassword() != null) {
+            if (!passwordEncoder.matches(userUpdateRequest.getOldPassword(), currentUser.getPassword())) {
+                throw new BadRequestException("Old password is incorrect");
+            }
+        }
+        
         userMapper.updateUserFromDto(userUpdateRequest, currentUser);
         
         return userRepository.save(currentUser);
-    }
-    
-    @Override
-    public List<User> findByUsernameContaining(String username) {
-        return userRepository.findByUsernameContainingIgnoreCase(username);
     }
     
     private User getCurrentUser(Authentication auth) {

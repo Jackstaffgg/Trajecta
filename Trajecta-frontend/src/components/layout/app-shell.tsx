@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Bell, CheckCheck, CheckCircle2, Info, LoaderCircle, LogOut, Siren, Wifi, WifiOff, XCircle } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
@@ -156,11 +157,7 @@ export function AppShell({ children, onUserBanned }: AppShellProps) {
   const selectTaskRef = useRef(selectTask);
   const notificationsAnchorRef = useRef<HTMLDivElement | null>(null);
   const notificationsPanelRef = useRef<HTMLDivElement | null>(null);
-  const [notificationsPanelPos, setNotificationsPanelPos] = useState<{ top: number; left: number; width: number }>({
-    top: 64,
-    left: 16,
-    width: 320
-  });
+  const [notificationsDropdownPos, setNotificationsDropdownPos] = useState({ top: 72, left: 16, width: 360 });
 
   const unreadCount = useMemo(
     () => notifications.reduce((acc, n) => acc + (n.isRead ? 0 : 1), 0),
@@ -510,23 +507,11 @@ export function AppShell({ children, onUserBanned }: AppShellProps) {
       if (!anchor) {
         return;
       }
-
       const rect = anchor.getBoundingClientRect();
-      const width = Math.min(360, Math.max(240, window.innerWidth - 32));
+      const width = Math.min(360, Math.max(280, window.innerWidth - 32));
       const left = Math.max(16, Math.min(window.innerWidth - width - 16, rect.right - width));
-      const top = Math.max(8, rect.bottom + 8);
-      setNotificationsPanelPos({ top, left, width });
-    };
-
-    const onPointerDown = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      if (!target) {
-        return;
-      }
-      if (notificationsPanelRef.current?.contains(target) || notificationsAnchorRef.current?.contains(target)) {
-        return;
-      }
-      setOpenNotifications(false);
+      const top = Math.round(rect.bottom + 8);
+      setNotificationsDropdownPos({ top, left, width });
     };
 
     const onEscape = (event: KeyboardEvent) => {
@@ -538,18 +523,89 @@ export function AppShell({ children, onUserBanned }: AppShellProps) {
     updatePosition();
     window.addEventListener("resize", updatePosition);
     window.addEventListener("scroll", updatePosition, true);
-    window.addEventListener("mousedown", onPointerDown);
     window.addEventListener("keydown", onEscape);
 
     return () => {
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
-      window.removeEventListener("mousedown", onPointerDown);
       window.removeEventListener("keydown", onEscape);
     };
   }, [openNotifications]);
 
   const WsIcon = wsBadge.icon;
+  const notificationsDropdown =
+    openNotifications && typeof document !== "undefined"
+      ? createPortal(
+          <div className="fixed inset-0 z-40" onClick={() => setOpenNotifications(false)}>
+            <div
+              ref={notificationsPanelRef}
+              className="surface-panel fixed z-50 max-h-[min(68vh,520px)] overflow-hidden rounded-lg p-3 shadow-2xl animate-rise"
+              style={{ top: notificationsDropdownPos.top, left: notificationsDropdownPos.left, width: notificationsDropdownPos.width }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-sm font-semibold">{t(locale, "header.notifications")}</p>
+                <Button variant="ghost" size="sm" type="button" onClick={() => void handleMarkAllAsRead()}>
+                  <CheckCheck className="h-4 w-4" />
+                  {t(locale, "header.markAll")}
+                </Button>
+              </div>
+
+              <div className="max-h-72 space-y-3 overflow-auto pr-1">
+                {notifications.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">{t(locale, "header.noNotifications")}</p>
+                ) : (
+                  Object.entries(groupedNotifications)
+                    .filter(([, items]) => items.length > 0)
+                    .map(([group, items]) => (
+                      <div key={group} className="space-y-2">
+                        <p className="px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          {group === "Alerts"
+                            ? t(locale, "notif.group.alerts")
+                            : group === "Tasks"
+                            ? t(locale, "notif.group.tasks")
+                            : t(locale, "notif.group.news")}
+                        </p>
+                        {items.map((notification) => {
+                          const meta = notificationTypeMeta(notification.type);
+                          const TypeIcon = meta.icon;
+                          return (
+                            <button
+                              key={notification.id}
+                              type="button"
+                              className={`w-full rounded-md border p-2 text-left text-xs transition hover:border-zinc-300/45 hover:bg-zinc-200/10 ${notificationTypeClass(notification.type)} ${
+                                notification.isRead
+                                  ? "opacity-70 text-muted-foreground"
+                                  : "text-foreground"
+                              }`}
+                              onClick={() => void handleMarkAsRead(notification)}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-start gap-2">
+                                  <TypeIcon className="mt-0.5 h-3.5 w-3.5" />
+                                  <div>
+                                    <p className="font-medium">{toText(notification.content, t(locale, "header.notifications"))}</p>
+                                    <p className="mt-1 text-[11px] opacity-80">
+                                      {toText(notification.senderName, "System")} • {formatDateByLocale(notification.createdAt, locale)}
+                                    </p>
+                                  </div>
+                                </div>
+                                <span className="rounded-full border border-border/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                                  {localizeNotificationType(notification.type, locale) || meta.label}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -579,7 +635,7 @@ export function AppShell({ children, onUserBanned }: AppShellProps) {
               </select>
             </label>
 
-            <div ref={notificationsAnchorRef}>
+            <div ref={notificationsAnchorRef} className="relative">
               <Button variant="outline" size="sm" type="button" onClick={() => setOpenNotifications((v) => !v)}>
                 <Bell className="h-4 w-4" />
                 <span className="hidden md:inline">{t(locale, "header.notifications")}</span>
@@ -596,75 +652,11 @@ export function AppShell({ children, onUserBanned }: AppShellProps) {
               <span className="hidden md:inline">{t(locale, "header.logout")}</span>
             </Button>
 
-            {openNotifications ? (
-              <div
-                ref={notificationsPanelRef}
-                className="surface-panel fixed z-50 max-h-[min(70vh,560px)] overflow-hidden rounded-lg p-3 shadow-2xl animate-rise"
-                style={{ top: notificationsPanelPos.top, left: notificationsPanelPos.left, width: notificationsPanelPos.width }}
-              >
-                <div className="mb-3 flex items-center justify-between">
-                  <p className="text-sm font-semibold">{t(locale, "header.notifications")}</p>
-                  <Button variant="ghost" size="sm" type="button" onClick={() => void handleMarkAllAsRead()}>
-                    <CheckCheck className="h-4 w-4" />
-                    {t(locale, "header.markAll")}
-                  </Button>
-                </div>
-
-                <div className="max-h-72 space-y-3 overflow-auto pr-1">
-                  {notifications.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">{t(locale, "header.noNotifications")}</p>
-                  ) : (
-                    Object.entries(groupedNotifications)
-                      .filter(([, items]) => items.length > 0)
-                      .map(([group, items]) => (
-                        <div key={group} className="space-y-2">
-                          <p className="px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                            {group === "Alerts"
-                              ? t(locale, "notif.group.alerts")
-                              : group === "Tasks"
-                              ? t(locale, "notif.group.tasks")
-                              : t(locale, "notif.group.news")}
-                          </p>
-                          {items.map((notification) => {
-                            const meta = notificationTypeMeta(notification.type);
-                            const TypeIcon = meta.icon;
-                            return (
-                              <button
-                                key={notification.id}
-                                type="button"
-                                className={`w-full rounded-md border p-2 text-left text-xs transition hover:border-zinc-300/45 hover:bg-zinc-200/10 ${notificationTypeClass(notification.type)} ${
-                                  notification.isRead
-                                    ? "opacity-70 text-muted-foreground"
-                                    : "text-foreground"
-                                }`}
-                                onClick={() => void handleMarkAsRead(notification)}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex items-start gap-2">
-                                    <TypeIcon className="mt-0.5 h-3.5 w-3.5" />
-                                    <div>
-                                      <p className="font-medium">{toText(notification.content, t(locale, "header.notifications"))}</p>
-                                      <p className="mt-1 text-[11px] opacity-80">
-                                        {toText(notification.senderName, "System")} • {formatDateByLocale(notification.createdAt, locale)}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <span className="rounded-full border border-border/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                                    {localizeNotificationType(notification.type, locale) || meta.label}
-                                  </span>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ))
-                  )}
-                </div>
-              </div>
-            ) : null}
           </div>
         </div>
       </header>
+
+      {notificationsDropdown}
 
       {error ? (
         <div className="mx-4 mt-3 rounded-xl border border-zinc-400/35 bg-zinc-500/10 px-4 py-3 text-sm text-zinc-100 md:mx-6">
