@@ -72,10 +72,13 @@ services:
     image: minio/mc
     depends_on:
       minio:
-        condition: service_healthy
+        condition: service_started
     entrypoint: >
       /bin/sh -c "
-      mc alias set myminio http://minio:9000 admin password123;
+      until mc alias set myminio http://minio:9000 admin password123; do
+        echo 'Waiting for MinIO...';
+        sleep 2;
+      done;
       mc mb myminio/flight-data;
       mc anonymous set public myminio/flight-data;
       exit 0;
@@ -93,6 +96,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio:
+        condition: service_started
+      minio-init:
+        condition: service_completed_successfully
     ports:
       - "8080:8080"
     environment:
