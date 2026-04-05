@@ -19,6 +19,7 @@ run_compose() {
 }
 
 action="${1:-up}"
+confirm="${2:-}"
 
 case "$action" in
   up)
@@ -43,8 +44,19 @@ case "$action" in
     run_compose config > /dev/null
     echo "[OK] Compose config is valid"
     ;;
+  wipe)
+    if [ "$confirm" != "--yes" ]; then
+      echo "[ERROR] wipe is destructive. Run: ./deploy-vps.sh wipe --yes"
+      exit 1
+    fi
+    echo "[WARN] Removing Trajecta stack containers, images, volumes and compose network..."
+    run_compose down --volumes --rmi all --remove-orphans
+    echo "[WARN] Pruning unused Docker resources on host (build cache, dangling images/networks)..."
+    docker system prune -f
+    echo "[OK] Full cleanup completed"
+    ;;
   *)
-    echo "Usage: ./deploy-vps.sh [up|pull|down|restart|logs|status|validate]"
+    echo "Usage: ./deploy-vps.sh [up|pull|down|restart|logs|status|validate|wipe --yes]"
     exit 1
     ;;
 esac

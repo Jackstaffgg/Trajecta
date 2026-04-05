@@ -330,43 +330,68 @@ def haversine_m(lat1: float | None, lon1: float | None, lat2: float | None, lon2
     return 2.0 * radius * math.asin(math.sqrt(a))
 
 
+def track_distance_and_speed(frames: list[dict[str, Any]]) -> tuple[float, float | None]:
+    if len(frames) < 2:
+        return 0.0, None
+
+    distance = 0.0
+    max_speed: float | None = None
+
+    prev = frames[0]
+    for frame in frames[1:]:
+        prev_t = maybe_float(prev.get("t"))
+        cur_t = maybe_float(frame.get("t"))
+        dt = (cur_t - prev_t) if prev_t is not None and cur_t is not None else None
+        if dt is None or dt <= 0:
+            prev = frame
+            continue
+
+        lat1 = maybe_float(prev.get("pos", {}).get("lat"))
+        lon1 = maybe_float(prev.get("pos", {}).get("lon"))
+        lat2 = maybe_float(frame.get("pos", {}).get("lat"))
+        lon2 = maybe_float(frame.get("pos", {}).get("lon"))
+        segment = haversine_m(lat1, lon1, lat2, lon2)
+        if segment is None:
+            prev = frame
+            continue
+
+        segment_speed = segment / dt
+        if not np.isfinite(segment_speed) or segment_speed > MAX_REASONABLE_GPS_SPEED_MPS:
+            prev = frame
+            continue
+
+        distance += float(segment)
+        if max_speed is None or segment_speed > max_speed:
+            max_speed = float(segment_speed)
+
+        prev = frame
+
+    return float(distance), max_speed
+
+
 def compute_metrics(frames: list[dict[str, Any]]) -> AnalysisMetrics:
     if not frames:
         return AnalysisMetrics()
 
     altitudes = [frame["pos"]["alt"] for frame in frames if frame.get("pos", {}).get("alt") is not None]
-    velocity = integrate_velocity_trapezoidal(frames)
-    horizontal_speed = velocity["horizontal"]
     gps_speed = np.array(
         [
             float(frame.get("vel"))
             for frame in frames
-            if frame.get("vel") is not None
+            if frame.get("vel") is not None and abs(float(frame.get("vel"))) <= MAX_REASONABLE_GPS_SPEED_MPS
         ],
         dtype=float,
     )
-
-    distance = 0.0
-    prev_lat = prev_lon = None
-    for frame in frames:
-        lat = frame.get("pos", {}).get("lat")
-        lon = frame.get("pos", {}).get("lon")
-        segment = haversine_m(prev_lat, prev_lon, lat, lon)
-        if segment is not None:
-            distance += segment
-        prev_lat, prev_lon = lat, lon
-
-    integrated_max = float(np.nanmax(horizontal_speed)) if horizontal_speed.size else None
+    distance, track_max = track_distance_and_speed(frames)
     gps_max = float(np.nanmax(gps_speed)) if gps_speed.size else None
-    max_speed = integrated_max
-    if max_speed is None or max_speed <= 0:
-        max_speed = gps_max
+    speed_candidates = [value for value in (track_max, gps_max) if value is not None and value > 0]
+    max_speed = max(speed_candidates) if speed_candidates else None
 
     return AnalysisMetrics(
         maxAltitude=float(np.nanmax(altitudes)) if altitudes else None,
         maxSpeed=max_speed,
         flightDuration=float(frames[-1]["t"] - frames[0]["t"]) if len(frames) >= 2 else 0.0,
-        distance=float(distance) if distance else 0.0,
+        distance=distance,
     )
 
 
@@ -381,23 +406,13 @@ def compute_extended_metrics(frames: list[dict[str, Any]]) -> dict[str, float | 
             "totalDistance": 0.0,
         }
 
-    velocity = integrate_velocity_trapezoidal(frames)
-
     accel_norm: list[float] = []
     for frame in frames:
         accel = frame.get("imu", {}).get("accel", [])
         if len(accel) == 3 and all(value is not None for value in accel):
             accel_norm.append(float(np.linalg.norm(np.array(accel, dtype=float))))
 
-    distance = 0.0
-    prev_lat = prev_lon = None
-    for frame in frames:
-        lat = frame.get("pos", {}).get("lat")
-        lon = frame.get("pos", {}).get("lon")
-        segment = haversine_m(prev_lat, prev_lon, lat, lon)
-        if segment is not None:
-            distance += segment
-        prev_lat, prev_lon = lat, lon
+    distance, track_max = track_distance_and_speed(frames)
 
     climb_rates = np.array(
         [
@@ -407,26 +422,50 @@ def compute_extended_metrics(frames: list[dict[str, Any]]) -> dict[str, float | 
         ],
         dtype=float,
     )
-    vz = velocity["vz"] if velocity["vz"].size else np.array([0.0], dtype=float)
-    horizontal = velocity["horizontal"] if velocity["horizontal"].size else np.array([0.0], dtype=float)
     gps_speed = np.array(
         [
             float(frame.get("vel"))
             for frame in frames
-            if frame.get("vel") is not None
+            if frame.get("vel") is not None and abs(float(frame.get("vel"))) <= MAX_REASONABLE_GPS_SPEED_MPS
         ],
         dtype=float,
     )
 
-    max_horizontal = float(np.nanmax(horizontal)) if horizontal.size else None
-    if (max_horizontal is None or max_horizontal <= 0) and gps_speed.size:
-        max_horizontal = float(np.nanmax(gps_speed))
+    gps_max = float(np.nanmax(gps_speed)) if gps_speed.size else None
+    horizontal_candidates = [value for value in (track_max, gps_max) if value is not None and value > 0]
+    max_horizontal = max(horizontal_candidates) if horizontal_candidates else None
+
+    alt_vertical_rates: list[float] = []
+    for i in range(1, len(frames)):
+        prev = frames[i - 1]
+        curr = frames[i]
+        prev_t = maybe_float(prev.get("t"))
+        curr_t = maybe_float(curr.get("t"))
+        prev_alt = maybe_float(prev.get("pos", {}).get("alt"))
+        curr_alt = maybe_float(curr.get("pos", {}).get("alt"))
+        if None in (prev_t, curr_t, prev_alt, curr_alt):
+            continue
+        dt = curr_t - prev_t
+        if dt <= 0:
+            continue
+        vertical = abs((curr_alt - prev_alt) / dt)
+        if np.isfinite(vertical) and vertical <= MAX_REASONABLE_GPS_SPEED_MPS:
+            alt_vertical_rates.append(float(vertical))
+
+    climb_abs = np.abs(climb_rates)
+    climb_abs = climb_abs[np.isfinite(climb_abs)]
+    climb_abs = climb_abs[climb_abs <= MAX_REASONABLE_GPS_SPEED_MPS]
+    climb_pos = climb_rates[np.isfinite(climb_rates)]
+    climb_pos = climb_pos[(climb_pos >= 0) & (climb_pos <= MAX_REASONABLE_GPS_SPEED_MPS)]
+
+    max_vertical = float(np.nanmax(climb_abs)) if climb_abs.size else (max(alt_vertical_rates) if alt_vertical_rates else None)
+    max_climb = float(np.nanmax(climb_pos)) if climb_pos.size else (max(alt_vertical_rates) if alt_vertical_rates else None)
 
     return {
         "maxHorizontalSpeed": max_horizontal,
-        "maxVerticalSpeed": float(np.nanmax(np.abs(climb_rates))) if climb_rates.size else (float(np.nanmax(np.abs(vz))) if vz.size else None),
+        "maxVerticalSpeed": max_vertical,
         "maxAcceleration": float(np.nanmax(accel_norm)) if accel_norm else None,
-        "maxClimbRate": float(np.nanmax(climb_rates)) if climb_rates.size else (float(np.nanmax(vz)) if vz.size else None),
+        "maxClimbRate": max_climb,
         "totalFlightDuration": float(frames[-1]["t"] - frames[0]["t"]) if len(frames) >= 2 else 0.0,
         "totalDistance": float(distance),
     }

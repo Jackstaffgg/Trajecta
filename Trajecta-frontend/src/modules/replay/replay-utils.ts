@@ -14,6 +14,21 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+function lerpOptional(a: number | undefined, b: number | undefined, alpha: number): number | undefined {
+  const hasA = Number.isFinite(a);
+  const hasB = Number.isFinite(b);
+  if (hasA && hasB) {
+    return CesiumMath.lerp(a as number, b as number, alpha);
+  }
+  if (hasA) {
+    return a;
+  }
+  if (hasB) {
+    return b;
+  }
+  return undefined;
+}
+
 export function findFramePair(frames: FlightFrame[], t: number): [FlightFrame, FlightFrame, number] {
   if (frames.length === 0) {
     const empty: FlightFrame = { t: 0, lat: 0, lon: 0, alt: 0 };
@@ -73,7 +88,7 @@ export function interpolateFrame(frames: FlightFrame[], t: number): FlightFrame 
     lon: CesiumMath.lerp(a.lon, b.lon, alpha),
     alt: CesiumMath.lerp(a.alt, b.alt, alpha),
     speed: CesiumMath.lerp(a.speed ?? 0, b.speed ?? 0, alpha),
-    battery: CesiumMath.lerp(a.battery ?? 0, b.battery ?? 0, alpha),
+    battery: lerpOptional(a.battery, b.battery, alpha),
     accelX: CesiumMath.lerp(a.accelX ?? 0, b.accelX ?? 0, alpha),
     accelY: CesiumMath.lerp(a.accelY ?? 0, b.accelY ?? 0, alpha),
     accelZ: CesiumMath.lerp(a.accelZ ?? 0, b.accelZ ?? 0, alpha),

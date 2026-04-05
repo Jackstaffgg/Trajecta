@@ -245,10 +245,17 @@ def parse_log(bin_path: str) -> dict[str, Any]:
             data["ctun"]["dalt"].append(normalize_alt_meters(to_float(first_present(md, ["DAlt", "dalt"]))))
             data["ctun"]["crt"].append(normalize_speed_mps(to_float(first_present(md, ["CRt", "ClimbRate", "Vz", "VZ"]))))
 
-        elif mtype == "BAT":
+        elif mtype.startswith("BAT"):
             data["bat"]["t"].append(t)
             data["bat"]["remainingPct"].append(
-                normalize_percent(to_float(first_present(md, ["RemPct", "Remain", "Remaining", "Pct"])))
+                normalize_percent(
+                    to_float(
+                        first_present(
+                            md,
+                            ["RemPct", "Remain", "Remaining", "Pct", "Rem", "BatPct", "BattPct"],
+                        )
+                    )
+                )
             )
 
         elif mtype.startswith("IMU"):

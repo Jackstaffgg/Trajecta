@@ -2,7 +2,7 @@
 setlocal
 
 set "SCRIPT_DIR=%~dp0"
-set "ROOT_DIR=%SCRIPT_DIR%"
+set "ROOT_DIR=%SCRIPT_DIR:~0,-1%"
 set "API_DIR=%ROOT_DIR%\Trajecta-api"
 set "WORKER_DIR=%ROOT_DIR%\Trajecta-worker"
 set "FRONTEND_DIR=%ROOT_DIR%\Trajecta-frontend"
@@ -12,26 +12,6 @@ set "API_COMPOSE_FILE=%API_DIR%\compose.yaml"
 set "WORKER_COMPOSE_FILE=%WORKER_DIR%\docker-compose.yml"
 set "FRONTEND_COMPOSE_FILE=%FRONTEND_DIR%\docker-compose.yml"
 
-if not exist "%GRADLEW%" (
-  echo [ERROR] Gradle wrapper not found: "%GRADLEW%"
-  exit /b 1
-)
-
-if not exist "%API_COMPOSE_FILE%" (
-  echo [ERROR] API compose file not found: "%API_COMPOSE_FILE%"
-  exit /b 1
-)
-
-if not exist "%WORKER_COMPOSE_FILE%" (
-  echo [ERROR] Worker compose file not found: "%WORKER_COMPOSE_FILE%"
-  exit /b 1
-)
-
-if not exist "%FRONTEND_COMPOSE_FILE%" (
-  echo [ERROR] Frontend compose file not found: "%FRONTEND_COMPOSE_FILE%"
-  exit /b 1
-)
-
 pushd "%API_DIR%"
 if errorlevel 1 (
   echo [ERROR] Unable to switch to API project directory: "%API_DIR%"
@@ -39,8 +19,8 @@ if errorlevel 1 (
 )
 
 set "ACTION=up"
-set "RUN_BUILD=1"
-set "RUN_TESTS=1"
+set "RUN_BUILD=0"
+set "RUN_TESTS=0"
 set "RUN_COMPOSE=1"
 set "RUN_LOGS=0"
 
@@ -84,6 +64,19 @@ if /I "%~1"=="validate" (
   goto parse_args
 )
 
+if /I "%~1"=="build" (
+  set "RUN_BUILD=1"
+  shift
+  goto parse_args
+)
+
+if /I "%~1"=="tests" (
+  set "RUN_BUILD=1"
+  set "RUN_TESTS=1"
+  shift
+  goto parse_args
+)
+
 if /I "%~1"=="skiptests" (
   set "RUN_TESTS=0"
   shift
@@ -108,12 +101,6 @@ if /I "%~1"=="autologs" (
   goto parse_args
 )
 
-if /I "%~1"=="logs" (
-  set "RUN_LOGS=1"
-  shift
-  goto parse_args
-)
-
 if /I "%~1"=="help" goto usage
 if /I "%~1"=="/h" goto usage
 if /I "%~1"=="-h" goto usage
@@ -124,6 +111,31 @@ shift
 goto parse_args
 
 :run
+where docker >nul 2>&1
+if errorlevel 1 (
+  echo [ERROR] Docker CLI was not found in PATH.
+  popd
+  exit /b 1
+)
+
+if not exist "%API_COMPOSE_FILE%" (
+  echo [ERROR] API compose file not found: "%API_COMPOSE_FILE%"
+  popd
+  exit /b 1
+)
+
+if not exist "%WORKER_COMPOSE_FILE%" (
+  echo [ERROR] Worker compose file not found: "%WORKER_COMPOSE_FILE%"
+  popd
+  exit /b 1
+)
+
+if not exist "%FRONTEND_COMPOSE_FILE%" (
+  echo [ERROR] Frontend compose file not found: "%FRONTEND_COMPOSE_FILE%"
+  popd
+  exit /b 1
+)
+
 if /I "%ACTION%"=="status" goto action_status
 if /I "%ACTION%"=="logs" goto action_logs
 if /I "%ACTION%"=="down" goto action_down
@@ -136,6 +148,12 @@ if /I "%ACTION%"=="restart" (
 )
 
 if "%RUN_BUILD%"=="1" (
+  if not exist "%GRADLEW%" (
+    echo [ERROR] Gradle wrapper not found: "%GRADLEW%"
+    popd
+    exit /b 1
+  )
+
   if "%RUN_TESTS%"=="1" (
     echo Running: "%GRADLEW%" clean build
     call "%GRADLEW%" clean build
@@ -304,20 +322,25 @@ exit /b 0
 
 :usage
 echo Usage:
-echo   start-all-stacks.bat [up^|restart^|down^|status^|logs^|validate] [skiptests] [skipbuild] [skipcompose] [autologs]
+echo   start-all-stacks.bat [up^|restart^|down^|status^|logs^|validate] [build] [tests] [skipcompose] [autologs]
+echo.
+echo Default behavior:
+echo   start-all-stacks.bat
+echo   ^- starts API + worker + frontend locally with Docker Compose (no Gradle build)
 echo.
 echo Examples:
 echo   start-all-stacks.bat
-echo   start-all-stacks.bat up skiptests
+echo   start-all-stacks.bat up
+echo   start-all-stacks.bat up build
+echo   start-all-stacks.bat up tests
 echo   start-all-stacks.bat restart
 echo   start-all-stacks.bat down
 echo   start-all-stacks.bat status
 echo   start-all-stacks.bat logs
 echo   start-all-stacks.bat validate
-echo   start-all-stacks.bat skiptests
 echo   start-all-stacks.bat skipcompose
 echo   start-all-stacks.bat autologs
-echo   start-all-stacks.bat skiptests autologs
+echo   start-all-stacks.bat up build autologs
 popd
 exit /b 0
 
