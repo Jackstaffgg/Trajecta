@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Bell, CheckCheck, CheckCircle2, Info, LogOut, Siren, Trash2, Wifi, WifiOff, XCircle } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { BrandLogo } from "@/components/ui/brand-logo";
+import { LocaleSelect } from "@/components/ui/locale-select";
 import { Button } from "@/components/ui/button";
 import { formatDateByLocale, localizeErrorMessage, localizeErrorScope, localizeNotificationType, t } from "@/lib/i18n";
 import {
@@ -648,12 +649,12 @@ export function AppShell({ children, onUserBanned, onGoHome }: AppShellProps) {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              className="inline-flex items-center gap-3 rounded-lg border border-border/60 bg-zinc-900/30 px-2 py-1 transition hover:border-zinc-300/40 hover:bg-zinc-800/35"
+              className="inline-flex items-center gap-2 rounded-lg border border-border/60 bg-zinc-900/30 px-2 py-1 transition hover:border-zinc-300/40 hover:bg-zinc-800/35 sm:gap-3"
               onClick={onGoHome}
               title={t(locale, "landing.title")}
             >
               <BrandLogo className="h-8 w-8" />
-              <h1 className="text-base font-semibold tracking-wide text-foreground">{t(locale, "header.title")}</h1>
+              <h1 className="hidden text-base font-semibold tracking-wide text-foreground sm:inline">{t(locale, "header.title")}</h1>
             </button>
             <div
               className={`inline-flex h-9 w-9 items-center justify-center rounded-md border ${wsBadge.className}`}
@@ -665,18 +666,7 @@ export function AppShell({ children, onUserBanned, onGoHome }: AppShellProps) {
           </div>
 
           <div className="relative flex items-center gap-2">
-            <label className="flex h-9 items-center rounded-md border border-border/70 bg-background/40 px-3 text-sm text-muted-foreground">
-              <select
-                className="ui-select min-h-0 w-auto border-transparent bg-transparent py-1 pl-2 pr-6 text-sm text-foreground"
-                value={locale}
-                onChange={(e) => setLocale(e.target.value === "ru" ? "ru" : e.target.value === "uk" ? "uk" : "en")}
-                aria-label={t(locale, "header.locale")}
-              >
-                <option value="en">EN</option>
-                <option value="ru">RU</option>
-                <option value="uk">UK</option>
-              </select>
-            </label>
+            <LocaleSelect locale={locale} onChange={setLocale} />
 
             <div ref={notificationsAnchorRef} className="relative">
               <Button

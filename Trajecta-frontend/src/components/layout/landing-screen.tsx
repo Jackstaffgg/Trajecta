@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/ui/brand-logo";
+import { LocaleSelect } from "@/components/ui/locale-select";
 import { useLocaleStore } from "@/store/locale-store";
 import { t } from "@/lib/i18n";
 
@@ -33,18 +34,7 @@ export function LandingScreen({
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="flex h-9 items-center gap-2 rounded-md border border-border/70 bg-background/40 px-3 text-sm text-muted-foreground">
-            <select
-              className="ui-select min-h-0 w-auto border-transparent bg-transparent py-1 pl-2 pr-6 text-sm text-foreground"
-              value={locale}
-              onChange={(e) => setLocale(e.target.value === "ru" ? "ru" : e.target.value === "uk" ? "uk" : "en")}
-              aria-label={t(locale, "header.locale")}
-            >
-              <option value="en">EN</option>
-              <option value="ru">RU</option>
-              <option value="uk">UK</option>
-            </select>
-          </label>
+          <LocaleSelect locale={locale} onChange={setLocale} />
 
           {isAuthenticated ? (
             <div className="hidden h-9 items-center rounded-md border border-border/70 bg-zinc-900/40 px-3 text-sm text-zinc-300 sm:flex">

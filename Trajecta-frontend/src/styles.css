@@ -4,15 +4,15 @@
 @tailwind utilities;
 
 :root {
-  --background: 220 7% 10%;
-  --foreground: 220 11% 93%;
-  --card: 220 7% 14%;
-  --card-foreground: 220 11% 95%;
-  --muted: 220 6% 21%;
-  --muted-foreground: 220 7% 70%;
-  --border: 220 6% 31%;
-  --accent: 220 8% 74%;
-  --ring: 220 8% 66%;
+  --background: 0 0% 10%;
+  --foreground: 0 0% 93%;
+  --card: 0 0% 14%;
+  --card-foreground: 0 0% 95%;
+  --muted: 0 0% 21%;
+  --muted-foreground: 0 0% 70%;
+  --border: 0 0% 31%;
+  --accent: 0 0% 74%;
+  --ring: 0 0% 66%;
 }
 
 * {

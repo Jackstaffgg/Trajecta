@@ -174,39 +174,17 @@ deploy-vps.bat logs
 ./deploy-vps.sh logs
 ./deploy-vps.sh restart
 ./deploy-vps.sh down
+./deploy-vps.sh wipe --yes
 ```
 
-Windows:
 
-```bat
-deploy-vps.bat up
-deploy-vps.bat status
-deploy-vps.bat logs
-deploy-vps.bat restart
-deploy-vps.bat down
-```
-
-## 9.1) Run deployment over SSH from local machine
-
-Linux/macOS:
+Full cleanup (destructive) on VPS:
 
 ```bash
-./deploy-vps-ssh.sh user@your-vps /opt/Trajecta status
-./deploy-vps-ssh.sh user@your-vps /opt/Trajecta restart
+./deploy-vps.sh wipe --yes
 ```
 
-Windows:
-
-```bat
-deploy-vps-ssh.bat user@your-vps /opt/Trajecta status
-deploy-vps-ssh.bat user@your-vps /opt/Trajecta restart
-```
-
-Notes:
-
-- Remote path must point to repository root where `deploy-vps.sh` is located.
-- SSH key auth is recommended.
-- `status` is used as safe default action in SSH wrappers.
+This command removes Trajecta containers, images, volumes and compose network, then runs Docker prune for unused host resources.
 
 ## 9.2) SSH scenario where script executes ON VPS
 
