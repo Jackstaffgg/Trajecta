@@ -28,111 +28,111 @@ public class GlobalExceptionHandler {
     }
     
     @ExceptionHandler(NotFoundException.class)
-    public ResponseEntity<ApiResponse<Void>> handleNotFoundException(NotFoundException ex) {
-        return buildResponse(HttpStatus.NOT_FOUND, "NOT_FOUND", "The requested resource was not found.");
+    public ResponseEntity<ApiResponse<Void>> handleNotFoundException() {
+        return buildResponse(HttpStatus.NOT_FOUND, ApiErrorCodes.NOT_FOUND, "The requested resource was not found.");
     }
     
     @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<ApiResponse<Void>> handleBadRequestException(BadRequestException ex) {
-        return buildResponse(HttpStatus.BAD_REQUEST, "BAD_REQUEST", "The request was invalid or cannot be processed.");
+    public ResponseEntity<ApiResponse<Void>> handleBadRequestException() {
+        return buildResponse(HttpStatus.BAD_REQUEST, ApiErrorCodes.BAD_REQUEST, "The request was invalid or cannot be processed.");
     }
     
     @ExceptionHandler(FieldAlreadyExistException.class)
-    public ResponseEntity<ApiResponse<Void>> handleFieldAlreadyExistException(FieldAlreadyExistException ex) {
-        return buildResponse(HttpStatus.BAD_REQUEST, "FIELD_ALREADY_EXISTS", "The field already exists.");
+    public ResponseEntity<ApiResponse<Void>> handleFieldAlreadyExistException() {
+        return buildResponse(HttpStatus.BAD_REQUEST, ApiErrorCodes.FIELD_ALREADY_EXISTS, "The field already exists.");
     }
     
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ApiResponse<Void>> handleBadCredentialsException(BadCredentialsException ex) {
-        return buildResponse(HttpStatus.UNAUTHORIZED, "BAD_CREDENTIALS", "Invalid username or password.");
+    public ResponseEntity<ApiResponse<Void>> handleBadCredentialsException() {
+        return buildResponse(HttpStatus.UNAUTHORIZED, ApiErrorCodes.BAD_CREDENTIALS, "Invalid username or password.");
     }
 
     @ExceptionHandler({AuthenticationException.class, AuthenticationCredentialsNotFoundException.class})
-    public ResponseEntity<ApiResponse<Void>> handleAuthenticationException(Exception ex) {
-        return buildResponse(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Authentication is required to access this resource.");
+    public ResponseEntity<ApiResponse<Void>> handleAuthenticationException() {
+        return buildResponse(HttpStatus.UNAUTHORIZED, ApiErrorCodes.UNAUTHORIZED, "Authentication is required to access this resource.");
     }
     
     @ExceptionHandler(RateLimitException.class)
-    public ResponseEntity<ApiResponse<Void>> handleRateLimitException(RateLimitException ex) {
-        return buildResponse(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMIT", "Too many requests. Please try again later.");
+    public ResponseEntity<ApiResponse<Void>> handleRateLimitException() {
+        return buildResponse(HttpStatus.TOO_MANY_REQUESTS, ApiErrorCodes.RATE_LIMIT, "Too many requests. Please try again later.");
     }
     
     @ExceptionHandler(PermissionDeniedException.class)
-    public ResponseEntity<ApiResponse<Void>> handlePermissionDeniedException(PermissionDeniedException ex) {
-        return buildResponse(HttpStatus.FORBIDDEN, "FORBIDDEN", "You do not have permission to perform this action.");
+    public ResponseEntity<ApiResponse<Void>> handlePermissionDeniedException() {
+        return buildResponse(HttpStatus.FORBIDDEN, ApiErrorCodes.FORBIDDEN, "You do not have permission to perform this action.");
     }
     
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(AccessDeniedException ex) {
-        return buildResponse(HttpStatus.FORBIDDEN, "FORBIDDEN", "You do not have permission to access this resource.");
+    public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException() {
+        return buildResponse(HttpStatus.FORBIDDEN, ApiErrorCodes.FORBIDDEN, "You do not have permission to access this resource.");
     }
     
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<ApiResponse<Void>> handleMethodNotSupportedException(HttpRequestMethodNotSupportedException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleMethodNotSupportedException() {
         return buildResponse(
                 HttpStatus.METHOD_NOT_ALLOWED,
-                "METHOD_NOT_ALLOWED",
+                ApiErrorCodes.METHOD_NOT_ALLOWED,
                 "This request method is not supported for this resource. Please use a different HTTP method."
         );
     }
     
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ApiResponse<Void>> handleMessageNotReadableException(HttpMessageNotReadableException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleMessageNotReadableException() {
         return buildResponse(
                 HttpStatus.BAD_REQUEST,
-                "MESSAGE_NOT_READABLE",
+                ApiErrorCodes.MESSAGE_NOT_READABLE,
                 "The request body could not be read or is invalid. Please check the request format."
         );
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<ApiResponse<Void>> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleMethodArgumentTypeMismatch() {
         return buildResponse(
                 HttpStatus.BAD_REQUEST,
-                "ARGUMENT_TYPE_MISMATCH",
+                ApiErrorCodes.ARGUMENT_TYPE_MISMATCH,
                 "One or more request parameters have an invalid type."
         );
     }
     
     @ExceptionHandler(ExpiredJwtException.class)
-    public ResponseEntity<ApiResponse<Void>> handleExpiredJwtException(ExpiredJwtException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleExpiredJwtException() {
         return buildResponse(
                 HttpStatus.UNAUTHORIZED,
-                "TOKEN_EXPIRED",
+                ApiErrorCodes.TOKEN_EXPIRED,
                 "Your session has expired. Please log in again."
         );
     }
     
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Void>> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "Validation failed for request payload.");
+    public ResponseEntity<ApiResponse<Void>> handleValidationExceptions() {
+        return buildResponse(HttpStatus.BAD_REQUEST, ApiErrorCodes.VALIDATION_FAILED, "Validation failed for request payload.");
     }
     
     @ExceptionHandler(InternalServerException.class)
     public ResponseEntity<ApiResponse<Void>> handleInternalServerException(InternalServerException ex) {
-        if (isCausedBy(ex, UnknownHostException.class)) {
+        if (hasUnknownHostCause(ex)) {
             log.warn("External dependency host is unreachable", ex.getCause());
             return buildResponse(
                     HttpStatus.SERVICE_UNAVAILABLE,
-                    "DEPENDENCY_UNAVAILABLE",
+                    ApiErrorCodes.DEPENDENCY_UNAVAILABLE,
                     "Required external service is temporarily unavailable. Please try again later."
             );
         }
 
         log.error("Internal server error occurred", ex.getCause());
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "Internal server error.");
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ApiErrorCodes.INTERNAL_SERVER_ERROR, "Internal server error.");
     }
     
-     @ExceptionHandler(Exception.class)
+    @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
         log.error("Unexpected error occurred", ex);
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "UNEXPECTED_ERROR", "An unexpected error occurred. Please try again later.");
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ApiErrorCodes.UNEXPECTED_ERROR, "An unexpected error occurred. Please try again later.");
     }
 
-    private boolean isCausedBy(Throwable throwable, Class<? extends Throwable> type) {
+    private boolean hasUnknownHostCause(Throwable throwable) {
         Throwable current = throwable;
         while (current != null) {
-            if (type.isInstance(current)) {
+            if (current instanceof UnknownHostException) {
                 return true;
             }
             current = current.getCause();

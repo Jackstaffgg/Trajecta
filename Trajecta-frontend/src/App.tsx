@@ -14,6 +14,7 @@ import { StartScreen } from "@/components/layout/start-screen";
 import { ProfileView } from "@/modules/profile/profile-view";
 import { AdminDashboardView } from "@/modules/admin/admin-dashboard-view";
 import { t } from "@/lib/i18n";
+import { API_ERROR_CODES } from "@/lib/error-codes";
 import { useFlightStore } from "@/store/flight-store";
 import { useLocaleStore } from "@/store/locale-store";
 import type { UserBannedSocketPayload } from "@/types/flight";
@@ -118,6 +119,7 @@ export default function App() {
   const locale = useLocaleStore((s) => s.locale);
   const [banPayload, setBanPayload] = useState<UserBannedSocketPayload | null>(null);
   const [entryView, setEntryView] = useState<"landing" | "auth" | "workspace">("landing");
+  const [checkingBanStatus, setCheckingBanStatus] = useState(false);
 
   useEffect(() => {
     if (auth.isAuthenticated && entryView === "auth") {
@@ -127,14 +129,21 @@ export default function App() {
 
   useEffect(() => {
     if (!auth.isAuthenticated || !auth.token) {
+      setBanPayload(null);
+      setCheckingBanStatus(false);
       return;
     }
 
     let active = true;
     const run = async () => {
+      setCheckingBanStatus(true);
       try {
         const status = await getCurrentUserBanStatus({ token: auth.token });
-        if (!active || !status) {
+        if (!active) {
+          return;
+        }
+        if (!status) {
+          setBanPayload(null);
           return;
         }
         setBanPayload({ ...status, userId: auth.user?.id ?? status.userId });
@@ -146,7 +155,22 @@ export default function App() {
           logout();
           return;
         }
+        if (error instanceof ApiClientError && error.code === API_ERROR_CODES.USER_BANNED) {
+          setBanPayload({
+            userId: auth.user?.id ?? 0,
+            punishmentId: 0,
+            reason: locale === "ru" ? "Доступ ограничен активной блокировкой" : "Access is restricted by an active ban",
+            expiredAt: null,
+            punishedById: 0,
+            punishedByName: "System"
+          });
+          return;
+        }
         setError(error instanceof Error ? error.message : (locale === "ru" ? "Не удалось проверить статус бана" : "Failed to verify ban status"), "realtime");
+      } finally {
+        if (active) {
+          setCheckingBanStatus(false);
+        }
       }
     };
 
@@ -156,12 +180,12 @@ export default function App() {
     };
   }, [auth.isAuthenticated, auth.token, auth.user?.id, locale, logout, setError]);
 
-  if (entryView === "landing") {
+  if (!auth.isAuthenticated && entryView === "landing") {
     return (
       <LandingScreen
-        isAuthenticated={auth.isAuthenticated}
+        isAuthenticated={false}
         username={auth.user?.username ?? undefined}
-        onStart={() => setEntryView(auth.isAuthenticated ? "workspace" : "auth")}
+        onStart={() => setEntryView("auth")}
         onLogin={() => setEntryView("auth")}
       />
     );
@@ -171,8 +195,26 @@ export default function App() {
     return <AuthScreen />;
   }
 
+  if (checkingBanStatus) {
+    return <ProcessingScreen />;
+  }
+
   if (banPayload) {
-    return <BannedScreen payload={banPayload} onLogout={logout} />;
+    return <BannedScreen payload={banPayload} onLogout={() => {
+      logout();
+      setEntryView("landing");
+    }} />;
+  }
+
+  if (entryView === "landing") {
+    return (
+      <LandingScreen
+        isAuthenticated={true}
+        username={auth.user?.username ?? undefined}
+        onStart={() => setEntryView("workspace")}
+        onLogin={() => setEntryView("workspace")}
+      />
+    );
   }
 
   return (

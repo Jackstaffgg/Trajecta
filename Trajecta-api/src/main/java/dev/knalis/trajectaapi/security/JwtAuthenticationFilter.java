@@ -1,5 +1,8 @@
 package dev.knalis.trajectaapi.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.knalis.trajectaapi.dto.common.ApiResponse;
+import dev.knalis.trajectaapi.exception.ApiErrorCodes;
 import dev.knalis.trajectaapi.service.intrf.auth.JwtService;
 import dev.knalis.trajectaapi.model.user.User;
 import dev.knalis.trajectaapi.model.user.punishment.PunishmentType;
@@ -32,6 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
     private final PunishmentRepository punishmentRepository;
+    private final ObjectMapper objectMapper;
 
     @Override
     protected boolean shouldNotFilterAsyncDispatch() {
@@ -102,7 +106,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private void writeForbidden(HttpServletResponse response) throws IOException {
         response.setStatus(HttpStatus.FORBIDDEN.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.sendError(HttpStatus.FORBIDDEN.value());
+        response.getWriter().write(objectMapper.writeValueAsString(
+                ApiResponse.failure(HttpStatus.FORBIDDEN.value(), ApiErrorCodes.USER_BANNED, "User is banned")
+        ));
     }
 
     private boolean shouldRejectBanned(HttpServletRequest request, UserDetails userDetails) {
@@ -116,6 +122,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         if (uri.startsWith("/api/v1/auth/")) {
+            return false;
+        }
+
+        if ("/api/v1/users/me/ban-status".equals(uri)) {
             return false;
         }
 

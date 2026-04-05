@@ -2,14 +2,12 @@ package dev.knalis.trajectaapi.service.impl.auth;
 
 import dev.knalis.trajectaapi.dto.auth.RegisterRequest;
 import dev.knalis.trajectaapi.dto.user.UserResponse;
-import dev.knalis.trajectaapi.exception.PermissionDeniedException;
 import dev.knalis.trajectaapi.exception.RateLimitException;
 import dev.knalis.trajectaapi.mapper.UserMapper;
 import dev.knalis.trajectaapi.model.user.User;
 import dev.knalis.trajectaapi.security.LoginRateLimiter;
 import dev.knalis.trajectaapi.service.intrf.user.UserService;
 import dev.knalis.trajectaapi.service.intrf.auth.JwtService;
-import dev.knalis.trajectaapi.service.intrf.user.PunishmentService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,8 +34,6 @@ class AuthServiceImplTest {
     @Mock
     private LoginRateLimiter rateLimiter;
     @Mock
-    private PunishmentService punishmentService;
-    @Mock
     private UserService userService;
     @Mock
     private UserMapper userMapper;
@@ -46,7 +42,7 @@ class AuthServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new AuthServiceImpl(authenticationManager, jwtService, userDetailsService, rateLimiter, punishmentService, userService, userMapper);
+        service = new AuthServiceImpl(authenticationManager, jwtService, userDetailsService, rateLimiter, userService, userMapper);
     }
 
     @Test
@@ -95,7 +91,6 @@ class AuthServiceImplTest {
         when(rateLimiter.isAllowed("pilot")).thenReturn(true);
         when(userDetailsService.loadUserByUsername("pilot")).thenReturn(details);
         when(jwtService.generateToken(details)).thenReturn("jwt-token");
-        when(punishmentService.isUserBanned(5L)).thenReturn(false);
         when(userMapper.toDto(details)).thenReturn(dto);
 
         var response = service.login("pilot", "pass");
@@ -107,20 +102,23 @@ class AuthServiceImplTest {
     }
 
     @Test
-    void login_throwsWhenUserIsBanned() {
+    void login_allowsBannedUserAndReturnsToken() {
         User details = new User();
         details.setId(55L);
+        details.setUsername("pilot");
+        UserResponse dto = new UserResponse();
+        dto.setUsername("pilot");
 
         when(rateLimiter.isAllowed("pilot")).thenReturn(true);
         when(userDetailsService.loadUserByUsername("pilot")).thenReturn(details);
         when(jwtService.generateToken(details)).thenReturn("jwt-token");
-        when(punishmentService.isUserBanned(55L)).thenReturn(true);
+        when(userMapper.toDto(details)).thenReturn(dto);
 
-        assertThatThrownBy(() -> service.login("pilot", "pass"))
-                .isInstanceOf(PermissionDeniedException.class)
-                .hasMessageContaining("banned");
+        var response = service.login("pilot", "pass");
 
-        verify(rateLimiter, never()).onSuccess("pilot");
+        assertThat(response.getToken()).isEqualTo("jwt-token");
+        assertThat(response.getUser().getUsername()).isEqualTo("pilot");
+        verify(rateLimiter).onSuccess("pilot");
     }
 }
 
