@@ -14,11 +14,11 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
-set -a
-. "./$ENV_FILE"
-set +a
 
-WORKER_REPLICAS="${WORKER_REPLICAS:-2}"
+WORKER_REPLICAS="$(grep -E '^WORKER_REPLICAS=' "$ENV_FILE" | tail -n 1 | cut -d '=' -f 2- | tr -d "'\"[:space:]")"
+if [ -z "$WORKER_REPLICAS" ]; then
+  WORKER_REPLICAS="2"
+fi
 
 run_compose() {
   docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
