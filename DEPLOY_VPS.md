@@ -85,6 +85,9 @@ cp .env.vps.example .env.vps
 - `MINIO_PASS=...`
 - `JWT_SECRET=...` (long random)
 - `INTERNAL_WORKER_TOKEN=...` (long random)
+- `WORKER_REPLICAS=2` (recommended start point for 3 CPU / 4 GB VPS)
+- `WORKER_CPU_LIMIT=0.7` and `WORKER_MEM_LIMIT=576m` (per worker)
+- `BACKEND_MEM_LIMIT=768m` and `BACKEND_JAVA_TOOL_OPTIONS=...` (keep backend heap capped)
 - `OWNER_USERNAME=...` (admin user created on startup)
 - `OWNER_PASSWORD=...` (admin password created on startup)
 - `OWNER_MAIL=...` (admin email created on startup)

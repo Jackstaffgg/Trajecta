@@ -11,6 +11,8 @@ set "GRADLEW=%API_DIR%\gradlew.bat"
 set "API_COMPOSE_FILE=%API_DIR%\compose.yaml"
 set "WORKER_COMPOSE_FILE=%WORKER_DIR%\docker-compose.yml"
 set "FRONTEND_COMPOSE_FILE=%FRONTEND_DIR%\docker-compose.yml"
+set "WORKER_REPLICAS=%WORKER_REPLICAS%"
+if "%WORKER_REPLICAS%"=="" set "WORKER_REPLICAS=2"
 
 pushd "%API_DIR%"
 if errorlevel 1 (
@@ -101,6 +103,18 @@ if /I "%~1"=="autologs" (
   goto parse_args
 )
 
+if /I "%~1"=="workers" (
+  if "%~2"=="" (
+    echo [ERROR] Missing value after workers. Example: workers 2
+    popd
+    exit /b 1
+  )
+  set "WORKER_REPLICAS=%~2"
+  shift
+  shift
+  goto parse_args
+)
+
 if /I "%~1"=="help" goto usage
 if /I "%~1"=="/h" goto usage
 if /I "%~1"=="-h" goto usage
@@ -179,8 +193,8 @@ if "%RUN_COMPOSE%"=="1" (
     exit /b 1
   )
 
-  echo Running: docker compose -f "%WORKER_COMPOSE_FILE%" up --build -d worker
-  docker compose -f "%WORKER_COMPOSE_FILE%" up --build -d worker
+  echo Running: docker compose -f "%WORKER_COMPOSE_FILE%" up --build -d --scale worker=%WORKER_REPLICAS% worker
+  docker compose -f "%WORKER_COMPOSE_FILE%" up --build -d --scale worker=%WORKER_REPLICAS% worker
   if errorlevel 1 (
     echo [ERROR] Worker Docker Compose failed.
     popd
@@ -322,7 +336,7 @@ exit /b 0
 
 :usage
 echo Usage:
-echo   start-all-stacks.bat [up^|restart^|down^|status^|logs^|validate] [build] [tests] [skipcompose] [autologs]
+echo   start-all-stacks.bat [up^|restart^|down^|status^|logs^|validate] [build] [tests] [skipcompose] [autologs] [workers N]
 echo.
 echo Default behavior:
 echo   start-all-stacks.bat
@@ -341,6 +355,12 @@ echo   start-all-stacks.bat validate
 echo   start-all-stacks.bat skipcompose
 echo   start-all-stacks.bat autologs
 echo   start-all-stacks.bat up build autologs
+echo   start-all-stacks.bat up workers 2
+echo.
+echo Worker scaling:
+echo   - default WORKER_REPLICAS=%WORKER_REPLICAS%
+echo   - override via argument: workers N
+echo   - or environment variable before run: set WORKER_REPLICAS=2
 popd
 exit /b 0
 

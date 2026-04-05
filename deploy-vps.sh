@@ -14,6 +14,12 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
+set -a
+. "./$ENV_FILE"
+set +a
+
+WORKER_REPLICAS="${WORKER_REPLICAS:-2}"
+
 run_compose() {
   docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
 }
@@ -23,7 +29,7 @@ confirm="${2:-}"
 
 case "$action" in
   up)
-    run_compose up -d --build --remove-orphans
+    run_compose up -d --build --remove-orphans --scale "worker=$WORKER_REPLICAS"
     ;;
   pull)
     run_compose pull
@@ -32,7 +38,7 @@ case "$action" in
     run_compose down --remove-orphans
     ;;
   restart)
-    run_compose up -d --build --force-recreate --remove-orphans
+    run_compose up -d --build --force-recreate --remove-orphans --scale "worker=$WORKER_REPLICAS"
     ;;
   logs)
     run_compose logs -f --tail=200
@@ -57,6 +63,7 @@ case "$action" in
     ;;
   *)
     echo "Usage: ./deploy-vps.sh [up|pull|down|restart|logs|status|validate|wipe --yes]"
+    echo "Hint: set WORKER_REPLICAS in .env.vps (default: 2)."
     exit 1
     ;;
 esac

@@ -89,6 +89,8 @@ API integration:
 - `WORKER_TOKEN_HEADER` (default `X-Worker-Token`)
 - `INTERNAL_WORKER_TOKEN` (required)
 - `HTTP_TIMEOUT_SECONDS`
+- `WORKER_CPU_LIMIT` (compose CPU limit per worker container)
+- `WORKER_MEM_LIMIT` (compose RAM limit per worker container)
 
 ## Docker
 
@@ -100,6 +102,7 @@ Run:
 
 ```bash
 docker compose up --build -d worker
+docker compose up --build -d --scale worker=2 worker
 ```
 
 ## Tests

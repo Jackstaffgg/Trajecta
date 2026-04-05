@@ -4,27 +4,17 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7e60ac53-03c3-493b-aa67-b1ef6b2f0543" name="Changes" comment="add batch file upload support with progress tracking and deduplication">
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/pub/PublicController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/admin/ServiceHealthResponse.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/admin/ServiceRuntimeMetricsResponse.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/check-system.ps1" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/check-system.sh" afterDir="false" />
+    <list default="true" id="7e60ac53-03c3-493b-aa67-b1ef6b2f0543" name="Changes" comment="enhance system diagnostics script with detailed health checks and performance metrics">
+      <change beforePath="$PROJECT_DIR$/.env.vps.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.vps.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DEPLOY_VPS.md" beforeDir="false" afterPath="$PROJECT_DIR$/DEPLOY_VPS.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/SecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/WebSocketSecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/WebSocketSecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/admin/AdminCacheController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/admin/AdminCacheController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/repo/FlightTaskRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/repo/FlightTaskRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/cache/CacheAdminServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/cache/CacheAdminServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/intrf/user/CacheAdminService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/intrf/user/CacheAdminService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/controller/rest/v1/admin/AdminCacheControllerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/controller/rest/v1/admin/AdminCacheControllerTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/App.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/components/layout/sidebar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/components/layout/sidebar.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/lib/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/lib/api.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/lib/i18n.ts" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/lib/i18n.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/modules/admin/admin-dashboard-view.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/modules/admin/admin-dashboard-view.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-worker/trajecta_worker/messaging.py" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-worker/trajecta_worker/messaging.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-worker/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-worker/.env.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-worker/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-worker/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-worker/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-worker/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deploy-vps.sh" beforeDir="false" afterPath="$PROJECT_DIR$/deploy-vps.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.vps.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.vps.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/start-all-stacks.bat" beforeDir="false" afterPath="$PROJECT_DIR$/start-all-stacks.bat" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -293,7 +283,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1775397058834</updated>
-      <workItem from="1775397059887" duration="12213000" />
+      <workItem from="1775397059887" duration="14572000" />
     </task>
     <task id="LOCAL-00011" summary="implement user ban and unban functionality with history tracking in admin dashboard">
       <option name="closed" value="true" />
@@ -311,7 +301,23 @@
       <option name="project" value="LOCAL" />
       <updated>1775404293319</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="add service health and runtime metrics endpoints with admin dashboard integration">
+      <option name="closed" value="true" />
+      <created>1775416784229</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1775416784229</updated>
+    </task>
+    <task id="LOCAL-00014" summary="enhance system diagnostics script with detailed health checks and performance metrics">
+      <option name="closed" value="true" />
+      <created>1775418080037</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1775418080037</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -342,7 +348,9 @@
     <MESSAGE value="add API error codes and implement ban handling in authentication flow" />
     <MESSAGE value="implement user ban and unban functionality with history tracking in admin dashboard" />
     <MESSAGE value="add batch file upload support with progress tracking and deduplication" />
-    <option name="LAST_COMMIT_MESSAGE" value="add batch file upload support with progress tracking and deduplication" />
+    <MESSAGE value="add service health and runtime metrics endpoints with admin dashboard integration" />
+    <MESSAGE value="enhance system diagnostics script with detailed health checks and performance metrics" />
+    <option name="LAST_COMMIT_MESSAGE" value="enhance system diagnostics script with detailed health checks and performance metrics" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>
