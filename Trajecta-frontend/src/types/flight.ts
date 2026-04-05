@@ -43,6 +43,7 @@ export type AuthUser = {
   username: string;
   email: string;
   role: string;
+  hasActiveBan?: boolean;
 };
 
 export type UserPunishmentInfo = {
@@ -58,6 +59,7 @@ export type UserPunishmentInfo = {
 
 export type AdminUserDetails = AuthUser & {
   activePunishments: UserPunishmentInfo[];
+  punishmentHistory: UserPunishmentInfo[];
 };
 
 export type AdminUsersPage = {
@@ -109,8 +111,13 @@ export type NotificationSocketPayload = {
 };
 
 export type SocketEvent = {
-  type: "NEW_NOTIFICATION" | "TASK_STATUS_UPDATE" | "USER_BANNED";
+  type: "NEW_NOTIFICATION" | "TASK_STATUS_UPDATE" | "USER_BANNED" | "USER_UNBANNED";
   payload: unknown;
+};
+
+export type UserUnbannedSocketPayload = {
+  userId: number;
+  timestamp?: string;
 };
 
 export type UserBannedSocketPayload = {

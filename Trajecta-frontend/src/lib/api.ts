@@ -276,7 +276,7 @@ export async function getNotifications(input: { token: string }): Promise<Notifi
   });
 
   const data = await readEnvelope<NotificationDto[]>(res);
-  return data.map(mapNotificationDto);
+  return data.map(mapNotificationDto).filter((item) => item.id > 0);
 }
 
 export function mapNotificationDto(item: NotificationDto): NotificationInfo {
@@ -356,7 +356,12 @@ export async function getAdminUserDetails(input: { token: string; userId: number
     headers: withAuth({}, input.token)
   });
 
-  return readEnvelope<AdminUserDetails>(res);
+  const details = await readEnvelope<AdminUserDetails>(res);
+  return {
+    ...details,
+    activePunishments: Array.isArray(details.activePunishments) ? details.activePunishments : [],
+    punishmentHistory: Array.isArray(details.punishmentHistory) ? details.punishmentHistory : []
+  };
 }
 
 export async function updateAdminUserRole(input: {
@@ -455,7 +460,7 @@ export async function getAdminBroadcastHistory(input: { token: string; limit?: n
   });
 
   const data = await readEnvelope<NotificationDto[]>(res);
-  return data.map(mapNotificationDto);
+  return data.map(mapNotificationDto).filter((item) => item.id > 0);
 }
 
 export async function getAdminCacheHealth(input: { token: string }): Promise<CacheHealthDto> {
@@ -476,6 +481,10 @@ export async function clearAdminUserCache(input: { token: string; userId: number
 }
 
 export async function markNotificationAsRead(input: { token: string; id: number }): Promise<void> {
+  if (!Number.isFinite(input.id) || input.id <= 0) {
+    throw new ApiClientError("Invalid notification id", 400, "INVALID_NOTIFICATION_ID");
+  }
+
   const res = await fetch(buildUrl(`/api/v1/notifications/${input.id}/read`), {
     method: "PATCH",
     headers: withAuth({}, input.token)
@@ -494,6 +503,10 @@ export async function markAllNotificationsAsRead(input: { token: string }): Prom
 }
 
 export async function deleteNotification(input: { token: string; id: number }): Promise<void> {
+  if (!Number.isFinite(input.id) || input.id <= 0) {
+    throw new ApiClientError("Invalid notification id", 400, "INVALID_NOTIFICATION_ID");
+  }
+
   const res = await fetch(buildUrl(`/api/v1/notifications/${input.id}`), {
     method: "DELETE",
     headers: withAuth({}, input.token)

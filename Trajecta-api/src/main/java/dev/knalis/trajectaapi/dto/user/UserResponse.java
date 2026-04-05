@@ -20,4 +20,7 @@ public class UserResponse {
 
     @Schema(description = "Role name.", example = "USER")
     private String role;
+
+    @Schema(description = "Whether the user currently has an active ban.", example = "false")
+    private boolean hasActiveBan;
 }

@@ -42,8 +42,11 @@ public class AdminUserController {
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size
     ) {
+        final var users = userMapper.toDtoList(userService.findAll(page, size));
+        users.forEach(user -> user.setHasActiveBan(punishmentService.isUserBanned(user.getId())));
+
         return ResponseEntity.ok(
-                ApiResponse.success(userMapper.toDtoList(userService.findAll(page, size)))
+                ApiResponse.success(users)
         );
     }
     
@@ -78,6 +81,11 @@ public class AdminUserController {
         final var response = userMapper.toAdminDetailsDto(user);
         response.setActivePunishments(
                 punishmentService.getActivePunishments(id).stream()
+                        .map(userPunishmentMapper::toDto)
+                        .toList()
+        );
+        response.setPunishmentHistory(
+                punishmentService.getPunishmentsHistory(id).stream()
                         .map(userPunishmentMapper::toDto)
                         .toList()
         );

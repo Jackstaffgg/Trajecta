@@ -114,6 +114,12 @@ public class PunishmentServiceImpl implements PunishmentService {
     }
 
     @Override
+    public List<UserPunishment> getPunishmentsHistory(long userId) {
+        User user = userService.findById(userId);
+        return punishmentRepository.findByUserOrderByCreatedAtDesc(user);
+    }
+
+    @Override
     public Optional<UserPunishment> getActiveBan(long userId) {
         User user = userService.findById(userId);
         return punishmentRepository.findLatestActivePunishment(user, PunishmentType.BAN, Instant.now());
@@ -129,6 +135,10 @@ public class PunishmentServiceImpl implements PunishmentService {
         if (punishment.isExpired()) {
             throw new BadRequestException("Ban is already inactive");
         }
+        
+        eventPublisher.publishUserUnbanned(
+                punishment.getUser().getId()
+        );
 
         punishment.setExpiredAt(Instant.now());
         punishmentRepository.save(punishment);

@@ -27,4 +27,7 @@ public class AdminUserDetailsResponse {
     
     @Schema(description = "List of active punishments for the user.")
     private List<UserPunishmentResponse> activePunishments;
+
+    @Schema(description = "Full punishment history for the user, sorted by most recent first.")
+    private List<UserPunishmentResponse> punishmentHistory;
 }

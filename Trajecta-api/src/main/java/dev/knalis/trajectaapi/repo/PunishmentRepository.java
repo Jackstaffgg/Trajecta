@@ -51,4 +51,6 @@ public interface PunishmentRepository extends JpaRepository<UserPunishment, Long
             @Param("type") PunishmentType type,
             @Param("now") Instant now
     );
+
+    List<UserPunishment> findByUserOrderByCreatedAtDesc(User user);
 }

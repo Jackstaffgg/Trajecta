@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public enum WsEventType {
     NEW_NOTIFICATION,
     TASK_STATUS_UPDATE,
-    USER_BANNED,
+    USER_BANNED, USER_UNBANNED,
 }
 
 

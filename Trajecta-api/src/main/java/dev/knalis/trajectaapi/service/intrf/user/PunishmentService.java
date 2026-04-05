@@ -18,6 +18,8 @@ public interface PunishmentService {
     Optional<UserPunishment> getActiveBan(long userId);
     
     List<UserPunishment> getActivePunishments(long userId);
+
+    List<UserPunishment> getPunishmentsHistory(long userId);
     
     boolean isUserBanned(long userId);
 }

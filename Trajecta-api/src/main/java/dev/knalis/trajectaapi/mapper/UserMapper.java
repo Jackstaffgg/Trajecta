@@ -31,6 +31,7 @@ public abstract class UserMapper {
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     public abstract void updateUserFromDto(UserUpdateRequest request, @MappingTarget User user);
     
+    @Mapping(target = "hasActiveBan", ignore = true)
     public abstract UserResponse toDto(User user);
     
     public List<UserResponse> toDtoList(List<?> users) {
@@ -65,5 +66,6 @@ public abstract class UserMapper {
     }
     
     @Mapping(target = "activePunishments", ignore = true)
+    @Mapping(target = "punishmentHistory", ignore = true)
     public abstract AdminUserDetailsResponse toAdminDetailsDto(User user);
 }

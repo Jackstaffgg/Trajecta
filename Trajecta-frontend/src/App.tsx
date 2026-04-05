@@ -17,10 +17,58 @@ import { t } from "@/lib/i18n";
 import { API_ERROR_CODES } from "@/lib/error-codes";
 import { useFlightStore } from "@/store/flight-store";
 import { useLocaleStore } from "@/store/locale-store";
-import type { UserBannedSocketPayload } from "@/types/flight";
-import { ApiClientError, getCurrentUserBanStatus } from "@/lib/api";
+import type { SocketEvent, UserBannedSocketPayload, UserUnbannedSocketPayload } from "@/types/flight";
+import { ApiClientError, getApiBaseUrl, getCurrentUserBanStatus } from "@/lib/api";
 
 type AnalyticsTab = "dashboard" | "replay" | "charts" | "params" | "diagnostics";
+
+function parseStompMessage(rawFrame: string): { command: string; body: string } | null {
+  const frame = rawFrame.trim();
+  if (!frame) {
+    return null;
+  }
+  const sep = frame.indexOf("\n\n");
+  if (sep < 0) {
+    return { command: frame.split("\n")[0] ?? "", body: "" };
+  }
+  return {
+    command: frame.slice(0, sep).split("\n")[0] ?? "",
+    body: frame.slice(sep + 2)
+  };
+}
+
+function toStompFrame(command: string, headers: Record<string, string>, body = ""): string {
+  const headerLines = Object.entries(headers).map(([k, v]) => `${k}:${v}`);
+  return [command, ...headerLines, "", body].join("\n") + "\0";
+}
+
+function normalizePath(value: string, fallback: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return fallback;
+  }
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+}
+
+function resolveWsEndpoint(): string {
+  const wsPath = normalizePath((import.meta.env.VITE_WS_PATH as string | undefined) ?? "/ws", "/ws");
+  const base = getApiBaseUrl();
+  if (base) {
+    if (/^https?:\/\//i.test(base)) {
+      const url = new URL(base);
+      url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+      url.pathname = wsPath;
+      url.search = "";
+      url.hash = "";
+      return url.toString();
+    }
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const prefix = normalizePath(base, "").replace(/\/$/, "");
+    return `${protocol}//${window.location.host}${prefix}${wsPath}`;
+  }
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${window.location.host}${wsPath}`;
+}
 
 function AnalyticsWorkspace() {
   const locale = useLocaleStore((s) => s.locale);
@@ -179,6 +227,80 @@ export default function App() {
       active = false;
     };
   }, [auth.isAuthenticated, auth.token, auth.user?.id, locale, logout, setError]);
+
+  useEffect(() => {
+    if (!auth.isAuthenticated || !auth.token || !banPayload) {
+      return;
+    }
+
+    let closed = false;
+    const ws = new WebSocket(resolveWsEndpoint());
+
+    ws.onopen = () => {
+      ws.send(
+        toStompFrame("CONNECT", {
+          "accept-version": "1.2",
+          host: window.location.host,
+          Authorization: `Bearer ${auth.token}`
+        })
+      );
+    };
+
+    ws.onmessage = (event) => {
+      const chunks = String(event.data).split("\0").filter(Boolean);
+      for (const chunk of chunks) {
+        const message = parseStompMessage(chunk);
+        if (!message) {
+          continue;
+        }
+
+        if (message.command === "CONNECTED") {
+          ws.send(
+            toStompFrame("SUBSCRIBE", {
+              id: "events-sub-banned-0",
+              destination: "/user/queue/events",
+              ack: "auto"
+            })
+          );
+          continue;
+        }
+
+        if (message.command !== "MESSAGE" || !message.body) {
+          continue;
+        }
+
+        let envelope: SocketEvent | null = null;
+        try {
+          envelope = JSON.parse(message.body) as SocketEvent;
+        } catch {
+          envelope = null;
+        }
+
+        if (!envelope || envelope.type !== "USER_UNBANNED") {
+          continue;
+        }
+
+        const payload = envelope.payload as UserUnbannedSocketPayload;
+        if (!payload?.userId || payload.userId !== (auth.user?.id ?? payload.userId)) {
+          continue;
+        }
+
+        setBanPayload(null);
+        setEntryView("workspace");
+        ws.close();
+      }
+    };
+
+    ws.onclose = () => {
+      closed = true;
+    };
+
+    return () => {
+      if (!closed) {
+        ws.close();
+      }
+    };
+  }, [auth.isAuthenticated, auth.token, auth.user?.id, banPayload]);
 
   if (!auth.isAuthenticated && entryView === "landing") {
     return (

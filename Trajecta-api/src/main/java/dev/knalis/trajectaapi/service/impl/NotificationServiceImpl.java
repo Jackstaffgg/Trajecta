@@ -56,12 +56,13 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setRecipientId(request.getRecipientId());
         notification.setRead(false);
         notification.setCreatedAt(Instant.now());
-        
-        NotificationPayload payload = new NotificationPayload(notificationMapper.toDto(notification));
-        wsEventDispatcher.emitToUsers(List.of(notification.getRecipientId()), WsEventType.NEW_NOTIFICATION , payload);
+
+        final var savedNotification = notificationRepository.save(notification);
+        NotificationPayload payload = new NotificationPayload(notificationMapper.toDto(savedNotification));
+        wsEventDispatcher.emitToUsers(List.of(savedNotification.getRecipientId()), WsEventType.NEW_NOTIFICATION , payload);
         incrementCounter("notifications.created");
 
-        return notificationRepository.save(notification);
+        return savedNotification;
     }
     
     @Override

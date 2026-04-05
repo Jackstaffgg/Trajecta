@@ -152,6 +152,7 @@ export function AppShell({ children, onUserBanned, onGoHome }: AppShellProps) {
   const [loadingPanel, setLoadingPanel] = useState(false);
   const [deletingTasks, setDeletingTasks] = useState(false);
   const [wsState, setWsState] = useState<WsState>("connecting");
+  const [notificationSyncPending, setNotificationSyncPending] = useState(false);
 
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
@@ -159,6 +160,7 @@ export function AppShell({ children, onUserBanned, onGoHome }: AppShellProps) {
   const manualCloseRef = useRef(false);
   const currentTaskRef = useRef<TaskInfo | null>(null);
   const selectTaskRef = useRef(selectTask);
+  const notificationSyncTimerRef = useRef<number | null>(null);
   const notificationsAnchorRef = useRef<HTMLDivElement | null>(null);
   const notificationsPanelRef = useRef<HTMLDivElement | null>(null);
   const [notificationsDropdownPos, setNotificationsDropdownPos] = useState({ top: 72, left: 16, width: 360 });
@@ -355,6 +357,24 @@ export function AppShell({ children, onUserBanned, onGoHome }: AppShellProps) {
               continue;
             }
 
+            if (!Number.isFinite(incoming.id) || incoming.id <= 0) {
+              setNotificationSyncPending(true);
+              if (notificationSyncTimerRef.current !== null) {
+                window.clearTimeout(notificationSyncTimerRef.current);
+              }
+              notificationSyncTimerRef.current = window.setTimeout(() => {
+                setNotificationSyncPending(false);
+                notificationSyncTimerRef.current = null;
+              }, 6000);
+              continue;
+            }
+
+            setNotificationSyncPending(false);
+            if (notificationSyncTimerRef.current !== null) {
+              window.clearTimeout(notificationSyncTimerRef.current);
+              notificationSyncTimerRef.current = null;
+            }
+
             const normalized = mapNotificationDto({
               id: incoming.id,
               type: incoming.type,
@@ -402,6 +422,10 @@ export function AppShell({ children, onUserBanned, onGoHome }: AppShellProps) {
 
     return () => {
       manualCloseRef.current = true;
+      if (notificationSyncTimerRef.current !== null) {
+        window.clearTimeout(notificationSyncTimerRef.current);
+        notificationSyncTimerRef.current = null;
+      }
       if (reconnectTimerRef.current !== null) {
         window.clearTimeout(reconnectTimerRef.current);
         reconnectTimerRef.current = null;
@@ -471,7 +495,7 @@ export function AppShell({ children, onUserBanned, onGoHome }: AppShellProps) {
   }
 
   async function handleMarkAsRead(notification: NotificationInfo) {
-    if (!auth.token || notification.isRead) {
+    if (!auth.token || notification.isRead || notification.id <= 0) {
       return;
     }
     try {
@@ -499,7 +523,7 @@ export function AppShell({ children, onUserBanned, onGoHome }: AppShellProps) {
   }
 
   async function handleDeleteNotification(notification: NotificationInfo) {
-    if (!auth.token) {
+    if (!auth.token || notification.id <= 0) {
       return;
     }
     try {
@@ -564,6 +588,12 @@ export function AppShell({ children, onUserBanned, onGoHome }: AppShellProps) {
                   {t(locale, "header.markAll")}
                 </Button>
               </div>
+
+              {notificationSyncPending ? (
+                <p className="mb-2 rounded-md border border-zinc-300/35 bg-zinc-300/10 px-2 py-1 text-[11px] text-zinc-200">
+                  {t(locale, "header.notificationsSyncing")}
+                </p>
+              ) : null}
 
               <div className="max-h-72 space-y-3 overflow-auto pr-1">
                 {notifications.length === 0 ? (

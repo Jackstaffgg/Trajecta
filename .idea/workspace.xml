@@ -4,20 +4,27 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7e60ac53-03c3-493b-aa67-b1ef6b2f0543" name="Changes" comment="add NotificationType enumeration to Notification model and update workspace configuration">
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/props/BaseSeedProperties.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules/Trajecta-api.main.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules/Trajecta-api.main.iml" afterDir="false" />
+    <list default="true" id="7e60ac53-03c3-493b-aa67-b1ef6b2f0543" name="Changes" comment="add API error codes and implement ban handling in authentication flow">
+      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/ws/payload/UserUnbannedPayload.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/event/user/UserUnbannedEvent.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/compose.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/compose.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/DataSeeder.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/DataSeeder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/RateLimitProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/props/RateLimitProperties.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/RequestLoggingProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/props/RequestLoggingProperties.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/security/AiConclusionRateLimiter.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/security/AiConclusionRateLimiter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/security/LoginRateLimiter.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/security/LoginRateLimiter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/security/RequestLoggingFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/security/RequestLoggingFilter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/security/TaskCreationRateLimiter.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/security/TaskCreationRateLimiter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker-compose.vps.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.vps.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/user/AdminUserController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/user/AdminUserController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/user/AdminUserDetailsResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/user/AdminUserDetailsResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/user/UserResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/user/UserResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/ws/WsEventType.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/ws/WsEventType.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/event/EventPublisher.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/event/EventPublisher.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/event/user/UserBannedEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/event/user/UserBannedEventListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/mapper/UserMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/mapper/UserMapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/repo/PunishmentRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/repo/PunishmentRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/NotificationServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/NotificationServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/user/PunishmentServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/user/PunishmentServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/intrf/user/PunishmentService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/intrf/user/PunishmentService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/components/layout/app-shell.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/components/layout/app-shell.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/lib/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/lib/api.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/lib/i18n.ts" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/lib/i18n.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/modules/admin/admin-dashboard-view.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/modules/admin/admin-dashboard-view.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/types/flight.ts" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/types/flight.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -71,21 +78,21 @@
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "knliiss"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;knliiss&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/Jackstaffgg/Trajecta.git",
-    "accountId": "476a8ad0-c782-44ef-8ba1-a91d38e74431"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/Jackstaffgg/Trajecta.git&quot;,
+    &quot;accountId&quot;: &quot;476a8ad0-c782-44ef-8ba1-a91d38e74431&quot;
   }
-}]]></component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 1
-}]]></component>
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 1
+}</component>
   <component name="ProjectId" id="3BwCq6DWS300z6KH23kgk5FkhVq" />
   <component name="ProjectViewState">
     <option name="showLibraryContents" value="true" />
@@ -98,16 +105,23 @@
     "Gradle.Build Trajecta-api.executor": "Run",
     "Gradle.Download Sources.executor": "Run",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
     "ts.external.directory.path": "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2024.3.1.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external"
   }
 }]]></component>
   <component name="RecentsManager">
     <key name="CreateClassDialog.RecentsKey">
+      <recent name="dev.knalis.trajectaapi.dto.ws.payload" />
+      <recent name="dev.knalis.trajectaapi.dto.ws.payload;" />
+      <recent name="dev.knalis.trajectaapi.event.user" />
       <recent name="dev.knalis.trajectaapi.repo" />
       <recent name="dev.knalis.trajectaapi.controller.rest.v1.admin" />
-      <recent name="dev.knalis.trajectaapi.service.intrf.user" />
-      <recent name="dev.knalis.trajectaapi.dto.user" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="Z:\Trajecta\test-assets" />
@@ -238,7 +252,39 @@
       <option name="project" value="LOCAL" />
       <updated>1775350734457</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="add base seed properties for owner user configuration and update related components">
+      <option name="closed" value="true" />
+      <created>1775392446853</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1775392446853</updated>
+    </task>
+    <task id="LOCAL-00009" summary="add APP_SEED_ENABLED configuration to environment files and update documentation">
+      <option name="closed" value="true" />
+      <created>1775392656150</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1775392656150</updated>
+    </task>
+    <task id="LOCAL-00010" summary="add API error codes and implement ban handling in authentication flow">
+      <option name="closed" value="true" />
+      <created>1775396604760</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1775396604760</updated>
+    </task>
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="7e60ac53-03c3-493b-aa67-b1ef6b2f0543" name="Changes" comment="add API error codes and implement ban handling in authentication flow" />
+      <created>1775397058834</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1775397058834</updated>
+      <workItem from="1775397059887" duration="5145000" />
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -263,7 +309,11 @@
     <MESSAGE value="add project icon to index.html and update workspace configuration" />
     <MESSAGE value="add OpenAI configuration to .env and docker-compose files" />
     <MESSAGE value="add NotificationType enumeration to Notification model and update workspace configuration" />
-    <option name="LAST_COMMIT_MESSAGE" value="add NotificationType enumeration to Notification model and update workspace configuration" />
+    <MESSAGE value="Refactor configuration properties and enhance data seeding functionality" />
+    <MESSAGE value="add base seed properties for owner user configuration and update related components" />
+    <MESSAGE value="add APP_SEED_ENABLED configuration to environment files and update documentation" />
+    <MESSAGE value="add API error codes and implement ban handling in authentication flow" />
+    <option name="LAST_COMMIT_MESSAGE" value="add API error codes and implement ban handling in authentication flow" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,58 @@ type AdminDashboardViewProps = {
   section: AdminSection;
 };
 
+type DateTimeParts = {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+};
+
+function pad2(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function toLocalDateTimeValue(parts: DateTimeParts) {
+  return `${parts.year}-${pad2(parts.month)}-${pad2(parts.day)}T${pad2(parts.hour)}:${pad2(parts.minute)}`;
+}
+
+function parseLocalDateTimeValue(value: string): DateTimeParts | null {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return {
+    year: date.getFullYear(),
+    month: date.getMonth() + 1,
+    day: date.getDate(),
+    hour: date.getHours(),
+    minute: date.getMinutes()
+  };
+}
+
+function toIsoFromLocalDateTime(value: string): string | null {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return date.toISOString();
+}
+
+function daysInMonth(year: number, month: number) {
+  return new Date(year, month, 0).getDate();
+}
+
+function localeTag(locale: "en" | "ru" | "uk") {
+  if (locale === "ru") {
+    return "ru-RU";
+  }
+  if (locale === "uk") {
+    return "uk-UA";
+  }
+  return "en-US";
+}
+
 export function AdminDashboardView({ section }: AdminDashboardViewProps) {
   const auth = useFlightStore((s) => s.auth);
   const setMode = useFlightStore((s) => s.setMode);
@@ -46,6 +98,8 @@ export function AdminDashboardView({ section }: AdminDashboardViewProps) {
   const [actionLoading, setActionLoading] = useState(false);
   const [banReason, setBanReason] = useState("");
   const [banUntil, setBanUntil] = useState("");
+  const [banPickerOpen, setBanPickerOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const [broadcastText, setBroadcastText] = useState("");
   const [broadcastType, setBroadcastType] = useState<"SYSTEM_NEWS" | "SYSTEM_ALERT">("SYSTEM_NEWS");
@@ -67,6 +121,7 @@ export function AdminDashboardView({ section }: AdminDashboardViewProps) {
   const [cacheUserIdRaw, setCacheUserIdRaw] = useState("");
   const [cacheClearLoading, setCacheClearLoading] = useState(false);
   const [cacheClearResult, setCacheClearResult] = useState<string | null>(null);
+  const banPickerRef = useRef<HTMLDivElement | null>(null);
 
   const isUsersSection = section === "users";
   const isUserSection = section === "user";
@@ -76,6 +131,22 @@ export function AdminDashboardView({ section }: AdminDashboardViewProps) {
   const targetRole = selectedDetails?.role?.toUpperCase();
   const isSelfTarget = selectedDetails?.id === auth.user?.id;
   const canMutateTarget = Boolean(selectedDetails) && !isSelfTarget && (actorRole === "OWNER" || targetRole !== "OWNER");
+  const hasActiveBan = Boolean(selectedDetails?.activePunishments.some((item) => item.type === "BAN" && !item.expired));
+
+  const pickerParts = useMemo<DateTimeParts>(() => {
+    const parsed = parseLocalDateTimeValue(banUntil);
+    if (parsed) {
+      return parsed;
+    }
+    const seed = new Date(Date.now() + 60 * 60 * 1000);
+    return {
+      year: seed.getFullYear(),
+      month: seed.getMonth() + 1,
+      day: seed.getDate(),
+      hour: seed.getHours(),
+      minute: Math.floor(seed.getMinutes() / 5) * 5
+    };
+  }, [banUntil]);
 
   useEffect(() => {
     if (!auth.token || (!isUsersSection && !isUserSection)) {
@@ -180,6 +251,52 @@ export function AdminDashboardView({ section }: AdminDashboardViewProps) {
     };
   }, [auth.token, isNotificationsSection, setError]);
 
+  useEffect(() => {
+    if (!banPickerOpen) {
+      return;
+    }
+
+    const onPointerDown = (event: PointerEvent) => {
+      const root = banPickerRef.current;
+      if (!root) {
+        return;
+      }
+      if (event.target instanceof Node && !root.contains(event.target)) {
+        setBanPickerOpen(false);
+      }
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setBanPickerOpen(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [banPickerOpen]);
+
+  useEffect(() => {
+    if (!confirmDeleteOpen) {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setConfirmDeleteOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [confirmDeleteOpen]);
+
   async function refreshUsersAndDetails() {
     if (!auth.token || (!isUsersSection && !isUserSection)) {
       return;
@@ -200,6 +317,27 @@ export function AdminDashboardView({ section }: AdminDashboardViewProps) {
       .split(",")
       .map((value) => Number.parseInt(value.trim(), 10))
       .filter((value) => Number.isFinite(value) && value > 0);
+  }
+
+  function updateBanPicker(patch: Partial<DateTimeParts>) {
+    const next = { ...pickerParts, ...patch };
+    const maxDay = daysInMonth(next.year, next.month);
+    if (next.day > maxDay) {
+      next.day = maxDay;
+    }
+    setBanUntil(toLocalDateTimeValue(next));
+  }
+
+  function applyBanDuration(hours: number) {
+    const date = new Date(Date.now() + hours * 60 * 60 * 1000);
+    const next: DateTimeParts = {
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      day: date.getDate(),
+      hour: date.getHours(),
+      minute: Math.floor(date.getMinutes() / 5) * 5
+    };
+    setBanUntil(toLocalDateTimeValue(next));
   }
 
   async function handleRoleUpdate(role: "USER" | "ADMIN") {
@@ -225,16 +363,24 @@ export function AdminDashboardView({ section }: AdminDashboardViewProps) {
       setError("Ban reason is required", "admin");
       return;
     }
+
+    const banIso = banUntil ? toIsoFromLocalDateTime(banUntil) : null;
+    if (banUntil && !banIso) {
+      setError("Invalid ban expiration date", "admin");
+      return;
+    }
+
     setActionLoading(true);
     try {
       await banAdminUser({
         token: auth.token,
         userId: selectedUserId,
         reason: banReason.trim(),
-        expiredAt: banUntil ? new Date(banUntil).toISOString() : null
+        expiredAt: banIso
       });
       setBanReason("");
       setBanUntil("");
+      setBanPickerOpen(false);
       await refreshUsersAndDetails();
     } catch (error) {
       setError(error instanceof ApiClientError ? error.message : "Failed to ban user", "admin");
@@ -258,16 +404,19 @@ export function AdminDashboardView({ section }: AdminDashboardViewProps) {
     }
   }
 
-  async function handleDeleteUser() {
+  async function handleConfirmDeleteUser() {
     if (!auth.token || selectedUserId === null || !canMutateTarget) {
       return;
     }
     setActionLoading(true);
     try {
       await deleteAdminUser({ token: auth.token, userId: selectedUserId });
+      const usersPage = await getAdminUsers({ token: auth.token, page, size });
+      setUsers(usersPage.items);
+      setHasNext(usersPage.hasNext);
       setSelectedUserId(null);
       setSelectedDetails(null);
-      await refreshUsersAndDetails();
+      setConfirmDeleteOpen(false);
       setMode("admin-users");
     } catch (error) {
       setError(error instanceof ApiClientError ? error.message : "Failed to delete user", "admin");
@@ -412,6 +561,7 @@ export function AdminDashboardView({ section }: AdminDashboardViewProps) {
                     <th className="px-3 py-2 text-left">{t(locale, "admin.userUsername")}</th>
                     <th className="px-3 py-2 text-left">{t(locale, "admin.userEmail")}</th>
                     <th className="px-3 py-2 text-left">{t(locale, "admin.userRole")}</th>
+                    <th className="px-3 py-2 text-left">{t(locale, "common.status")}</th>
                     <th className="px-3 py-2 text-left">{t(locale, "admin.userActions")}</th>
                   </tr>
                 </thead>
@@ -423,6 +573,15 @@ export function AdminDashboardView({ section }: AdminDashboardViewProps) {
                       <td className="px-3 py-2">{user.username}</td>
                       <td className="px-3 py-2">{user.email}</td>
                       <td className="px-3 py-2">{user.role}</td>
+                      <td className="px-3 py-2">
+                        {user.hasActiveBan ? (
+                          <span className="inline-flex items-center rounded-full border border-zinc-300/40 bg-zinc-300/15 px-2 py-0.5 text-[11px] text-zinc-200">
+                            {t(locale, "admin.statusBanned")}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">{t(locale, "admin.statusClean")}</span>
+                        )}
+                      </td>
                       <td className="px-3 py-2">
                         <Button
                           variant="outline"
@@ -493,25 +652,78 @@ export function AdminDashboardView({ section }: AdminDashboardViewProps) {
                       placeholder={t(locale, "admin.banReason")}
                       value={banReason}
                       onChange={(e) => setBanReason(e.target.value)}
-                      disabled={!canMutateTarget}
+                      disabled={!canMutateTarget || hasActiveBan}
                     />
-                    <input
-                      type="datetime-local"
-                      className="ui-field text-sm"
-                      value={banUntil}
-                      onChange={(e) => setBanUntil(e.target.value)}
-                      disabled={!canMutateTarget}
-                    />
-                    <Button disabled={actionLoading || !canMutateTarget} onClick={() => void handleBanUser()}>{t(locale, "admin.banUser")}</Button>
+
+                    <div ref={banPickerRef} className="relative">
+                      <Button
+                        variant="outline"
+                        disabled={!canMutateTarget || hasActiveBan}
+                        onClick={() => setBanPickerOpen((v) => !v)}
+                      >
+                        {banUntil ? formatDateByLocale(new Date(banUntil).toISOString(), locale) : t(locale, "admin.pickBanUntil")}
+                      </Button>
+                      {banPickerOpen ? (
+                        <div className="absolute right-0 z-20 mt-2 w-[340px] rounded-lg border border-border bg-background p-3 shadow-lg">
+                          <p className="mb-2 text-xs text-muted-foreground">{t(locale, "admin.pickBanUntil")}</p>
+                          <div className="grid grid-cols-5 gap-2">
+                            <select className="ui-select" value={pickerParts.year} onChange={(e) => updateBanPicker({ year: Number.parseInt(e.target.value, 10) })}>
+                              {Array.from({ length: 4 }, (_, idx) => new Date().getFullYear() + idx).map((year) => (
+                                <option key={year} value={year}>{year}</option>
+                              ))}
+                            </select>
+                            <select className="ui-select" value={pickerParts.month} onChange={(e) => updateBanPicker({ month: Number.parseInt(e.target.value, 10) })}>
+                              {Array.from({ length: 12 }, (_, idx) => idx + 1).map((month) => (
+                                <option key={month} value={month}>
+                                  {new Date(2026, month - 1, 1).toLocaleString(localeTag(locale), { month: "short" })}
+                                </option>
+                              ))}
+                            </select>
+                            <select className="ui-select" value={pickerParts.day} onChange={(e) => updateBanPicker({ day: Number.parseInt(e.target.value, 10) })}>
+                              {Array.from({ length: daysInMonth(pickerParts.year, pickerParts.month) }, (_, idx) => idx + 1).map((day) => (
+                                <option key={day} value={day}>{day}</option>
+                              ))}
+                            </select>
+                            <select className="ui-select" value={pickerParts.hour} onChange={(e) => updateBanPicker({ hour: Number.parseInt(e.target.value, 10) })}>
+                              {Array.from({ length: 24 }, (_, idx) => idx).map((hour) => (
+                                <option key={hour} value={hour}>{pad2(hour)}</option>
+                              ))}
+                            </select>
+                            <select className="ui-select" value={pickerParts.minute} onChange={(e) => updateBanPicker({ minute: Number.parseInt(e.target.value, 10) })}>
+                              {Array.from({ length: 12 }, (_, idx) => idx * 5).map((minute) => (
+                                <option key={minute} value={minute}>{pad2(minute)}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <Button variant="outline" size="sm" onClick={() => applyBanDuration(24)}>{t(locale, "admin.plus24h")}</Button>
+                            <Button variant="outline" size="sm" onClick={() => applyBanDuration(24 * 7)}>{t(locale, "admin.plus7d")}</Button>
+                            <Button variant="outline" size="sm" onClick={() => setBanUntil("")}>{t(locale, "admin.clearBanUntil")}</Button>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {!hasActiveBan ? (
+                      <Button disabled={actionLoading || !canMutateTarget} onClick={() => void handleBanUser()}>{t(locale, "admin.banUser")}</Button>
+                    ) : (
+                      <Button variant="outline" disabled={actionLoading || !canMutateTarget} onClick={() => void handleUnbanUser()}>{t(locale, "admin.unbanUser")}</Button>
+                    )}
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" disabled={actionLoading || !canMutateTarget} onClick={() => void handleUnbanUser()}>{t(locale, "admin.unbanUser")}</Button>
-                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {hasActiveBan ? t(locale, "admin.banStateActive") : t(locale, "admin.banStateInactive")}
+                  </p>
                 </div>
 
                 <div className="space-y-2 rounded-md border border-zinc-400/30 p-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-zinc-300">{t(locale, "admin.dangerZone")}</p>
-                  <Button variant="destructive" disabled={actionLoading || !canMutateTarget} onClick={() => void handleDeleteUser()}>{t(locale, "admin.deleteUser")}</Button>
+                  <Button
+                    variant="destructive"
+                    disabled={actionLoading || !canMutateTarget}
+                    onClick={() => setConfirmDeleteOpen(true)}
+                  >
+                    {t(locale, "admin.deleteUser")}
+                  </Button>
                 </div>
 
                 <div>
@@ -523,6 +735,23 @@ export function AdminDashboardView({ section }: AdminDashboardViewProps) {
                       {selectedDetails.activePunishments.map((p) => (
                         <div key={p.id} className="rounded border border-border/70 p-2 text-xs">
                           <p className="font-medium">{p.type} • {p.reason}</p>
+                          <p className="text-muted-foreground">{t(locale, "common.until")}: {p.expiredAt ? formatDateByLocale(p.expiredAt, locale) : t(locale, "common.permanent")}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <p className="mb-1 text-xs text-muted-foreground">{t(locale, "admin.punishmentHistory")}</p>
+                  {selectedDetails.punishmentHistory.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">{t(locale, "admin.noPunishmentHistory")}</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {selectedDetails.punishmentHistory.map((p) => (
+                        <div key={`history-${p.id}`} className="rounded border border-border/70 p-2 text-xs">
+                          <p className="font-medium">{p.type} • {p.reason}</p>
+                          <p className="text-muted-foreground">{t(locale, "admin.issuedAt")}: {formatDateByLocale(p.createdAt, locale)}</p>
                           <p className="text-muted-foreground">{t(locale, "common.until")}: {p.expiredAt ? formatDateByLocale(p.expiredAt, locale) : t(locale, "common.permanent")}</p>
                         </div>
                       ))}
@@ -656,6 +885,23 @@ export function AdminDashboardView({ section }: AdminDashboardViewProps) {
             </CardContent>
           </Card>
         </>
+      ) : null}
+
+      {confirmDeleteOpen && selectedDetails ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setConfirmDeleteOpen(false)}>
+          <div className="w-full max-w-md rounded-xl border border-border bg-background p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
+            <h3 className="text-base font-semibold text-foreground">{t(locale, "admin.deleteConfirmTitle")}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t(locale, "admin.deleteConfirmText", { username: selectedDetails.username })}
+            </p>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <Button variant="outline" onClick={() => setConfirmDeleteOpen(false)}>{t(locale, "tasks.cancel")}</Button>
+              <Button variant="destructive" disabled={actionLoading} onClick={() => void handleConfirmDeleteUser()}>
+                {actionLoading ? t(locale, "common.loading") : t(locale, "tasks.confirmDelete")}
+              </Button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );
