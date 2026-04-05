@@ -655,6 +655,21 @@ export function FlightReplayView() {
 
   useEffect(() => {
     const viewer = viewerRef.current;
+    if (!viewer) {
+      return;
+    }
+
+    const controller = viewer.scene.screenSpaceCameraController;
+    const fpvMode = replay.camera === "fpv";
+    controller.enableRotate = !fpvMode;
+    controller.enableTranslate = !fpvMode;
+    controller.enableZoom = !fpvMode;
+    controller.enableTilt = !fpvMode;
+    controller.enableLook = !fpvMode;
+  }, [replay.camera]);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
     if (!viewer || replay.camera !== "fpv") {
       return;
     }

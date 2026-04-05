@@ -81,9 +81,11 @@ function TimelineChart({
       return;
     }
     const chart = echarts.init(ref.current, undefined, { renderer: "canvas" });
+    const palette = lines.map((line) => line.color);
 
     chart.setOption({
       animation: false,
+      color: palette,
       backgroundColor: "transparent",
       grid: { left: 40, right: 12, top: 14, bottom: 24 },
       xAxis: { type: "value", min: xMin, max: xMax, axisLine: { lineStyle: { color: "#64748b" } } },

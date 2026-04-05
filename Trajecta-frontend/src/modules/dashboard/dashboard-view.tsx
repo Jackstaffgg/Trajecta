@@ -6,7 +6,7 @@ import { formatDuration, metersToKm } from "@/lib/utils";
 
 function StatCard({ label, value, unit }: { label: string; value: string | number; unit?: string }) {
   return (
-    <Card className="border-white/10 bg-slate-950/45">
+    <Card>
       <CardContent className="p-4">
         <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
         <p className="mt-2 text-3xl font-bold leading-none text-foreground">
@@ -42,7 +42,7 @@ export function DashboardView() {
         <StatCard label="Max Vertical Speed" value={(m.maxVerticalSpeed ?? 0).toFixed(1)} unit="m/s" />
         <StatCard label="IMU Sampling" value={(m.imuRateHz ?? 0).toFixed(0)} unit="Hz" />
       </div>
-      <Card className="border-white/10 bg-slate-950/45">
+      <Card>
         <CardHeader>
           <CardTitle>Metadata</CardTitle>
         </CardHeader>

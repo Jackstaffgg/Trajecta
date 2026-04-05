@@ -89,7 +89,7 @@ export function CartesianTraceView({ frames, currentFrame }: CartesianTraceViewP
     ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = "#0f172a";
+    ctx.fillStyle = "#18181b";
     ctx.fillRect(0, 0, width, height);
 
     const centerX = width / 2 + pan.x;

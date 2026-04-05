@@ -114,7 +114,11 @@ export function Sidebar({ tasks, activeTaskId, loadingTasks = false, deletingTas
       <div className="surface-panel h-full rounded-2xl p-3">
         <div className="mb-4 flex items-center justify-between md:block">
           <h1 className="text-lg font-bold tracking-wider text-foreground">TRAJECTA</h1>
-          <p className="text-xs text-muted-foreground md:mt-1">Flight Intelligence Suite</p>
+            <div className="mt-1 inline-flex w-fit items-center gap-2 rounded-full border border-border/70 bg-card/80 px-2.5 py-1 text-[11px] font-medium text-muted-foreground md:mt-2">
+              <UserCog className="h-3.5 w-3.5" />
+              <span>{t(locale, "sidebar.currentUser")}: </span>
+              <span className="font-semibold text-foreground">{auth.user?.username ?? "-"}</span>
+            </div>
           <div className="mt-2 hidden w-fit items-center gap-1 rounded-full border border-zinc-300/35 bg-zinc-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-200 md:inline-flex">
             Online
           </div>
