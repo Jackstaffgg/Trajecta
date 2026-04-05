@@ -54,7 +54,7 @@ export function LandingScreen({
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto flex min-h-[calc(100vh-80px)] w-full max-w-7xl items-center justify-center px-4 pb-12 pt-6 sm:min-h-[calc(100vh-88px)] sm:pb-16 sm:pt-0 md:px-8">
+      <main className="relative z-10 mx-auto flex min-h-[calc(100vh-80px)] w-full max-w-7xl items-center justify-center px-4 pb-20 pt-6 sm:min-h-[calc(100vh-88px)] sm:pb-24 sm:pt-0 md:px-8">
         <section className="w-full max-w-3xl text-center">
           <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-3xl border border-zinc-300/25 bg-zinc-900/35 backdrop-blur-md animate-rise sm:mb-6 sm:h-20 sm:w-20">
             <BrandLogo className="h-10 w-10 sm:h-12 sm:w-12" />
@@ -76,12 +76,14 @@ export function LandingScreen({
               {t(locale, "landing.workspace")}
             </Button>
           </div>
-
-          <p className="landing-team-tagline landing-reveal-delay-3 mt-10 text-[11px] tracking-wide text-zinc-500 sm:mt-12 sm:text-xs">
-            {t(locale, "landing.teamTagline")}
-          </p>
         </section>
       </main>
+
+      <footer className="pointer-events-none absolute inset-x-0 bottom-5 z-10 flex justify-center px-4 sm:bottom-6">
+        <p className="landing-team-footer text-[11px] tracking-[0.14em] text-zinc-500 sm:text-xs">
+          <span className="landing-team-typing">{t(locale, "landing.teamTagline")}</span>
+        </p>
+      </footer>
     </div>
   );
 }
