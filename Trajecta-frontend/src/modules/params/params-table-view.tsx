@@ -35,8 +35,8 @@ export function ParamsTableView() {
       <CardHeader className="flex flex-col items-stretch gap-3 md:flex-row md:items-center md:justify-between">
         <CardTitle className="min-w-0">{tr(locale, "params.title")}</CardTitle>
         <div className="relative w-full md:max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input className="pl-8" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tr(locale, "params.search")} />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input className="pl-10" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tr(locale, "params.search")} />
         </div>
       </CardHeader>
       <CardContent>
