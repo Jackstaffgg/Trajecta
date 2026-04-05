@@ -11,6 +11,10 @@ type SeriesDef = {
   accessor: (idx: number) => number;
 };
 
+function finiteOrZero(value: number | undefined) {
+  return Number.isFinite(value) ? (value as number) : 0;
+}
+
 function TimelineChart({
   id,
   x,
@@ -39,6 +43,10 @@ function TimelineChart({
       xAxis: { type: "value", axisLine: { lineStyle: { color: "#64748b" } } },
       yAxis: { type: "value", axisLine: { lineStyle: { color: "#64748b" } }, splitLine: { lineStyle: { color: "#1e293b" } } },
       tooltip: { trigger: "axis" },
+      dataZoom: [
+        { type: "inside", xAxisIndex: 0, filterMode: "none", zoomOnMouseWheel: true, moveOnMouseMove: true, moveOnMouseWheel: true },
+        { type: "slider", xAxisIndex: 0, filterMode: "none", height: 18, bottom: 0 }
+      ],
       series: lines.map((line) => ({
         name: line.label,
         type: "line",
@@ -122,6 +130,7 @@ export function FlightChartsView() {
               { label: tr(locale, "charts.series.altitude"), color: "#34d399", accessor: (i) => frames[i].alt ?? 0 }
             ]}
           />
+          <p className="mt-2 text-xs text-muted-foreground">{tr(locale, "charts.zoomHint")}</p>
         </CardContent>
       </Card>
 
@@ -158,6 +167,67 @@ export function FlightChartsView() {
               { label: "Roll", color: "#2dd4bf", accessor: (i) => frames[i].roll ?? 0 },
               { label: "Pitch", color: "#60a5fa", accessor: (i) => frames[i].pitch ?? 0 },
               { label: "Yaw", color: "#f43f5e", accessor: (i) => frames[i].yaw ?? 0 }
+            ]}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{tr(locale, "charts.card.vertical")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TimelineChart
+            id="vertical"
+            x={x}
+            scrubber={scrubber}
+            onHover={setScrubber}
+            lines={[
+              { label: tr(locale, "charts.series.climbRate"), color: "#f59e0b", accessor: (i) => finiteOrZero(frames[i].climbRate) },
+              { label: tr(locale, "charts.series.altitude"), color: "#22c55e", accessor: (i) => finiteOrZero(frames[i].alt) }
+            ]}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{tr(locale, "charts.card.battery")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TimelineChart
+            id="battery"
+            x={x}
+            scrubber={scrubber}
+            onHover={setScrubber}
+            lines={[
+              { label: tr(locale, "charts.series.battery"), color: "#eab308", accessor: (i) => finiteOrZero(frames[i].battery) }
+            ]}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{tr(locale, "charts.card.accelNorm")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TimelineChart
+            id="accel-norm"
+            x={x}
+            scrubber={scrubber}
+            onHover={setScrubber}
+            lines={[
+              {
+                label: tr(locale, "charts.series.accelNorm"),
+                color: "#a78bfa",
+                accessor: (i) => {
+                  const ax = finiteOrZero(frames[i].accelX);
+                  const ay = finiteOrZero(frames[i].accelY);
+                  const az = finiteOrZero(frames[i].accelZ);
+                  return Math.sqrt(ax * ax + ay * ay + az * az);
+                }
+              }
             ]}
           />
         </CardContent>

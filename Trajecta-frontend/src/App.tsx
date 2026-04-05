@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { AuthScreen } from "@/components/layout/auth-screen";
 import { BannedScreen } from "@/components/layout/banned-screen";
+import { LandingScreen } from "@/components/layout/landing-screen";
 import { ProcessingScreen } from "@/components/layout/processing-screen";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardView } from "@/modules/dashboard/dashboard-view";
@@ -116,6 +117,13 @@ export default function App() {
   const setError = useFlightStore((s) => s.setError);
   const locale = useLocaleStore((s) => s.locale);
   const [banPayload, setBanPayload] = useState<UserBannedSocketPayload | null>(null);
+  const [entryView, setEntryView] = useState<"landing" | "auth" | "workspace">("landing");
+
+  useEffect(() => {
+    if (auth.isAuthenticated && entryView === "auth") {
+      setEntryView("workspace");
+    }
+  }, [auth.isAuthenticated, entryView]);
 
   useEffect(() => {
     if (!auth.isAuthenticated || !auth.token) {
@@ -148,6 +156,17 @@ export default function App() {
     };
   }, [auth.isAuthenticated, auth.token, auth.user?.id, locale, logout, setError]);
 
+  if (entryView === "landing") {
+    return (
+      <LandingScreen
+        isAuthenticated={auth.isAuthenticated}
+        username={auth.user?.username ?? undefined}
+        onStart={() => setEntryView(auth.isAuthenticated ? "workspace" : "auth")}
+        onLogin={() => setEntryView("auth")}
+      />
+    );
+  }
+
   if (!auth.isAuthenticated) {
     return <AuthScreen />;
   }
@@ -157,7 +176,7 @@ export default function App() {
   }
 
   return (
-    <AppShell onUserBanned={setBanPayload}>
+    <AppShell onUserBanned={setBanPayload} onGoHome={() => setEntryView("landing")}>
       {loading ? <ProcessingScreen /> : <MainContent />}
     </AppShell>
   );

@@ -32,32 +32,32 @@ export function ParamsTableView() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <CardTitle>{tr(locale, "params.title")}</CardTitle>
-        <div className="relative w-full max-w-sm">
+      <CardHeader className="flex flex-col items-stretch gap-3 md:flex-row md:items-center md:justify-between">
+        <CardTitle className="min-w-0">{tr(locale, "params.title")}</CardTitle>
+        <div className="relative w-full md:max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input className="pl-8" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tr(locale, "params.search")} />
         </div>
       </CardHeader>
       <CardContent>
-        <div className="mb-2 grid grid-cols-[2fr_1fr_2fr] gap-2 border-b border-border pb-2 text-xs uppercase text-muted-foreground">
+        <div className="mb-2 grid min-w-[760px] grid-cols-[minmax(180px,2fr)_minmax(130px,1fr)_minmax(220px,2fr)] gap-2 border-b border-border pb-2 text-xs uppercase text-muted-foreground">
           <span>{tr(locale, "params.column.name")}</span>
           <span>{tr(locale, "params.column.value")}</span>
           <span>{tr(locale, "params.column.description")}</span>
         </div>
         <div ref={(el) => (parentRef.current = el)} className="h-[62vh] overflow-auto rounded-md border border-border bg-background/40">
-          <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}>
+          <div className="min-w-[760px]" style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}>
             {rowVirtualizer.getVirtualItems().map((item) => {
               const row = rows[item.index];
               return (
                 <div
                   key={item.key}
-                  className="absolute left-0 top-0 grid w-full grid-cols-[2fr_1fr_2fr] gap-2 border-b border-border/50 px-3 py-2 text-sm"
+                  className="absolute left-0 top-0 grid w-full grid-cols-[minmax(180px,2fr)_minmax(130px,1fr)_minmax(220px,2fr)] gap-2 border-b border-border/50 px-3 py-2 text-sm"
                   style={{ transform: `translateY(${item.start}px)` }}
                 >
-                  <span className="font-mono text-accent">{row.name}</span>
-                  <span>{String(row.value)}</span>
-                  <span className="text-muted-foreground">{tr(locale, "params.description.placeholder")}</span>
+                  <span className="truncate font-mono text-accent" title={row.name}>{row.name}</span>
+                  <span className="truncate" title={String(row.value)}>{String(row.value)}</span>
+                  <span className="truncate text-muted-foreground" title={tr(locale, "params.description.placeholder")}>{tr(locale, "params.description.placeholder")}</span>
                 </div>
               );
             })}

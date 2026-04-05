@@ -398,8 +398,10 @@ export function FlightReplayView() {
   const horizontalSpeed = Math.max(0, interpolated.speed ?? 0);
   const verticalSpeed = interpolated.climbRate ?? 0;
   const absoluteSpeed = Math.hypot(horizontalSpeed, verticalSpeed);
-  const batteryPct = interpolated.battery ?? 0;
-  const batteryTone = batteryPct <= 20 ? "text-zinc-300" : batteryPct <= 40 ? "text-zinc-200" : "text-zinc-100";
+  const hasBattery = Number.isFinite(interpolated.battery);
+  const batteryPct = hasBattery ? (interpolated.battery as number) : undefined;
+  const batteryPctSafe = batteryPct ?? 100;
+  const batteryTone = !hasBattery ? "text-zinc-400" : batteryPctSafe <= 20 ? "text-zinc-300" : batteryPctSafe <= 40 ? "text-zinc-200" : "text-zinc-100";
 
   useEffect(() => {
     interpolatedRef.current = interpolated;
@@ -712,7 +714,7 @@ export function FlightReplayView() {
           <div className="telemetry-pill rounded-md px-2 py-1 text-xs">{tr(locale, "replay.hud.altMsl")}: {alignedAltitude.toFixed(1)} m</div>
           <div className="telemetry-pill rounded-md px-2 py-1 text-xs">{tr(locale, "replay.hud.speedAbs")}: {absoluteSpeed.toFixed(1)} m/s</div>
           <div className="telemetry-pill rounded-md px-2 py-1 text-xs">{tr(locale, "replay.hud.speedHv")}: {horizontalSpeed.toFixed(1)} / {verticalSpeed.toFixed(1)} m/s</div>
-          <div className={`telemetry-pill rounded-md px-2 py-1 text-xs ${batteryTone}`}>{tr(locale, "replay.hud.battery")}: {batteryPct.toFixed(0)}%</div>
+          <div className={`telemetry-pill rounded-md px-2 py-1 text-xs ${batteryTone}`}>{tr(locale, "replay.hud.battery")}: {hasBattery ? `${batteryPct!.toFixed(0)}%` : "N/A"}</div>
           {!compactHud ? (
             <>
               <div className="telemetry-pill rounded-md px-2 py-1 text-xs">{tr(locale, "replay.hud.mode")}: {replay.camera.toUpperCase()}</div>

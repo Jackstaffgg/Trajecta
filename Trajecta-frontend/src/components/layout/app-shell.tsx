@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Bell, CheckCheck, CheckCircle2, Info, LoaderCircle, LogOut, Siren, Wifi, WifiOff, XCircle } from "lucide-react";
+import { Bell, CheckCheck, CheckCircle2, Info, LogOut, Siren, Wifi, WifiOff, XCircle } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { Button } from "@/components/ui/button";
 import { formatDateByLocale, localizeErrorMessage, localizeErrorScope, localizeNotificationType, t } from "@/lib/i18n";
 import {
@@ -91,6 +92,7 @@ function resolveWsEndpoint(): string {
 type AppShellProps = {
   children: ReactNode;
   onUserBanned: (payload: UserBannedSocketPayload) => void;
+  onGoHome: () => void;
 };
 
 type WsState = "connecting" | "connected" | "reconnecting" | "offline";
@@ -127,7 +129,7 @@ function notificationTypeMeta(type: unknown) {
   return { label: "Notification", group: "News", icon: Info };
 }
 
-export function AppShell({ children, onUserBanned }: AppShellProps) {
+export function AppShell({ children, onUserBanned, onGoHome }: AppShellProps) {
   const auth = useFlightStore((s) => s.auth);
   const currentTask = useFlightStore((s) => s.currentTask);
   const setCurrentTask = useFlightStore((s) => s.setCurrentTask);
@@ -412,25 +414,23 @@ export function AppShell({ children, onUserBanned }: AppShellProps) {
     if (wsState === "connected") {
       return {
         icon: Wifi,
-        label: t(locale, "ws.connected"),
-        className: "text-zinc-100 border-zinc-300/35 bg-zinc-400/10"
-      };
-    }
-    if (wsState === "reconnecting") {
-      return {
-        icon: LoaderCircle,
-        label: t(locale, "ws.reconnecting"),
-        className: "text-zinc-200 border-zinc-300/35 bg-zinc-400/10"
+        tooltip: t(locale, "ws.tooltip.connected"),
+        className: "text-emerald-400 border-emerald-400/35 bg-emerald-500/10"
       };
     }
     return {
       icon: WifiOff,
-      label: t(locale, "ws.offline"),
-      className: "text-zinc-300 border-zinc-400/35 bg-zinc-500/10"
+      tooltip: wsState === "reconnecting" ? t(locale, "ws.tooltip.reconnecting") : t(locale, "ws.tooltip.offline"),
+      className: "text-rose-400 border-rose-400/35 bg-rose-500/10"
     };
   }, [locale, wsState]);
 
   const activeTaskId = currentTask?.id ?? null;
+
+  function handleLogout() {
+    logout();
+    onGoHome();
+  }
 
   async function handleTaskSelect(task: TaskInfo) {
     await selectTask(task);
@@ -611,23 +611,32 @@ export function AppShell({ children, onUserBanned }: AppShellProps) {
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur-2xl">
         <div className="flex items-center justify-between px-4 py-3 md:px-6">
-          <div>
-            <h1 className="text-base font-semibold tracking-wide text-foreground">{t(locale, "header.title")}</h1>
-            <p className="text-xs text-muted-foreground">{t(locale, "header.subtitle")}</p>
-            <p className="mt-1 text-[11px] text-muted-foreground">{t(locale, "header.user")}: <span className="font-semibold text-foreground">{auth.user?.username ?? "-"}</span></p>
-            <div className={`mt-1 inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] ${wsBadge.className}`}>
-              <WsIcon className={`h-3 w-3 ${wsState === "reconnecting" ? "animate-spin" : ""}`} />
-              {wsBadge.label}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="inline-flex items-center gap-3 rounded-lg border border-border/60 bg-zinc-900/30 px-2 py-1 transition hover:border-zinc-300/40 hover:bg-zinc-800/35"
+              onClick={onGoHome}
+              title={t(locale, "landing.title")}
+            >
+              <BrandLogo className="h-8 w-8" />
+              <h1 className="text-base font-semibold tracking-wide text-foreground">{t(locale, "header.title")}</h1>
+            </button>
+            <div
+              className={`inline-flex h-9 w-9 items-center justify-center rounded-md border ${wsBadge.className}`}
+              title={wsBadge.tooltip}
+              aria-label={wsBadge.tooltip}
+            >
+              <WsIcon className="h-4 w-4" />
             </div>
           </div>
 
           <div className="relative flex items-center gap-2">
-            <label className="flex items-center gap-2 rounded-md border border-border/70 bg-background/40 px-2 py-1 text-xs text-muted-foreground">
-              <span className="hidden sm:inline">{t(locale, "header.locale")}</span>
+            <label className="flex h-9 items-center rounded-md border border-border/70 bg-background/40 px-3 text-sm text-muted-foreground">
               <select
-                className="ui-select min-h-0 w-auto border-transparent bg-transparent py-1 pl-2 pr-6 text-foreground"
+                className="ui-select min-h-0 w-auto border-transparent bg-transparent py-1 pl-2 pr-6 text-sm text-foreground"
                 value={locale}
                 onChange={(e) => setLocale(e.target.value === "ru" ? "ru" : e.target.value === "uk" ? "uk" : "en")}
+                aria-label={t(locale, "header.locale")}
               >
                 <option value="en">EN</option>
                 <option value="ru">RU</option>
@@ -636,9 +645,15 @@ export function AppShell({ children, onUserBanned }: AppShellProps) {
             </label>
 
             <div ref={notificationsAnchorRef} className="relative">
-              <Button variant="outline" size="sm" type="button" onClick={() => setOpenNotifications((v) => !v)}>
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                className="h-9 px-3"
+                aria-label={t(locale, "header.notifications")}
+                onClick={() => setOpenNotifications((v) => !v)}
+              >
                 <Bell className="h-4 w-4" />
-                <span className="hidden md:inline">{t(locale, "header.notifications")}</span>
                 {unreadCount > 0 ? (
                   <span className="rounded-full border border-zinc-300/40 bg-zinc-200 px-1.5 py-0.5 text-[10px] font-bold text-zinc-900">
                     {unreadCount}
@@ -647,7 +662,7 @@ export function AppShell({ children, onUserBanned }: AppShellProps) {
               </Button>
             </div>
 
-            <Button variant="ghost" size="sm" onClick={logout}>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4" />
               <span className="hidden md:inline">{t(locale, "header.logout")}</span>
             </Button>
