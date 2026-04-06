@@ -64,10 +64,6 @@ Relogin after group change.
 - [docker-compose.vps.yml](docker-compose.vps.yml)
 - [.env.vps.example](.env.vps.example)
 - [deploy-vps.sh](deploy-vps.sh)
-- [deploy-vps.bat](deploy-vps.bat)
-- [deploy-vps-ssh.sh](deploy-vps-ssh.sh)
-- [deploy-vps-ssh.bat](deploy-vps-ssh.bat)
-- [deploy-vps-remote.sh](deploy-vps-remote.sh)
 - [infra/caddy/Caddyfile](infra/caddy/Caddyfile)
 
 ## 5) Step-by-step deployment
@@ -102,10 +98,10 @@ chmod +x deploy-vps.sh
 ./deploy-vps.sh validate
 ```
 
-Windows alternative:
+If you run `docker compose` directly, always pass env file explicitly:
 
-```bat
-deploy-vps.bat validate
+```bash
+docker compose --env-file .env.vps -f docker-compose.vps.yml config >/dev/null
 ```
 
 7. Start stack (with build):
@@ -114,22 +110,10 @@ deploy-vps.bat validate
 ./deploy-vps.sh up
 ```
 
-Windows alternative:
-
-```bat
-deploy-vps.bat up
-```
-
 8. Check service status:
 
 ```bash
 ./deploy-vps.sh status
-```
-
-Windows alternative:
-
-```bat
-deploy-vps.bat status
 ```
 
 9. Open app:
@@ -147,12 +131,6 @@ Useful logs command:
 
 ```bash
 ./deploy-vps.sh logs
-```
-
-Windows alternative:
-
-```bat
-deploy-vps.bat logs
 ```
 
 ## 7) Update flow (new code deploy)
@@ -176,48 +154,14 @@ deploy-vps.bat logs
 ./deploy-vps.sh down
 ```
 
-Windows:
-
-```bat
-deploy-vps.bat up
-deploy-vps.bat status
-deploy-vps.bat logs
-deploy-vps.bat restart
-deploy-vps.bat down
-```
-
-## 9.1) Run deployment over SSH from local machine
-
-Linux/macOS:
+Direct compose equivalents:
 
 ```bash
-./deploy-vps-ssh.sh user@your-vps /opt/Trajecta status
-./deploy-vps-ssh.sh user@your-vps /opt/Trajecta restart
+docker compose --env-file .env.vps -f docker-compose.vps.yml up -d --build --remove-orphans
+docker compose --env-file .env.vps -f docker-compose.vps.yml ps
+docker compose --env-file .env.vps -f docker-compose.vps.yml logs -f --tail=200
+docker compose --env-file .env.vps -f docker-compose.vps.yml down --remove-orphans
 ```
-
-Windows:
-
-```bat
-deploy-vps-ssh.bat user@your-vps /opt/Trajecta status
-deploy-vps-ssh.bat user@your-vps /opt/Trajecta restart
-```
-
-Notes:
-
-- Remote path must point to repository root where `deploy-vps.sh` is located.
-- SSH key auth is recommended.
-- `status` is used as safe default action in SSH wrappers.
-
-## 9.2) SSH scenario where script executes ON VPS
-
-If you want deployment commands to execute on VPS (not on local machine), use:
-
-```bash
-ssh user@your-vps "cd /opt/Trajecta && chmod +x ./deploy-vps-remote.sh && ./deploy-vps-remote.sh status"
-ssh user@your-vps "cd /opt/Trajecta && ./deploy-vps-remote.sh restart"
-```
-
-This script runs only on Linux server and forwards action to `deploy-vps.sh` in the same repo directory.
 
 ## 9) Notes and troubleshooting
 

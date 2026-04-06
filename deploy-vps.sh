@@ -14,11 +14,32 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
+if ! command -v docker >/dev/null 2>&1; then
+  echo "[ERROR] docker command not found"
+  exit 1
+fi
+
+if ! docker compose version >/dev/null 2>&1; then
+  echo "[ERROR] docker compose plugin is not available"
+  exit 1
+fi
+
 
 WORKER_REPLICAS="$(grep -E '^WORKER_REPLICAS=' "$ENV_FILE" | tail -n 1 | cut -d '=' -f 2- | tr -d "'\"[:space:]")"
 if [ -z "$WORKER_REPLICAS" ]; then
   WORKER_REPLICAS="2"
 fi
+
+case "$WORKER_REPLICAS" in
+  ''|*[!0-9]*)
+    echo "[ERROR] WORKER_REPLICAS must be a positive integer (current: $WORKER_REPLICAS)"
+    exit 1
+    ;;
+  0)
+    echo "[ERROR] WORKER_REPLICAS must be >= 1"
+    exit 1
+    ;;
+esac
 
 run_compose() {
   docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"

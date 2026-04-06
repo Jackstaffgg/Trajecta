@@ -4,11 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ead05c28-5888-4bfd-aa2d-b5db12a27391" name="Changes" comment="add API error codes and implement ban handling in authentication flow">
+    <list default="true" id="ead05c28-5888-4bfd-aa2d-b5db12a27391" name="Changes" comment="update environment configuration and enhance WebSocket security with JWT authentication">
       <change beforePath="$PROJECT_DIR$/.env.vps.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.vps.example" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/WebSocketSecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/WebSocketSecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DEPLOY_VPS.md" beforeDir="false" afterPath="$PROJECT_DIR$/DEPLOY_VPS.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deploy-vps.sh" beforeDir="false" afterPath="$PROJECT_DIR$/deploy-vps.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docker-compose.vps.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.vps.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -29,6 +30,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "git-widget-placeholder": "main",
     "ts.external.directory.path": "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2024.3.1.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external"
   }
@@ -50,12 +52,21 @@
       <option name="project" value="LOCAL" />
       <updated>1775436044482</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="update environment configuration and enhance WebSocket security with JWT authentication">
+      <option name="closed" value="true" />
+      <created>1775439232332</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1775439232332</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="add task creation endpoint with authorization and throttling for unauthorized requests" />
     <MESSAGE value="add bad data message limit to log parser and update related configurations" />
-    <option name="LAST_COMMIT_MESSAGE" value="add bad data message limit to log parser and update related configurations" />
+    <MESSAGE value="update environment configuration and enhance WebSocket security with JWT authentication" />
+    <option name="LAST_COMMIT_MESSAGE" value="update environment configuration and enhance WebSocket security with JWT authentication" />
   </component>
 </project>

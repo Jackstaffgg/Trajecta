@@ -175,6 +175,9 @@ VPS deploy uses:
 - `.env.vps` (required)
 - `deploy-vps.sh`
 
+Important: if you use `docker compose` directly, pass `--env-file .env.vps`.
+Without it, `${...}` values from `docker-compose.vps.yml` resolve as empty and services may fail to start.
+
 Create `.env.vps` from template:
 
 ```bash
@@ -254,6 +257,14 @@ npm run build
 ./deploy-vps.sh restart
 ./deploy-vps.sh down
 ./deploy-vps.sh wipe --yes
+```
+
+Direct compose equivalents:
+
+```bash
+docker compose --env-file .env.vps -f docker-compose.vps.yml config >/dev/null
+docker compose --env-file .env.vps -f docker-compose.vps.yml up -d --build --remove-orphans
+docker compose --env-file .env.vps -f docker-compose.vps.yml ps
 ```
 
 For full production notes and setup sequence, see `DEPLOY_VPS.md`.
