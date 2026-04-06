@@ -43,6 +43,7 @@ public class CacheConfig {
         cacheConfigs.put("userByIdV1", defaultConfig.entryTtl(Duration.ofMinutes(5)));
         cacheConfigs.put("userByUsernameV1", defaultConfig.entryTtl(Duration.ofMinutes(5)));
         cacheConfigs.put("userPageV1", defaultConfig.entryTtl(Duration.ofMinutes(2)));
+        cacheConfigs.put("punishmentBanFlagByUserV1", defaultConfig.entryTtl(Duration.ofSeconds(30)));
 
         return RedisCacheManager.builder(redisConnectionFactory)
                 .cacheDefaults(defaultConfig)

@@ -13,6 +13,9 @@ import dev.knalis.trajectaapi.repo.PunishmentRepository;
 import dev.knalis.trajectaapi.service.intrf.user.PunishmentService;
 import dev.knalis.trajectaapi.service.intrf.user.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +32,7 @@ public class PunishmentServiceImpl implements PunishmentService {
     private final UserService userService;
     private final PunishmentRepository punishmentRepository;
     private final EventPublisher eventPublisher;
+    private final CacheManager cacheManager;
     
     @Override
     @Transactional
@@ -73,6 +77,7 @@ public class PunishmentServiceImpl implements PunishmentService {
                 currentUser.getName()
         );
 
+        evictBanStateCache(targetUser.getId());
         return saved;
     }
     
@@ -126,6 +131,7 @@ public class PunishmentServiceImpl implements PunishmentService {
     }
     
     @Override
+    @Cacheable(cacheNames = "punishmentBanFlagByUserV1", key = "#userId")
     public boolean isUserBanned(long userId) {
         User user = userService.findById(userId);
         return punishmentRepository.existsActivePunishment(user, PunishmentType.BAN, Instant.now());
@@ -142,6 +148,7 @@ public class PunishmentServiceImpl implements PunishmentService {
 
         punishment.setExpiredAt(Instant.now());
         punishmentRepository.save(punishment);
+        evictBanStateCache(punishment.getUser().getId());
     }
     
     private void ensureCanPunish(User actor, User target) {
@@ -165,4 +172,12 @@ public class PunishmentServiceImpl implements PunishmentService {
             throw new PermissionDeniedException("Cannot punish another owner");
         }
     }
+
+    private void evictBanStateCache(Long userId) {
+        Cache cache = cacheManager.getCache("punishmentBanFlagByUserV1");
+        if (cache != null && userId != null) {
+            cache.evict(userId);
+        }
+    }
 }
+
