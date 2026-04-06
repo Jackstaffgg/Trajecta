@@ -28,6 +28,34 @@
     @base path /trajecta
     redir @base /trajecta/ 308
 
+    @task_create_post {
+        method POST
+        path /trajecta/api/v1/tasks
+    }
+    handle @task_create_post {
+        @missing_bearer {
+            not header_regexp Authorization ^Bearer\s+.+$
+        }
+        respond @missing_bearer 401 {
+            body "Unauthorized"
+        }
+
+        request_body {
+            max_size 50MB
+        }
+
+        uri strip_prefix /trajecta
+        reverse_proxy backend:8080 {
+            transport http {
+                dial_timeout 5s
+                response_header_timeout 60s
+                read_timeout 120s
+                write_timeout 120s
+                keepalive 30s
+            }
+        }
+    }
+
     handle /trajecta/api/* {
         request_body {
             max_size 50MB
