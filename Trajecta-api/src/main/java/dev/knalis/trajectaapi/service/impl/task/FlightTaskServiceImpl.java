@@ -29,6 +29,7 @@ import dev.knalis.trajectaapi.storage.ObjectKeyBuilder;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -60,6 +61,8 @@ public class FlightTaskServiceImpl implements FlightTaskService {
     private final ObjectKeyBuilder objectKeyBuilder;
     private final ObjectMapper objectMapper;
     private final AiConclusionService aiConclusionService;
+    @Value("${application.task.processing-timeout-seconds:900}")
+    private long processingTimeoutSeconds = 900;
     @Autowired(required = false)
     private MeterRegistry meterRegistry;
     
@@ -117,7 +120,7 @@ public class FlightTaskServiceImpl implements FlightTaskService {
             throw new PermissionDeniedException("You do not have permission to access this task");
         }
         
-        return task;
+        return expireStaleProcessingTask(task);
     }
     
     @Override
@@ -130,7 +133,7 @@ public class FlightTaskServiceImpl implements FlightTaskService {
         return taskRepository.findByUserIdOrderByCreatedAtDesc(
                 currentUser.getId(),
                 PageRequest.of(page, limit)
-        ).getContent();
+        ).getContent().stream().map(this::expireStaleProcessingTask).toList();
     }
     
     @Transactional
@@ -149,7 +152,14 @@ public class FlightTaskServiceImpl implements FlightTaskService {
             return task;
         }
         
-        if (result.getStatus().isSuccess()) {
+        if (result.getStatus() == null) {
+            String reason = result.getErrorMessage();
+            if (reason == null || reason.isBlank()) {
+                reason = "Invalid analysis result: status is missing.";
+            }
+            task.markFailed(reason);
+            incrementCounter("tasks.completed.failed_invalid_status");
+        } else if (result.getStatus().isSuccess()) {
             final String trajectoryKey = resolveTrajectoryKey(task, result);
             if (trajectoryKey == null || trajectoryKey.isBlank()) {
                 task.markFailed("Trajectory file is missing in analysis result");
@@ -183,6 +193,35 @@ public class FlightTaskServiceImpl implements FlightTaskService {
                 savedTask.getErrorMessage()
         );
         
+        return savedTask;
+    }
+
+    private FlightTask expireStaleProcessingTask(FlightTask task) {
+        if (task.getStatus() != dev.knalis.trajectaapi.model.task.TaskStatus.PROCESSING) {
+            return task;
+        }
+        if (task.getCreatedAt() == null || task.getFinishedAt() != null || processingTimeoutSeconds <= 0) {
+            return task;
+        }
+
+        Instant timeoutAt = task.getCreatedAt().plusSeconds(processingTimeoutSeconds);
+        Instant now = Instant.now();
+        if (now.isBefore(timeoutAt)) {
+            return task;
+        }
+
+        task.markFailed("Analysis timed out while waiting for worker result");
+        task.setFinishedAt(now);
+        FlightTask savedTask = taskRepository.save(task);
+
+        eventPublisher.publishTaskStatusChanged(
+                savedTask.getId(),
+                savedTask.getUserId(),
+                savedTask.getTitle(),
+                savedTask.getStatus(),
+                savedTask.getErrorMessage()
+        );
+        incrementCounter("tasks.processing.timeout");
         return savedTask;
     }
 

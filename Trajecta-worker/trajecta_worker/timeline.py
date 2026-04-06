@@ -173,7 +173,7 @@ def sanitize_gps_dataframe(gps_df: pd.DataFrame) -> pd.DataFrame:
     return sanitized
 
 
-def build_uniform_timeline(data: dict[str, Any], dt: float) -> np.ndarray:
+def build_uniform_timeline(data: dict[str, Any], dt: float, max_frames: int | None = None) -> np.ndarray:
     starts: list[float] = []
     ends: list[float] = []
 
@@ -201,8 +201,17 @@ def build_uniform_timeline(data: dict[str, Any], dt: float) -> np.ndarray:
     if not starts:
         raise ValueError("No timestamped data found in log.")
 
+    if dt <= 0:
+        raise ValueError("Timeline step dt must be greater than zero.")
+
     start_time = min(starts)
     end_time = max(ends)
+    frame_count = int(np.floor((end_time - start_time) / dt)) + 1
+    if max_frames is not None and frame_count > max_frames:
+        raise ValueError(
+            f"Telemetry timeline is too large: expected {frame_count} frames, limit is {max_frames}."
+        )
+
     return np.arange(start_time, end_time + dt * 0.5, dt)
 
 
@@ -547,8 +556,8 @@ def build_frames(data: dict[str, Any], timeline: np.ndarray) -> list[dict[str, A
     return frames
 
 
-def build_output(data: dict[str, Any], dt: float) -> dict[str, Any]:
-    timeline = build_uniform_timeline(data, dt)
+def build_output(data: dict[str, Any], dt: float, max_frames: int | None = None) -> dict[str, Any]:
+    timeline = build_uniform_timeline(data, dt, max_frames=max_frames)
     frames = build_frames(data, timeline)
     start_time = float(timeline[0])
     end_time = float(timeline[-1])

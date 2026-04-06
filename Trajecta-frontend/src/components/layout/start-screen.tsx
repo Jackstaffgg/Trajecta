@@ -8,8 +8,7 @@ import { useLocaleStore } from "@/store/locale-store";
 import { useFlightStore } from "@/store/flight-store";
 import type { TaskStatus } from "@/types/flight";
 
-const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
-const MAX_UPLOAD_SIZE_MB = 10;
+const MAX_BIN_UPLOAD_BYTES = 50 * 1024 * 1024;
 
 function statusProgress(status: TaskStatus): number {
   if (status === "PENDING") return 22;
@@ -58,16 +57,19 @@ export function StartScreen() {
 
   async function handleFiles(files: File[]) {
     const deduped = uniqueFiles(files);
-    const binFiles = deduped.filter((file) => file.name.toLowerCase().endsWith(".bin"));
-    const oversized = binFiles.filter((file) => file.size > MAX_UPLOAD_SIZE_BYTES);
-    const valid = binFiles.filter((file) => file.size <= MAX_UPLOAD_SIZE_BYTES);
-    const skipped = deduped.length - valid.length;
+    const wrongExtension = deduped.filter((file) => !file.name.toLowerCase().endsWith(".bin"));
+    const tooLarge = deduped.filter(
+      (file) => file.name.toLowerCase().endsWith(".bin") && file.size > MAX_BIN_UPLOAD_BYTES
+    );
+    const valid = deduped.filter(
+      (file) => file.name.toLowerCase().endsWith(".bin") && file.size <= MAX_BIN_UPLOAD_BYTES
+    );
 
     if (valid.length === 0) {
-      if (oversized.length > 0) {
-        setError(t(locale, "tasks.maxSizeExceeded", { maxMb: MAX_UPLOAD_SIZE_MB }), "tasks");
+      if (tooLarge.length > 0) {
+        setError("BIN file exceeds maximum size of 50MB", "tasks");
       } else {
-        setError(t(locale, "tasks.onlyBin"), "tasks");
+        setError("Only .bin telemetry files are supported", "tasks");
       }
       return;
     }
@@ -93,10 +95,15 @@ export function StartScreen() {
       currentFileName: ""
     });
 
-    if (oversized.length > 0) {
-      setError(`${t(locale, "tasks.maxSizeExceeded", { maxMb: MAX_UPLOAD_SIZE_MB })}. Skipped ${oversized.length} file(s).`, "tasks");
-    } else if (skipped > 0) {
-      setError(`Skipped ${skipped} non-bin file(s)`, "tasks");
+    const skipMessages: string[] = [];
+    if (wrongExtension.length > 0) {
+      skipMessages.push(`Skipped ${wrongExtension.length} non-bin file(s)`);
+    }
+    if (tooLarge.length > 0) {
+      skipMessages.push(`Skipped ${tooLarge.length} oversized file(s) (>50MB)`);
+    }
+    if (skipMessages.length > 0) {
+      setError(skipMessages.join(". "), "tasks");
     }
   }
 

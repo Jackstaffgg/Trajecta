@@ -5,13 +5,16 @@ import json
 import os
 import tempfile
 from pathlib import Path
+from typing import Any
 from urllib.parse import urljoin
 from urllib.request import Request, urlopen
 
 from .config import (
     DEFAULT_API_BASE_URL,
+    DEFAULT_DOWNLOAD_CHUNK_SIZE_BYTES,
     DEFAULT_HTTP_TIMEOUT_SECONDS,
     DEFAULT_INTERNAL_RAW_PATH_TEMPLATE,
+    DEFAULT_MAX_RAW_DOWNLOAD_BYTES,
     DEFAULT_WORKER_TOKEN_HEADER,
 )
 from .models import WorkerError
@@ -36,8 +39,39 @@ def download_raw_for_task(task_id: int) -> tuple[str, bool]:
     req.add_header(worker_token_header, worker_token)
 
     timeout = int(os.getenv("HTTP_TIMEOUT_SECONDS", str(DEFAULT_HTTP_TIMEOUT_SECONDS)))
-    with urlopen(req, timeout=timeout) as response, open(tmp.name, "wb") as out:
-        out.write(response.read())
+    max_download_bytes = int(os.getenv("MAX_RAW_DOWNLOAD_BYTES", str(DEFAULT_MAX_RAW_DOWNLOAD_BYTES)))
+    chunk_size_bytes = int(os.getenv("DOWNLOAD_CHUNK_SIZE_BYTES", str(DEFAULT_DOWNLOAD_CHUNK_SIZE_BYTES)))
+
+    try:
+        with urlopen(req, timeout=timeout) as response, open(tmp.name, "wb") as out:
+            content_length = response.headers.get("Content-Length")
+            if content_length is not None:
+                try:
+                    declared_size = int(content_length)
+                except ValueError:
+                    declared_size = None
+                if declared_size is not None and declared_size > max_download_bytes:
+                    raise WorkerError(
+                        f"Raw file is too large ({declared_size} bytes). Maximum allowed is {max_download_bytes} bytes."
+                    )
+
+            total_downloaded = 0
+            while True:
+                chunk = response.read(chunk_size_bytes)
+                if not chunk:
+                    break
+                total_downloaded += len(chunk)
+                if total_downloaded > max_download_bytes:
+                    raise WorkerError(
+                        f"Raw file is too large ({total_downloaded} bytes). Maximum allowed is {max_download_bytes} bytes."
+                    )
+                out.write(chunk)
+    except Exception:
+        try:
+            os.remove(tmp.name)
+        except OSError:
+            pass
+        raise
 
     return tmp.name, True
 

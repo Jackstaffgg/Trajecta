@@ -113,6 +113,8 @@ application:
     username: ${OWNER_USERNAME:Owner}
     password: ${OWNER_PASSWORD:Owner123}
     mail: ${OWNER_MAIL:owner@ownermail.own}
+  task:
+    processing-timeout-seconds: ${TASK_PROCESSING_TIMEOUT_SECONDS:900}
 
 minio:
   endpoint: ${MINIO_URL:http://localhost:9000}

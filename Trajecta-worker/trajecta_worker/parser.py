@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import math
-import os
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 from pymavlink import mavutil
 
-from .config import TIME_FIELDS
+from .config import DEFAULT_MAX_BAD_DATA_MESSAGES, TIME_FIELDS
+from .models import WorkerError
 
 
 DATAFLASH_HEAD1 = 0xA3
@@ -197,22 +198,28 @@ def safe_json_value(value: Any) -> Any:
     return str(value)
 
 
-def _validate_dataflash_file(bin_path: str) -> None:
-    if not os.path.isfile(bin_path):
-        raise ValueError(f"Input file not found: {bin_path}")
+def validate_dataflash_signature(bin_path: str, sample_bytes: int = 64 * 1024, min_sync_headers: int = 2) -> None:
+    path = Path(bin_path)
+    if not path.exists() or not path.is_file():
+        raise WorkerError("BIN file is missing or not readable.")
 
-    with open(bin_path, "rb") as source:
-        header_window = source.read(_HEADER_SCAN_BYTES)
+    blob = path.read_bytes()[:sample_bytes]
+    if len(blob) < 8:
+        raise WorkerError("Unsupported or corrupted BIN file: file is too small.")
 
-    if len(header_window) < 3:
-        raise ValueError("Parse error: file is too short to be a DataFlash BIN log.")
+    sync_count = sum(1 for i in range(len(blob) - 1) if blob[i] == 0xA3 and blob[i + 1] == 0x95)
+    if sync_count < min_sync_headers:
+        raise WorkerError(
+            "Unsupported or corrupted BIN file: DataFlash sync headers are missing or heavily damaged."
+        )
 
-    if _DATAFLASH_SIGNATURE not in header_window:
-        raise ValueError("Parse error: invalid DataFlash BIN header (expected 0xA3 0x95 signature).")
 
-
-def parse_log(bin_path: str) -> dict[str, Any]:
-    _validate_dataflash_file(bin_path)
+def parse_log(
+    bin_path: str,
+    max_messages: int | None = None,
+    max_bad_data_messages: int | None = DEFAULT_MAX_BAD_DATA_MESSAGES,
+) -> dict[str, Any]:
+    validate_dataflash_signature(bin_path)
     log = mavutil.mavlink_connection(bin_path)
 
     data = {
@@ -232,12 +239,29 @@ def parse_log(bin_path: str) -> dict[str, Any]:
         "params": {},
     }
 
+    message_count = 0
+    bad_data_count = 0
     while True:
         msg = log.recv_match(blocking=False)
         if msg is None:
             break
 
+        message_count += 1
+        if max_messages is not None and message_count > max_messages:
+            raise WorkerError(
+                f"BIN file is too large or too dense: parsed messages exceeded limit of {max_messages}."
+            )
+
         mtype = msg.get_type()
+        if mtype == "BAD_DATA":
+            bad_data_count += 1
+            if max_bad_data_messages is not None and bad_data_count > max_bad_data_messages:
+                raise WorkerError(
+                    "Unsupported or corrupted BIN file: too many invalid message headers "
+                    f"({bad_data_count} > {max_bad_data_messages})."
+                )
+            continue
+
         if mtype in ("FMT", "FMTU", "UNIT", "MULT", "MSG"):
             continue
 
@@ -354,4 +378,13 @@ def parse_log(bin_path: str) -> dict[str, Any]:
             data["pm_rows"].append(row)
 
     data["events"] = sorted(data["events"], key=lambda item: item["t"])
+
+    has_timestamped_series = any(
+        bool(data[topic]["t"])
+        for topic in ("gps", "att", "ctun", "bat", "imu", "vibe", "pid", "baro", "gpa", "mode")
+    )
+    has_other_timestamped_data = bool(data["stat_rows"] or data["pm_rows"] or data["events"])
+    if not has_timestamped_series and not has_other_timestamped_data:
+        raise WorkerError("Unsupported or corrupted BIN file: no recognizable telemetry records found.")
+
     return data
