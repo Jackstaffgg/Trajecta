@@ -18,7 +18,7 @@ import { API_ERROR_CODES } from "@/lib/error-codes";
 import { useFlightStore } from "@/store/flight-store";
 import { useLocaleStore } from "@/store/locale-store";
 import type { SocketEvent, UserBannedSocketPayload, UserUnbannedSocketPayload } from "@/types/flight";
-import { ApiClientError, getApiBaseUrl, getCurrentUserBanStatus } from "@/lib/api";
+import { ApiClientError, getApiBaseUrl, getCurrentUserBanStatus, getCurrentUserProfile } from "@/lib/api";
 
 type AnalyticsTab = "dashboard" | "replay" | "charts" | "params" | "diagnostics";
 
@@ -168,12 +168,14 @@ function MainContent() {
 
 export default function App() {
   const auth = useFlightStore((s) => s.auth);
+  const setAuthenticated = useFlightStore((s) => s.setAuthenticated);
   const loading = useFlightStore((s) => s.loading);
   const logout = useFlightStore((s) => s.logout);
   const setError = useFlightStore((s) => s.setError);
   const locale = useLocaleStore((s) => s.locale);
   const [banPayload, setBanPayload] = useState<UserBannedSocketPayload | null>(null);
   const [entryView, setEntryView] = useState<"landing" | "auth" | "workspace">("landing");
+  const [checkingProfile, setCheckingProfile] = useState(false);
   const [checkingBanStatus, setCheckingBanStatus] = useState(false);
 
   useEffect(() => {
@@ -184,6 +186,48 @@ export default function App() {
 
   useEffect(() => {
     if (!auth.isAuthenticated || !auth.token) {
+      setCheckingProfile(false);
+      return;
+    }
+
+    let active = true;
+    const run = async () => {
+      setCheckingProfile(true);
+      try {
+        const profile = await getCurrentUserProfile({ token: auth.token });
+        if (!active) {
+          return;
+        }
+        setAuthenticated(auth.token, profile);
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+        if (error instanceof ApiClientError && error.status === 401) {
+          logout();
+          return;
+        }
+        setError(
+          error instanceof Error
+            ? error.message
+            : (locale === "ru" ? "Не удалось загрузить профиль пользователя" : "Failed to load user profile"),
+          "realtime"
+        );
+      } finally {
+        if (active) {
+          setCheckingProfile(false);
+        }
+      }
+    };
+
+    void run();
+    return () => {
+      active = false;
+    };
+  }, [auth.isAuthenticated, auth.token, locale, logout, setAuthenticated, setError]);
+
+  useEffect(() => {
+    if (checkingProfile || !auth.isAuthenticated || !auth.token) {
       setBanPayload(null);
       setCheckingBanStatus(false);
       return;
@@ -233,7 +277,7 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, [auth.isAuthenticated, auth.token, auth.user?.id, locale, logout, setError]);
+  }, [checkingProfile, auth.isAuthenticated, auth.token, auth.user?.id, locale, logout, setError]);
 
   useEffect(() => {
     if (!auth.isAuthenticated || !auth.token || !banPayload) {
@@ -324,7 +368,7 @@ export default function App() {
     return <AuthScreen />;
   }
 
-  if (checkingBanStatus) {
+  if (checkingProfile || checkingBanStatus) {
     return <ProcessingScreen />;
   }
 
