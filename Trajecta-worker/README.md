@@ -104,6 +104,7 @@ Run:
 
 ```bash
 docker compose up --build -d worker
+docker compose up --build -d --scale worker=2 worker
 ```
 
 ## Tests

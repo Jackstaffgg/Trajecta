@@ -11,6 +11,12 @@ from .config import DEFAULT_MAX_BAD_DATA_MESSAGES, TIME_FIELDS
 from .models import WorkerError
 
 
+DATAFLASH_HEAD1 = 0xA3
+DATAFLASH_HEAD2 = 0x95
+_DATAFLASH_SIGNATURE = bytes((DATAFLASH_HEAD1, DATAFLASH_HEAD2))
+_HEADER_SCAN_BYTES = 64 * 1024
+
+
 # Common ArduPilot EV identifiers from AP_Logger::LogEvent.
 ARDUPILOT_EV_MAP: dict[int, tuple[str, str, str]] = {
     10: ("ARMED", "Vehicle armed", "info"),

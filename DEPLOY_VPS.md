@@ -64,6 +64,10 @@ Relogin after group change.
 - [docker-compose.vps.yml](docker-compose.vps.yml)
 - [.env.vps.example](.env.vps.example)
 - [deploy-vps.sh](deploy-vps.sh)
+- [deploy-vps.bat](deploy-vps.bat)
+- [deploy-vps-ssh.sh](deploy-vps-ssh.sh)
+- [deploy-vps-ssh.bat](deploy-vps-ssh.bat)
+- [deploy-vps-remote.sh](deploy-vps-remote.sh)
 - [infra/caddy/Caddyfile](infra/caddy/Caddyfile)
 
 ## 5) Step-by-step deployment
@@ -85,10 +89,6 @@ cp .env.vps.example .env.vps
 - `MINIO_PASS=...`
 - `JWT_SECRET=...` (long random)
 - `INTERNAL_WORKER_TOKEN=...` (long random)
-- `OWNER_USERNAME=...` (admin user created on startup)
-- `OWNER_PASSWORD=...` (admin password created on startup)
-- `OWNER_MAIL=...` (admin email created on startup)
-- `APP_SEED_ENABLED=true` (creates admin user on startup with above credentials)
 
 5. Make helper script executable:
 
@@ -102,16 +102,34 @@ chmod +x deploy-vps.sh
 ./deploy-vps.sh validate
 ```
 
+Windows alternative:
+
+```bat
+deploy-vps.bat validate
+```
+
 7. Start stack (with build):
 
 ```bash
 ./deploy-vps.sh up
 ```
 
+Windows alternative:
+
+```bat
+deploy-vps.bat up
+```
+
 8. Check service status:
 
 ```bash
 ./deploy-vps.sh status
+```
+
+Windows alternative:
+
+```bat
+deploy-vps.bat status
 ```
 
 9. Open app:
@@ -129,6 +147,12 @@ Useful logs command:
 
 ```bash
 ./deploy-vps.sh logs
+```
+
+Windows alternative:
+
+```bat
+deploy-vps.bat logs
 ```
 
 ## 7) Update flow (new code deploy)
@@ -150,37 +174,59 @@ Useful logs command:
 ./deploy-vps.sh logs
 ./deploy-vps.sh restart
 ./deploy-vps.sh down
-./deploy-vps.sh wipe --yes
 ```
 
+Windows:
 
-Full cleanup (destructive) on VPS:
+```bat
+deploy-vps.bat up
+deploy-vps.bat status
+deploy-vps.bat logs
+deploy-vps.bat restart
+deploy-vps.bat down
+```
+
+## 9.1) Run deployment over SSH from local machine
+
+Linux/macOS:
 
 ```bash
-./deploy-vps.sh wipe --yes
+./deploy-vps-ssh.sh user@your-vps /opt/Trajecta status
+./deploy-vps-ssh.sh user@your-vps /opt/Trajecta restart
 ```
 
-This command removes Trajecta containers, images, volumes and compose network, then runs Docker prune for unused host resources.
+Windows:
 
-## 9) Remote execution over SSH
+```bat
+deploy-vps-ssh.bat user@your-vps /opt/Trajecta status
+deploy-vps-ssh.bat user@your-vps /opt/Trajecta restart
+```
 
-If you want deployment commands to execute on VPS (not local machine), use:
+Notes:
+
+- Remote path must point to repository root where `deploy-vps.sh` is located.
+- SSH key auth is recommended.
+- `status` is used as safe default action in SSH wrappers.
+
+## 9.2) SSH scenario where script executes ON VPS
+
+If you want deployment commands to execute on VPS (not on local machine), use:
 
 ```bash
-ssh user@your-vps "cd /opt/Trajecta && chmod +x ./deploy-vps.sh && ./deploy-vps.sh status"
-ssh user@your-vps "cd /opt/Trajecta && ./deploy-vps.sh restart"
+ssh user@your-vps "cd /opt/Trajecta && chmod +x ./deploy-vps-remote.sh && ./deploy-vps-remote.sh status"
+ssh user@your-vps "cd /opt/Trajecta && ./deploy-vps-remote.sh restart"
 ```
 
-This executes the same deployment script directly on the Linux server.
+This script runs only on Linux server and forwards action to `deploy-vps.sh` in the same repo directory.
 
-## 10) Notes and troubleshooting
+## 9) Notes and troubleshooting
 
 - First TLS issue is usually DNS/port 80-443/firewall problem.
 - If cert issuance fails, inspect edge logs first.
 - If frontend 404 under `/trajecta`, verify `VITE_APP_BASE_PATH=/trajecta/`.
 - If websocket fails, verify `VITE_API_BASE_URL=/trajecta` and `VITE_WS_PATH=/ws`.
 
-## 11) Security recommendations
+## 10) Security recommendations
 
 - Keep `.env.vps` only on server and out of git.
 - Disable SSH password login; use key-based auth.

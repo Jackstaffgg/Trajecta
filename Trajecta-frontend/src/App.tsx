@@ -70,6 +70,13 @@ function resolveWsEndpoint(): string {
   return `${protocol}//${window.location.host}${wsPath}`;
 }
 
+function normalizeRole(role: string | null | undefined): string {
+  if (!role) {
+    return "";
+  }
+  return role.toUpperCase().replace(/^ROLE_/, "");
+}
+
 function AnalyticsWorkspace() {
   const locale = useLocaleStore((s) => s.locale);
   const [tab, setTab] = useState<AnalyticsTab>("dashboard");
@@ -126,7 +133,7 @@ function MainContent() {
   const data = useFlightStore((s) => s.data);
   const auth = useFlightStore((s) => s.auth);
   const selectedAdminUserId = useFlightStore((s) => s.adminSelectedUserId);
-  const role = auth.user?.role?.toUpperCase();
+  const role = normalizeRole(auth.user?.role);
   const canAccessAdmin = role === "ADMIN" || role === "OWNER";
 
   if (mode === "tasks") {

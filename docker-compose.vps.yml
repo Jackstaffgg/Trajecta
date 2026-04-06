@@ -128,6 +128,7 @@ services:
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       OPENAI_CHAT_URL: ${OPENAI_CHAT_URL:-https://api.openai.com/v1/chat/completions}
       OPENAI_CHAT_TIMEOUT_SECONDS: ${OPENAI_CHAT_TIMEOUT_SECONDS:-15}
+      JAVA_TOOL_OPTIONS: ${BACKEND_JAVA_TOOL_OPTIONS:--Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError}
       APP_SEED_ENABLED: ${APP_SEED_ENABLED:-true}
       OWNER_USERNAME: ${OWNER_USERNAME:-Owner}
       OWNER_PASSWORD: ${OWNER_PASSWORD:-Owner123}
@@ -140,7 +141,6 @@ services:
     build:
       context: ./Trajecta-worker
       dockerfile: Dockerfile
-    container_name: trajecta_worker
     restart: unless-stopped
     depends_on:
       rabbitmq:
@@ -195,7 +195,7 @@ services:
     restart: unless-stopped
     depends_on:
       frontend:
-        condition: service_started
+        condition: service_healthy
       backend:
         condition: service_started
     ports:
