@@ -6,7 +6,7 @@ from typing import Any
 import numpy as np
 from pymavlink import mavutil
 
-from .config import TIME_FIELDS
+from .config import DEFAULT_MAX_BAD_DATA_MESSAGES, TIME_FIELDS
 from .models import WorkerError
 
 
@@ -191,7 +191,11 @@ def safe_json_value(value: Any) -> Any:
     return str(value)
 
 
-def parse_log(bin_path: str, max_messages: int | None = None) -> dict[str, Any]:
+def parse_log(
+    bin_path: str,
+    max_messages: int | None = None,
+    max_bad_data_messages: int | None = DEFAULT_MAX_BAD_DATA_MESSAGES,
+) -> dict[str, Any]:
     log = mavutil.mavlink_connection(bin_path)
 
     data = {
@@ -212,6 +216,7 @@ def parse_log(bin_path: str, max_messages: int | None = None) -> dict[str, Any]:
     }
 
     message_count = 0
+    bad_data_count = 0
     while True:
         msg = log.recv_match(blocking=False)
         if msg is None:
@@ -224,6 +229,15 @@ def parse_log(bin_path: str, max_messages: int | None = None) -> dict[str, Any]:
             )
 
         mtype = msg.get_type()
+        if mtype == "BAD_DATA":
+            bad_data_count += 1
+            if max_bad_data_messages is not None and bad_data_count > max_bad_data_messages:
+                raise WorkerError(
+                    "Unsupported or corrupted BIN file: too many invalid message headers "
+                    f"({bad_data_count} > {max_bad_data_messages})."
+                )
+            continue
+
         if mtype in ("FMT", "FMTU", "UNIT", "MULT", "MSG"):
             continue
 

@@ -4,7 +4,7 @@ import json
 import os
 from typing import Any
 
-from .config import DEFAULT_MAX_PARSE_MESSAGES, DEFAULT_MAX_TIMELINE_FRAMES
+from .config import DEFAULT_MAX_BAD_DATA_MESSAGES, DEFAULT_MAX_PARSE_MESSAGES, DEFAULT_MAX_TIMELINE_FRAMES
 from .models import AnalysisMetrics, AnalysisRequest, AnalysisResult, AnalysisStatus
 from .parser import parse_log
 from .storage import download_raw_for_task, write_json
@@ -57,10 +57,15 @@ def process_request_message(request: AnalysisRequest, dt: float) -> AnalysisResu
             raise ValueError("Timeline step dt must be greater than zero.")
 
         max_parse_messages = int(os.getenv("MAX_PARSE_MESSAGES", str(DEFAULT_MAX_PARSE_MESSAGES)))
+        max_bad_data_messages = int(os.getenv("MAX_BAD_DATA_MESSAGES", str(DEFAULT_MAX_BAD_DATA_MESSAGES)))
         max_timeline_frames = int(os.getenv("MAX_TIMELINE_FRAMES", str(DEFAULT_MAX_TIMELINE_FRAMES)))
 
         source_path, should_cleanup = download_raw_for_task(request.taskId)
-        data = parse_log(source_path, max_messages=max_parse_messages)
+        data = parse_log(
+            source_path,
+            max_messages=max_parse_messages,
+            max_bad_data_messages=max_bad_data_messages,
+        )
         payload = build_output(data, dt=dt, max_frames=max_timeline_frames)
 
         metrics = payload.get("metrics", {})

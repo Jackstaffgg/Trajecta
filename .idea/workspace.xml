@@ -4,323 +4,36 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7e60ac53-03c3-493b-aa67-b1ef6b2f0543" name="Changes" comment="add API error codes and implement ban handling in authentication flow">
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/ws/payload/UserUnbannedPayload.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/event/user/UserUnbannedEvent.java" afterDir="false" />
+    <list default="true" id="ead05c28-5888-4bfd-aa2d-b5db12a27391" name="Changes" comment="add task creation endpoint with authorization and throttling for unauthorized requests">
+      <change afterPath="$PROJECT_DIR$/Trajecta-worker/tests/test_parser.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/user/AdminUserController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/user/AdminUserController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/user/AdminUserDetailsResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/user/AdminUserDetailsResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/user/UserResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/user/UserResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/ws/WsEventType.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/ws/WsEventType.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/event/EventPublisher.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/event/EventPublisher.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/event/user/UserBannedEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/event/user/UserBannedEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/mapper/UserMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/mapper/UserMapper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/repo/PunishmentRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/repo/PunishmentRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/NotificationServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/NotificationServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/user/PunishmentServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/user/PunishmentServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/intrf/user/PunishmentService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/intrf/user/PunishmentService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/App.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/components/layout/app-shell.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/components/layout/app-shell.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/lib/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/lib/api.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/lib/i18n.ts" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/lib/i18n.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/modules/admin/admin-dashboard-view.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/modules/admin/admin-dashboard-view.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-frontend/src/types/flight.ts" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-frontend/src/types/flight.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-worker/tests/test_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-worker/tests/test_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-worker/trajecta_worker/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-worker/trajecta_worker/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-worker/trajecta_worker/parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-worker/trajecta_worker/parser.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-worker/trajecta_worker/service.py" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-worker/trajecta_worker/service.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="CopilotPersistence">
-    <persistenceIdMap>
-      <entry key="_Z:/Trajecta/Trajecta-api" value="3BwCq6DWS300z6KH23kgk5FkhVq" />
-    </persistenceIdMap>
-  </component>
-  <component name="ExternalProjectsData">
-    <projectState path="$PROJECT_DIR$/Trajecta-api">
-      <ProjectState />
-    </projectState>
-  </component>
-  <component name="ExternalProjectsManager">
-    <system id="GRADLE">
-      <state>
-        <task path="$PROJECT_DIR$/Trajecta-api">
-          <activation />
-        </task>
-        <projects_view>
-          <tree_state>
-            <expand>
-              <path>
-                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
-                <item name="Trajecta-api" type="f1a62948:ProjectNode" />
-              </path>
-            </expand>
-            <select />
-          </tree_state>
-        </projects_view>
-      </state>
-    </system>
-  </component>
-  <component name="FileTemplateManagerImpl">
-    <option name="RECENT_TEMPLATES">
-      <list>
-        <option value="Enum" />
-        <option value="Interface" />
-        <option value="Class" />
-      </list>
-    </option>
-  </component>
-  <component name="Git.Settings">
-    <option name="RECENT_BRANCH_BY_REPOSITORY">
-      <map>
-        <entry key="$PROJECT_DIR$" value="fetat/refactor" />
-      </map>
-    </option>
-    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
-  </component>
-  <component name="GitHubPullRequestSearchHistory">{
-  &quot;lastFilter&quot;: {
-    &quot;state&quot;: &quot;OPEN&quot;,
-    &quot;assignee&quot;: &quot;knliiss&quot;
-  }
-}</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/Jackstaffgg/Trajecta.git&quot;,
-    &quot;accountId&quot;: &quot;476a8ad0-c782-44ef-8ba1-a91d38e74431&quot;
-  }
-}</component>
-  <component name="ProjectColorInfo">{
-  &quot;associatedIndex&quot;: 1
-}</component>
-  <component name="ProjectId" id="3BwCq6DWS300z6KH23kgk5FkhVq" />
-  <component name="ProjectViewState">
-    <option name="showLibraryContents" value="true" />
-  </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Batch.start-all-stacks.executor": "Run",
-    "Batch.start-all.executor": "Run",
-    "Docker.Trajecta-api/compose.yaml.minio-init: Compose Deployment.executor": "Run",
-    "Gradle.Build Trajecta-api.executor": "Run",
-    "Gradle.Download Sources.executor": "Run",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "main",
-    "kotlin-language-version-configured": "true",
-    "node.js.detected.package.eslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "ts.external.directory.path": "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2024.3.1.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external"
-  }
-}]]></component>
-  <component name="RecentsManager">
-    <key name="CreateClassDialog.RecentsKey">
-      <recent name="dev.knalis.trajectaapi.dto.ws.payload" />
-      <recent name="dev.knalis.trajectaapi.dto.ws.payload;" />
-      <recent name="dev.knalis.trajectaapi.event.user" />
-      <recent name="dev.knalis.trajectaapi.repo" />
-      <recent name="dev.knalis.trajectaapi.controller.rest.v1.admin" />
-    </key>
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="Z:\Trajecta\test-assets" />
-      <recent name="Z:\Trajecta\Trajecta-frontend\public\icons" />
-    </key>
-  </component>
-  <component name="RunManager" selected="Batch.start-all-stacks">
-    <configuration name="start-all-stacks" type="BatchConfigurationType" factoryName="Batch" temporary="true">
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="PARENT_ENVS" value="true" />
-      <module name="" />
-      <option name="SCRIPT_NAME" value="start-all-stacks.bat" />
-      <option name="PARAMETERS" value="" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="start-all" type="BatchConfigurationType" factoryName="Batch" temporary="true">
-      <module name="Trajecta-api" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="WORKING_DIRECTORY" value="./Trajecta-api/scripts" />
-      <option name="PARENT_ENVS" value="true" />
-      <option name="SCRIPT_NAME" value="start-all.bat" />
-      <option name="PARAMETERS" value="" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="TrajectaApiApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
-      <module name="Trajecta-api.main" />
-      <option name="SPRING_BOOT_MAIN_CLASS" value="dev.knalis.trajectaapi.TrajectaApiApplication" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="Trajecta-api/compose.yaml.minio-init: Compose Deployment" type="docker-deploy" factoryName="docker-compose.yml" temporary="true" server-name="Docker">
-      <deployment type="docker-compose.yml">
-        <settings>
-          <option name="services">
-            <list>
-              <option value="minio-init" />
-            </list>
-          </option>
-          <option name="sourceFilePath" value="Trajecta-api/compose.yaml" />
-        </settings>
-      </deployment>
-      <method v="2" />
-    </configuration>
-    <configuration default="true" type="docker-deploy" factoryName="docker-compose.yml" temporary="true">
-      <deployment type="docker-compose.yml">
-        <settings />
-      </deployment>
-      <method v="2" />
-    </configuration>
-    <recent_temporary>
-      <list>
-        <item itemvalue="Batch.start-all-stacks" />
-        <item itemvalue="Batch.start-all" />
-        <item itemvalue="Batch.start-all-stacks" />
-        <item itemvalue="Docker.Trajecta-api/compose.yaml.minio-init: Compose Deployment" />
-        <item itemvalue="Batch.start-all" />
-      </list>
-    </recent_temporary>
-  </component>
-  <component name="SharedIndexes">
-    <attachedChunks>
-      <set>
-        <option value="bundled-jdk-30f59d01ecdd-2fc7cc6b9a17-intellij.indexing.shared.core-IU-253.31033.145" />
-        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-IU-253.31033.145" />
-      </set>
-    </attachedChunks>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="TaskManager">
-    <task id="LOCAL-00001" summary="add README documentation for Trajecta platform">
+    <task id="LOCAL-00001" summary="add task creation endpoint with authorization and throttling for unauthorized requests">
       <option name="closed" value="true" />
-      <created>1775312067189</created>
+      <created>1775434982962</created>
       <option name="number" value="00001" />
       <option name="presentableId" value="LOCAL-00001" />
       <option name="project" value="LOCAL" />
-      <updated>1775312067189</updated>
+      <updated>1775434982962</updated>
     </task>
-    <task id="LOCAL-00002" summary="update cache configuration and references for task DTOs to version 3">
-      <option name="closed" value="true" />
-      <created>1775313271641</created>
-      <option name="number" value="00002" />
-      <option name="presentableId" value="LOCAL-00002" />
-      <option name="project" value="LOCAL" />
-      <updated>1775313271641</updated>
-    </task>
-    <task id="LOCAL-00003" summary="update cache configuration for task DTOs and implement UserDetailsService in UserServiceImpl">
-      <option name="closed" value="true" />
-      <created>1775314218162</created>
-      <option name="number" value="00003" />
-      <option name="presentableId" value="LOCAL-00003" />
-      <option name="project" value="LOCAL" />
-      <updated>1775314218162</updated>
-    </task>
-    <task id="LOCAL-00004" summary="implement UserDetailsService in UserDetailsServiceImpl and remove from UserServiceImpl">
-      <option name="closed" value="true" />
-      <created>1775314475938</created>
-      <option name="number" value="00004" />
-      <option name="presentableId" value="LOCAL-00004" />
-      <option name="project" value="LOCAL" />
-      <updated>1775314475938</updated>
-    </task>
-    <task id="LOCAL-00005" summary="add project icon to index.html and update workspace configuration">
-      <option name="closed" value="true" />
-      <created>1775315170374</created>
-      <option name="number" value="00005" />
-      <option name="presentableId" value="LOCAL-00005" />
-      <option name="project" value="LOCAL" />
-      <updated>1775315170374</updated>
-    </task>
-    <task id="LOCAL-00006" summary="add OpenAI configuration to .env and docker-compose files">
-      <option name="closed" value="true" />
-      <created>1775317033115</created>
-      <option name="number" value="00006" />
-      <option name="presentableId" value="LOCAL-00006" />
-      <option name="project" value="LOCAL" />
-      <updated>1775317033115</updated>
-    </task>
-    <task id="LOCAL-00007" summary="add NotificationType enumeration to Notification model and update workspace configuration">
-      <option name="closed" value="true" />
-      <created>1775350734457</created>
-      <option name="number" value="00007" />
-      <option name="presentableId" value="LOCAL-00007" />
-      <option name="project" value="LOCAL" />
-      <updated>1775350734457</updated>
-    </task>
-    <task id="LOCAL-00008" summary="add base seed properties for owner user configuration and update related components">
-      <option name="closed" value="true" />
-      <created>1775392446853</created>
-      <option name="number" value="00008" />
-      <option name="presentableId" value="LOCAL-00008" />
-      <option name="project" value="LOCAL" />
-      <updated>1775392446853</updated>
-    </task>
-    <task id="LOCAL-00009" summary="add APP_SEED_ENABLED configuration to environment files and update documentation">
-      <option name="closed" value="true" />
-      <created>1775392656150</created>
-      <option name="number" value="00009" />
-      <option name="presentableId" value="LOCAL-00009" />
-      <option name="project" value="LOCAL" />
-      <updated>1775392656150</updated>
-    </task>
-    <task id="LOCAL-00010" summary="add API error codes and implement ban handling in authentication flow">
-      <option name="closed" value="true" />
-      <created>1775396604760</created>
-      <option name="number" value="00010" />
-      <option name="presentableId" value="LOCAL-00010" />
-      <option name="project" value="LOCAL" />
-      <updated>1775396604760</updated>
-    </task>
-    <task active="true" id="Default" summary="Default task">
-      <changelist id="7e60ac53-03c3-493b-aa67-b1ef6b2f0543" name="Changes" comment="add API error codes and implement ban handling in authentication flow" />
-      <created>1775397058834</created>
-      <option name="number" value="Default" />
-      <option name="presentableId" value="Default" />
-      <updated>1775397058834</updated>
-      <workItem from="1775397059887" duration="5145000" />
-    </task>
-    <option name="localTasksCounter" value="11" />
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
-  <component name="TypeScriptGeneratedFilesManager">
-    <option name="version" value="3" />
-  </component>
-  <component name="Vcs.Log.Tabs.Properties">
-    <option name="TAB_STATES">
-      <map>
-        <entry key="MAIN">
-          <value>
-            <State />
-          </value>
-        </entry>
-      </map>
-    </option>
-  </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="add README documentation for Trajecta platform" />
-    <MESSAGE value="update cache configuration and references for task DTOs to version 3" />
-    <MESSAGE value="update cache configuration for task DTOs and implement UserDetailsService in UserServiceImpl" />
-    <MESSAGE value="implement UserDetailsService in UserDetailsServiceImpl and remove from UserServiceImpl" />
-    <MESSAGE value="add project icon to index.html and update workspace configuration" />
-    <MESSAGE value="add OpenAI configuration to .env and docker-compose files" />
-    <MESSAGE value="add NotificationType enumeration to Notification model and update workspace configuration" />
-    <MESSAGE value="Refactor configuration properties and enhance data seeding functionality" />
-    <MESSAGE value="add base seed properties for owner user configuration and update related components" />
-    <MESSAGE value="add APP_SEED_ENABLED configuration to environment files and update documentation" />
-    <MESSAGE value="add API error codes and implement ban handling in authentication flow" />
-    <option name="LAST_COMMIT_MESSAGE" value="add API error codes and implement ban handling in authentication flow" />
-  </component>
-  <component name="github-copilot-workspace">
-    <instructionFileLocations>
-      <option value=".github/instructions" />
-    </instructionFileLocations>
-    <promptFileLocations>
-      <option value=".github/prompts" />
-    </promptFileLocations>
+    <MESSAGE value="add task creation endpoint with authorization and throttling for unauthorized requests" />
+    <option name="LAST_COMMIT_MESSAGE" value="add task creation endpoint with authorization and throttling for unauthorized requests" />
   </component>
 </project>
