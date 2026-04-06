@@ -2,6 +2,8 @@ package dev.knalis.trajectaapi.controller.rest.v1.admin;
 
 import dev.knalis.trajectaapi.dto.admin.CacheClearResponse;
 import dev.knalis.trajectaapi.dto.admin.CacheHealthResponse;
+import dev.knalis.trajectaapi.dto.admin.ServiceHealthResponse;
+import dev.knalis.trajectaapi.dto.admin.ServiceRuntimeMetricsResponse;
 import dev.knalis.trajectaapi.dto.common.ApiResponse;
 import dev.knalis.trajectaapi.service.intrf.user.CacheAdminService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -38,5 +40,16 @@ public class AdminCacheController {
     public ResponseEntity<ApiResponse<CacheHealthResponse>> cacheHealth() {
         return ResponseEntity.ok(ApiResponse.success(cacheAdminService.cacheHealth()));
     }
-}
 
+    @Operation(summary = "Service health", description = "Returns aggregated backend service status (database + redis).")
+    @GetMapping("/service-health")
+    public ResponseEntity<ApiResponse<ServiceHealthResponse>> serviceHealth() {
+        return ResponseEntity.ok(ApiResponse.success(cacheAdminService.serviceHealth()));
+    }
+
+    @Operation(summary = "Runtime metrics", description = "Returns runtime metrics, statistics and computed stability indicator.")
+    @GetMapping("/runtime-metrics")
+    public ResponseEntity<ApiResponse<ServiceRuntimeMetricsResponse>> runtimeMetrics() {
+        return ResponseEntity.ok(ApiResponse.success(cacheAdminService.runtimeMetrics()));
+    }
+}

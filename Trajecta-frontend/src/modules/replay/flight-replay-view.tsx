@@ -8,19 +8,18 @@ import {
   ConstantPositionProperty,
   HeadingPitchRoll,
   Ion,
+  Matrix4,
   Math as CesiumMath,
   Quaternion,
+  Transforms,
   createWorldTerrainAsync,
   Viewer as CesiumViewer
 } from "cesium";
 import { Pause, Play, Camera, Move3D, Rewind, FastForward, RotateCcw } from "lucide-react";
-import { useLocaleStore } from "@/store/locale-store";
 import { useFlightStore } from "@/store/flight-store";
 import { buildHybridTrajectory, buildRelativeTrajectory, interpolateFrame, speedToColor } from "@/modules/replay/replay-utils";
-import { CartesianTraceView } from "@/modules/replay/cartesian-trace-view";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { tr, trFmt } from "@/lib/i18n";
 import type { FlightFrame } from "@/types/flight";
 
 const CESIUM_TOKEN = import.meta.env.VITE_CESIUM_ION_TOKEN as string | undefined;
@@ -47,25 +46,25 @@ function eventToneFromType(type: string): EventTone {
 
 function eventToneClass(tone: EventTone, isActive: boolean): string {
   if (isActive) {
-    return "bg-zinc-200";
+    return "bg-cyan-300";
   }
   if (tone === "critical") {
-    return "bg-zinc-400";
+    return "bg-rose-300";
   }
   if (tone === "warning") {
-    return "bg-zinc-300";
+    return "bg-amber-300";
   }
-  return "bg-zinc-500/80";
+  return "bg-sky-300/80";
 }
 
 function eventToneColor(tone: EventTone): Color {
   if (tone === "critical") {
-    return Color.fromCssColorString("#a1a1aa");
+    return Color.fromCssColorString("#fb7185");
   }
   if (tone === "warning") {
-    return Color.fromCssColorString("#d4d4d8");
+    return Color.fromCssColorString("#fbbf24");
   }
-  return Color.fromCssColorString("#71717a");
+  return Color.fromCssColorString("#38bdf8");
 }
 
 function haversineMeters(a: FlightFrame, b: FlightFrame): number {
@@ -95,7 +94,6 @@ export function FlightReplayView() {
   const setPlaying = useFlightStore((s) => s.setReplayPlaying);
   const setCamera = useFlightStore((s) => s.setReplayCamera);
   const setSpeed = useFlightStore((s) => s.setReplaySpeed);
-  const locale = useLocaleStore((s) => s.locale);
   const viewerRef = useRef<CesiumViewer | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const interpolatedRef = useRef(interpolateFrame([], replay.timeSec));
@@ -107,6 +105,10 @@ export function FlightReplayView() {
   const traceEntityIdsRef = useRef<string[]>([]);
   const droneEntityRef = useRef<ReturnType<CesiumViewer["entities"]["add"]> | null>(null);
   const terrainBiasRef = useRef<number | null>(null);
+  const cartesianGuideIdsRef = useRef<string[]>([]);
+  const cartesianFrameRef = useRef<{ startLat: number; startLon: number; startAlt: number; cosLat: number } | null>(null);
+  const cartesianTransformRef = useRef<Matrix4 | null>(null);
+  const [terrainRevision, setTerrainRevision] = useState(0);
   const [compactHud, setCompactHud] = useState(false);
   const [chaseStyle, setChaseStyle] = useState<"normal" | "cinematic">("normal");
   const [hoveredEventKey, setHoveredEventKey] = useState<string | null>(null);
@@ -253,6 +255,10 @@ export function FlightReplayView() {
   }, [frames]);
 
   const alignedAltitudeFromFrame = useCallback((frame: { lat: number; lon: number; alt: number }) => {
+    if (visualizationMode === "cartesian") {
+      return Number.isFinite(frame.alt) ? frame.alt : 0;
+    }
+
     const srcAlt = Number.isFinite(frame.alt) ? frame.alt : 0;
     let alt = srcAlt + getTerrainBias();
 
@@ -266,14 +272,47 @@ export function FlightReplayView() {
     }
 
     return alt;
-  }, [getTerrainBias]);
+  }, [getTerrainBias, visualizationMode]);
+
+  const localCartesianOffset = useCallback((frame: { lat: number; lon: number; alt: number }) => {
+    const local = cartesianFrameRef.current;
+    if (!local) {
+      return new Cartesian3(0, 0, 0);
+    }
+
+    const metersPerDegLat = 111320;
+    const metersPerDegLon = 111320 * local.cosLat;
+    const east = ((frame.lon ?? local.startLon) - local.startLon) * metersPerDegLon;
+    const north = ((frame.lat ?? local.startLat) - local.startLat) * metersPerDegLat;
+    const up = (Number.isFinite(frame.alt) ? frame.alt : local.startAlt) - local.startAlt;
+    return new Cartesian3(Number.isFinite(east) ? east : 0, Number.isFinite(north) ? north : 0, Number.isFinite(up) ? up : 0);
+  }, []);
+
+  const localToWorld = useCallback((offset: Cartesian3) => {
+    const transform = cartesianTransformRef.current;
+    if (!transform) {
+      return Cartesian3.clone(offset);
+    }
+    return Matrix4.multiplyByPoint(transform, offset, new Cartesian3());
+  }, []);
 
   const positionFromFrameAligned = useCallback((frame: { lat: number; lon: number; alt: number }) => {
+    if (visualizationMode === "cartesian") {
+      const local = localCartesianOffset(frame);
+      if (cartesianTransformRef.current) {
+        return localToWorld(local);
+      }
+      const lat = Number.isFinite(frame.lat) ? frame.lat : 0;
+      const lon = Number.isFinite(frame.lon) ? frame.lon : 0;
+      const alt = Number.isFinite(frame.alt) ? frame.alt : 0;
+      return Cartesian3.fromDegrees(lon, lat, alt);
+    }
+
     const lat = Number.isFinite(frame.lat) ? frame.lat : 0;
     const lon = Number.isFinite(frame.lon) ? frame.lon : 0;
     const alt = alignedAltitudeFromFrame({ lat, lon, alt: frame.alt });
     return Cartesian3.fromDegrees(lon, lat, alt);
-  }, [alignedAltitudeFromFrame]);
+  }, [alignedAltitudeFromFrame, localCartesianOffset, localToWorld, visualizationMode]);
 
   function formatReplayTime(sec: number) {
     const s = Math.max(0, Math.floor(sec));
@@ -398,10 +437,8 @@ export function FlightReplayView() {
   const horizontalSpeed = Math.max(0, interpolated.speed ?? 0);
   const verticalSpeed = interpolated.climbRate ?? 0;
   const absoluteSpeed = Math.hypot(horizontalSpeed, verticalSpeed);
-  const hasBattery = Number.isFinite(interpolated.battery);
-  const batteryPct = hasBattery ? (interpolated.battery as number) : undefined;
-  const batteryPctSafe = batteryPct ?? 100;
-  const batteryTone = !hasBattery ? "text-zinc-400" : batteryPctSafe <= 20 ? "text-zinc-300" : batteryPctSafe <= 40 ? "text-zinc-200" : "text-zinc-100";
+  const batteryPct = interpolated.battery ?? 0;
+  const batteryTone = batteryPct <= 20 ? "text-rose-300" : batteryPct <= 40 ? "text-amber-200" : "text-emerald-200";
 
   useEffect(() => {
     interpolatedRef.current = interpolated;
@@ -429,10 +466,6 @@ export function FlightReplayView() {
   );
 
   const traceSegments = useMemo(() => {
-    if (visualizationMode !== "geo") {
-      return [] as Array<{ id: string; color: Color; positions: Cartesian3[] }>;
-    }
-
     if (playbackFrames.length < 2) {
       return [] as Array<{ id: string; color: Color; positions: Cartesian3[] }>;
     }
@@ -502,7 +535,7 @@ export function FlightReplayView() {
     }
 
     return segments;
-  }, [playbackFrames, positionFromFrameAligned, visualizationMode]);
+  }, [playbackFrames, positionFromFrameAligned, terrainRevision]);
 
   useEffect(() => {
     if (!containerRef.current || viewerRef.current) {
@@ -525,6 +558,7 @@ export function FlightReplayView() {
         if (!viewer.isDestroyed()) {
           viewer.scene.terrainProvider = terrainProvider;
           terrainBiasRef.current = null;
+          setTerrainRevision((v) => v + 1);
         }
       })
       .catch(() => {
@@ -561,6 +595,76 @@ export function FlightReplayView() {
       viewer.destroy();
     };
   }, [positionFromFrameAligned]);
+
+  useEffect(() => {
+    const base = playbackFrames[0];
+    if (!base) {
+      cartesianFrameRef.current = null;
+      cartesianTransformRef.current = null;
+      return;
+    }
+
+    const startLat = Number.isFinite(base.lat) ? base.lat : 0;
+    const startLon = Number.isFinite(base.lon) ? base.lon : 0;
+    const startAlt = Number.isFinite(base.alt) ? base.alt : 0;
+    const cosLat = Math.max(1e-6, Math.cos((startLat * Math.PI) / 180));
+
+    cartesianFrameRef.current = { startLat, startLon, startAlt, cosLat };
+    const origin = Cartesian3.fromDegrees(startLon, startLat, startAlt);
+    cartesianTransformRef.current = Transforms.eastNorthUpToFixedFrame(origin);
+  }, [playbackFrames]);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) {
+      return;
+    }
+
+    for (const id of cartesianGuideIdsRef.current) {
+      viewer.entities.removeById(id);
+    }
+    cartesianGuideIdsRef.current = [];
+
+    if (visualizationMode !== "cartesian") {
+      viewer.scene.globe.show = true;
+      return;
+    }
+
+    viewer.scene.globe.show = false;
+
+    const addGuide = (id: string, positions: Cartesian3[], color: Color, width = 1) => {
+      cartesianGuideIdsRef.current.push(id);
+      viewer.entities.add({
+        id,
+        polyline: {
+          positions,
+          width,
+          material: color
+        }
+      });
+    };
+
+    const size = 1200;
+    const step = 100;
+    for (let x = -size; x <= size; x += step) {
+      addGuide(
+        `cart-grid-x-${x}`,
+        [localToWorld(new Cartesian3(x, -size, 0)), localToWorld(new Cartesian3(x, size, 0))],
+        Color.fromCssColorString("#6b7280").withAlpha(x % 500 === 0 ? 0.5 : 0.2)
+      );
+    }
+    for (let y = -size; y <= size; y += step) {
+      addGuide(
+        `cart-grid-y-${y}`,
+        [localToWorld(new Cartesian3(-size, y, 0)), localToWorld(new Cartesian3(size, y, 0))],
+        Color.fromCssColorString("#6b7280").withAlpha(y % 500 === 0 ? 0.5 : 0.2)
+      );
+    }
+
+    addGuide("cart-axis-x", [localToWorld(new Cartesian3(0, 0, 0)), localToWorld(new Cartesian3(600, 0, 0))], Color.RED, 2);
+    addGuide("cart-axis-y", [localToWorld(new Cartesian3(0, 0, 0)), localToWorld(new Cartesian3(0, 600, 0))], Color.GREEN, 2);
+    addGuide("cart-axis-z", [localToWorld(new Cartesian3(0, 0, 0)), localToWorld(new Cartesian3(0, 0, 400))], Color.CYAN, 2);
+  }, [localToWorld, visualizationMode]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -619,6 +723,7 @@ export function FlightReplayView() {
   useEffect(() => {
     hasInitialFramingRef.current = false;
     terrainBiasRef.current = null;
+    setTerrainRevision((v) => v + 1);
   }, [playbackFrames, visualizationMode]);
 
   useEffect(() => {
@@ -650,23 +755,9 @@ export function FlightReplayView() {
 
     if (viewer.trackedEntity) {
       viewer.trackedEntity = undefined;
+      viewer.camera.lookAtTransform(Matrix4.IDENTITY);
     }
   }, [replay.camera, chaseViewFrom]);
-
-  useEffect(() => {
-    const viewer = viewerRef.current;
-    if (!viewer) {
-      return;
-    }
-
-    const controller = viewer.scene.screenSpaceCameraController;
-    const fpvMode = replay.camera === "fpv";
-    controller.enableRotate = !fpvMode;
-    controller.enableTranslate = !fpvMode;
-    controller.enableZoom = !fpvMode;
-    controller.enableTilt = !fpvMode;
-    controller.enableLook = !fpvMode;
-  }, [replay.camera]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -706,33 +797,29 @@ export function FlightReplayView() {
   }
 
   if (!playbackFrames.length) {
-    return <p className="text-sm text-muted-foreground">{tr(locale, "replay.empty")}</p>;
+    return <p className="text-sm text-muted-foreground">No frames found for replay.</p>;
   }
 
   return (
     <div className="space-y-3">
       <div className="relative h-[62vh] overflow-hidden rounded-xl border border-border">
-        {visualizationMode === "geo" ? (
-          <div ref={containerRef} className="h-full w-full" />
-        ) : (
-          <CartesianTraceView frames={playbackFrames} currentFrame={interpolated} />
-        )}
+        <div ref={containerRef} className="h-full w-full" />
 
         <div className="absolute right-3 top-3">
           <Button variant="outline" size="sm" onClick={() => setCompactHud((v) => !v)}>
-            {compactHud ? tr(locale, "replay.hud.full") : tr(locale, "replay.hud.compact")}
+            {compactHud ? "Full HUD" : "Compact HUD"}
           </Button>
         </div>
 
         <div className="absolute left-3 top-3 flex flex-wrap gap-2">
-          <div className="telemetry-pill rounded-md px-2 py-1 text-xs">{tr(locale, "replay.hud.altAgl")}: {altitudeAgl.toFixed(1)} m</div>
-          <div className="telemetry-pill rounded-md px-2 py-1 text-xs">{tr(locale, "replay.hud.altMsl")}: {alignedAltitude.toFixed(1)} m</div>
-          <div className="telemetry-pill rounded-md px-2 py-1 text-xs">{tr(locale, "replay.hud.speedAbs")}: {absoluteSpeed.toFixed(1)} m/s</div>
-          <div className="telemetry-pill rounded-md px-2 py-1 text-xs">{tr(locale, "replay.hud.speedHv")}: {horizontalSpeed.toFixed(1)} / {verticalSpeed.toFixed(1)} m/s</div>
-          <div className={`telemetry-pill rounded-md px-2 py-1 text-xs ${batteryTone}`}>{tr(locale, "replay.hud.battery")}: {hasBattery ? `${batteryPct!.toFixed(0)}%` : "N/A"}</div>
+          <div className="telemetry-pill rounded-md px-2 py-1 text-xs">Alt AGL: {altitudeAgl.toFixed(1)} m</div>
+          <div className="telemetry-pill rounded-md px-2 py-1 text-xs">Alt MSL: {alignedAltitude.toFixed(1)} m</div>
+          <div className="telemetry-pill rounded-md px-2 py-1 text-xs">Speed ABS: {absoluteSpeed.toFixed(1)} m/s</div>
+          <div className="telemetry-pill rounded-md px-2 py-1 text-xs">Speed H/V: {horizontalSpeed.toFixed(1)} / {verticalSpeed.toFixed(1)} m/s</div>
+          <div className={`telemetry-pill rounded-md px-2 py-1 text-xs ${batteryTone}`}>Battery: {batteryPct.toFixed(0)}%</div>
           {!compactHud ? (
             <>
-              <div className="telemetry-pill rounded-md px-2 py-1 text-xs">{tr(locale, "replay.hud.mode")}: {replay.camera.toUpperCase()}</div>
+              <div className="telemetry-pill rounded-md px-2 py-1 text-xs">Mode: {replay.camera.toUpperCase()}</div>
               <div className="telemetry-pill rounded-md px-2 py-1 text-xs">R/P/Y: {(interpolated.roll ?? 0).toFixed(1)} / {(interpolated.pitch ?? 0).toFixed(1)} / {(interpolated.yaw ?? 0).toFixed(1)}</div>
             </>
           ) : null}
@@ -742,7 +829,7 @@ export function FlightReplayView() {
       <div className="space-y-3 rounded-xl border border-border bg-card/80 p-3">
         <div className="grid gap-3 lg:grid-cols-3">
           <section className="rounded-lg border border-border/70 bg-background/30 p-3">
-            <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">{tr(locale, "replay.section.playback")}</p>
+            <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">Playback</p>
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => seekBy(-5)}>
                 <Rewind className="h-4 w-4" />
@@ -750,7 +837,7 @@ export function FlightReplayView() {
               </Button>
               <Button size="sm" onClick={() => setPlaying(!replay.isPlaying)}>
                 {replay.isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                {replay.isPlaying ? tr(locale, "replay.action.pause") : tr(locale, "replay.action.play")}
+                {replay.isPlaying ? "Pause" : "Play"}
               </Button>
               <Button variant="outline" size="sm" onClick={() => seekBy(5)}>
                 <FastForward className="h-4 w-4" />
@@ -758,11 +845,11 @@ export function FlightReplayView() {
               </Button>
               <Button variant="outline" size="sm" onClick={() => { setTime(0); setPlaying(false); }}>
                 <RotateCcw className="h-4 w-4" />
-                {tr(locale, "replay.action.reset")}
+                Reset
               </Button>
               <Button variant="outline" size="sm" onClick={recenterCamera}>
                 <Camera className="h-4 w-4" />
-                {tr(locale, "replay.action.recenter")}
+                Recenter
               </Button>
             </div>
             <div className="mt-2">
@@ -771,11 +858,11 @@ export function FlightReplayView() {
           </section>
 
           <section className="rounded-lg border border-border/70 bg-background/30 p-3 lg:col-span-2">
-            <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">{tr(locale, "replay.section.timeline")}</p>
+            <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">Timeline</p>
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{replay.isPlaying ? tr(locale, "replay.status.playing") : replay.timeSec >= maxTime ? tr(locale, "replay.status.ended") : tr(locale, "replay.status.paused")}</span>
-                <span>{progressPct.toFixed(1)}% · {tr(locale, "replay.status.left")} {formatReplayTime(maxTime - replay.timeSec)}</span>
+                <span>{replay.isPlaying ? "Playing" : replay.timeSec >= maxTime ? "Ended" : "Paused"}</span>
+                <span>{progressPct.toFixed(1)}% · left {formatReplayTime(maxTime - replay.timeSec)}</span>
               </div>
               <div className="relative">
                 <div className="absolute -top-2 left-0 right-0 h-2">
@@ -788,7 +875,7 @@ export function FlightReplayView() {
                       onMouseEnter={() => setHoveredEventKey(event.key)}
                       onMouseLeave={() => setHoveredEventKey((prev) => (prev === event.key ? null : prev))}
                       onClick={() => setTime(event.t)}
-                       title={`${event.label} @ ${formatReplayTime(event.t)}`}
+                      title={`${event.label} @ ${formatReplayTime(event.t)}`}
                     />
                   ))}
                 </div>
@@ -806,9 +893,9 @@ export function FlightReplayView() {
                 {(() => {
                   const active = visibleEventMarkers.find((event) => event.key === hoveredEventKey) ?? nearestEvent;
                   if (!active) {
-                     return tr(locale, "replay.timeline.noEvents");
+                    return "No events on timeline";
                   }
-                  return trFmt(locale, "replay.timeline.nearest", { label: active.label, tone: active.tone, time: formatReplayTime(active.t) });
+                  return `Nearest event: ${active.label} (${active.tone}) @ ${formatReplayTime(active.t)}`;
                 })()}
               </div>
             </div>
@@ -816,7 +903,7 @@ export function FlightReplayView() {
         </div>
 
         <section className="rounded-lg border border-border/70 bg-background/30 p-3">
-          <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">{tr(locale, "replay.section.cameraFilters")}</p>
+          <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">Camera and Filters</p>
           <div className="flex flex-wrap items-center gap-2">
             {speedPresets.map((preset) => (
               <Button
@@ -829,42 +916,42 @@ export function FlightReplayView() {
               </Button>
             ))}
             <Button variant={replay.camera === "chase" ? "default" : "outline"} size="sm" onClick={() => setCamera("chase")}>
-              <Camera className="h-3.5 w-3.5" /> {tr(locale, "replay.camera.chase")}
+              <Camera className="h-3.5 w-3.5" /> Chase
             </Button>
             <Button variant={replay.camera === "fpv" ? "default" : "outline"} size="sm" onClick={() => setCamera("fpv")}>
               <Camera className="h-3.5 w-3.5" /> FPV
             </Button>
             <Button variant={replay.camera === "free" ? "default" : "outline"} size="sm" onClick={() => setCamera("free")}>
-              <Move3D className="h-3.5 w-3.5" /> {tr(locale, "replay.camera.free")}
+              <Move3D className="h-3.5 w-3.5" /> Free
             </Button>
             <Button variant={chaseStyle === "cinematic" ? "default" : "outline"} size="sm" onClick={() => setChaseStyle((prev) => (prev === "normal" ? "cinematic" : "normal"))}>
-              {chaseStyle === "cinematic" ? tr(locale, "replay.camera.cinematic") : tr(locale, "replay.camera.normal")}
+              {chaseStyle === "cinematic" ? "Cinematic Chase" : "Normal Chase"}
             </Button>
             <Button variant={importantOnly ? "default" : "outline"} size="sm" onClick={() => setImportantOnly((prev) => !prev)}>
-              {importantOnly ? tr(locale, "replay.camera.importantOnly") : tr(locale, "replay.camera.allEvents")}
+              {importantOnly ? "Important Only" : "All Events"}
             </Button>
             <Button variant={positionMode === "absolute" ? "default" : "outline"} size="sm" onClick={() => setPositionMode("absolute") }>
-              {tr(locale, "replay.camera.gpsAbsolute")}
+              GPS Absolute
             </Button>
             <Button variant={positionMode === "relative" ? "default" : "outline"} size="sm" onClick={() => setPositionMode("relative") }>
-              {tr(locale, "replay.camera.relativeIns")}
+              Relative INS
             </Button>
             <Button variant={positionMode === "hybrid" ? "default" : "outline"} size="sm" onClick={() => setPositionMode("hybrid") }>
-              {tr(locale, "replay.camera.hybrid")}
+              Hybrid GPS+INS
             </Button>
             <Button variant={visualizationMode === "geo" ? "default" : "outline"} size="sm" onClick={() => setVisualizationMode("geo") }>
-              {tr(locale, "replay.camera.geo")}
+              Geo Globe
             </Button>
             <Button variant={visualizationMode === "cartesian" ? "default" : "outline"} size="sm" onClick={() => setVisualizationMode("cartesian") }>
-              {tr(locale, "replay.camera.cartesian")}
+              Cartesian 3D
             </Button>
-            <span className="text-[11px] text-zinc-300">{tr(locale, "replay.legend.critical")}</span>
-            <span className="text-[11px] text-zinc-200">{tr(locale, "replay.legend.warning")}</span>
-            <span className="text-[11px] text-zinc-100">{tr(locale, "replay.legend.info")}</span>
-            <span className="text-[11px] text-muted-foreground">{tr(locale, "replay.legend.traceColor")}</span>
-            <span className="text-[11px] text-muted-foreground">{tr(locale, "replay.legend.positionMode")}: {positionMode === "absolute" ? tr(locale, "replay.position.absolute") : positionMode === "relative" ? tr(locale, "replay.position.relative") : tr(locale, "replay.position.hybrid")}</span>
-            <span className="text-[11px] text-muted-foreground">{tr(locale, "replay.legend.viz")}: {visualizationMode === "geo" ? tr(locale, "replay.viz.geo") : tr(locale, "replay.viz.cartesian")}</span>
-            <span className="text-[11px] text-muted-foreground">{tr(locale, "replay.legend.keys")}: Space, ←/→, Shift+←/→, 1/2/3, C, R</span>
+            <span className="text-[11px] text-rose-300">Critical</span>
+            <span className="text-[11px] text-amber-200">Warning</span>
+            <span className="text-[11px] text-sky-300">Info</span>
+            <span className="text-[11px] text-muted-foreground">Trace color: blue (slow) to red (fast)</span>
+            <span className="text-[11px] text-muted-foreground">Position mode: {positionMode === "absolute" ? "GPS absolute" : positionMode === "relative" ? "Relative INS from start" : "Hybrid GPS+INS"}</span>
+            <span className="text-[11px] text-muted-foreground">Viz: {visualizationMode === "geo" ? "Geographic globe" : "Cartesian plane (ENU)"}</span>
+            <span className="text-[11px] text-muted-foreground">Keys: Space, ←/→, Shift+←/→, 1/2/3, C, R</span>
           </div>
         </section>
       </div>

@@ -96,7 +96,23 @@ start-all-stacks.bat logs
 start-all-stacks.bat validate
 start-all-stacks.bat up build
 start-all-stacks.bat up tests
+start-all-stacks.bat up workers 2
+set WORKER_REPLICAS=2 && start-all-stacks.bat up
 start-all-stacks.bat down
+```
+
+Host diagnostics (from repo root):
+
+```powershell
+.\check-system.ps1
+.\check-system.ps1 -ApiUrl "http://localhost:8080" -FrontendUrl "http://localhost:3000" -UsersCount 50
+.\check-system.ps1 -AdminToken "<jwt_admin_token>"
+.\check-system.ps1 -UsersCount 120 -ProbePath "/api/public/ping"
+```
+
+```bash
+./check-system.sh
+ADMIN_TOKEN="<jwt_admin_token>" ./check-system.sh "http://localhost:8080" 50 "http://localhost:3000"
 ```
 
 Typical local URLs:
@@ -116,6 +132,7 @@ Typical local URLs:
 4. Frontend compose startup (`Trajecta-frontend/docker-compose.yml`, `frontend`)
 
 By default, script starts all stacks via Docker Compose without Gradle build.
+Worker service can be scaled with `workers N` argument or `WORKER_REPLICAS` environment variable.
 
 ### Manual module mode
 
@@ -169,6 +186,13 @@ High-level variable groups:
 - Backend and security: `DB_*`, `RABBIT_*`, `MINIO_*`, `JWT_SECRET`, `INTERNAL_WORKER_TOKEN`
 - Frontend routing: `VITE_APP_BASE_PATH`, `VITE_API_BASE_URL`, `VITE_WS_PATH`
 - Worker runtime: `HTTP_TIMEOUT_SECONDS`
+- Worker scaling and limits: `WORKER_REPLICAS`, `WORKER_CPU_LIMIT`, `WORKER_MEM_LIMIT`
+
+For a single 3 CPU / 4 GB VPS, a practical baseline is:
+- `WORKER_REPLICAS=2`
+- `WORKER_CPU_LIMIT=0.7`
+- `WORKER_MEM_LIMIT=576m`
+- `BACKEND_MEM_LIMIT=768m`
 
 ## Services and Ports
 

@@ -16,6 +16,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.net.UnknownHostException;
 
@@ -106,6 +107,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidationExceptions() {
         return buildResponse(HttpStatus.BAD_REQUEST, ApiErrorCodes.VALIDATION_FAILED, "Validation failed for request payload.");
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceededException() {
+        return buildResponse(
+                HttpStatus.PAYLOAD_TOO_LARGE,
+                ApiErrorCodes.FILE_TOO_LARGE,
+                "Uploaded file exceeds the maximum allowed size."
+        );
     }
     
     @ExceptionHandler(InternalServerException.class)

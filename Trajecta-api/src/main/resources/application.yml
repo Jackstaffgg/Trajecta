@@ -11,10 +11,11 @@ spring:
     username: ${DB_USER:user}
     password: ${DB_PASSWORD:password123}
     hikari:
-      maximum-pool-size: 10
+      maximum-pool-size: 12
       minimum-idle: 2
-      idle-timeout: 30000
+      idle-timeout: 60000
       max-lifetime: 600000
+      connection-timeout: 20000
 
   jpa:
     hibernate:
@@ -62,12 +63,17 @@ spring:
 
   servlet:
     multipart:
-      max-file-size: 50MB
-      max-request-size: 50MB
+      max-file-size: 10MB
+      max-request-size: 10MB
       file-size-threshold: 2MB
 
 server:
   tomcat:
+    threads:
+      max: 200
+      min-spare: 10
+    max-connections: 1024
+    accept-count: 100
     max-swallow-size: -1
   servlet:
     session:
@@ -107,6 +113,8 @@ application:
     username: ${OWNER_USERNAME:Owner}
     password: ${OWNER_PASSWORD:Owner123}
     mail: ${OWNER_MAIL:owner@ownermail.own}
+  task:
+    processing-timeout-seconds: ${TASK_PROCESSING_TIMEOUT_SECONDS:900}
 
 minio:
   endpoint: ${MINIO_URL:http://localhost:9000}

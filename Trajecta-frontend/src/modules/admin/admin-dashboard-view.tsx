@@ -8,6 +8,8 @@ import {
   clearAdminUserCache,
   deleteAdminUser,
   getAdminCacheHealth,
+  getAdminRuntimeMetrics,
+  getAdminServiceHealth,
   getAdminBroadcastHistory,
   getAdminUserDetails,
   getAdminUsers,
@@ -79,6 +81,13 @@ function localeTag(locale: "en" | "ru" | "uk") {
   return "en-US";
 }
 
+function normalizeRole(role: string | null | undefined): string {
+  if (!role) {
+    return "";
+  }
+  return role.toUpperCase().replace(/^ROLE_/, "");
+}
+
 export function AdminDashboardView({ section }: AdminDashboardViewProps) {
   const auth = useFlightStore((s) => s.auth);
   const setMode = useFlightStore((s) => s.setMode);
@@ -118,6 +127,30 @@ export function AdminDashboardView({ section }: AdminDashboardViewProps) {
   const [history, setHistory] = useState<NotificationInfo[]>([]);
   const [cacheHealthLoading, setCacheHealthLoading] = useState(false);
   const [cacheHealth, setCacheHealth] = useState<{ status: string; redisPing: string; error: string | null } | null>(null);
+  const [serviceHealthLoading, setServiceHealthLoading] = useState(false);
+  const [serviceHealth, setServiceHealth] = useState<{
+    status: string;
+    database: string;
+    redis: string;
+    databaseError: string | null;
+    redisError: string | null;
+    checkedAt: string;
+  } | null>(null);
+  const [runtimeLoading, setRuntimeLoading] = useState(false);
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const [runtimeMetrics, setRuntimeMetrics] = useState<{
+    status: string;
+    stability: string;
+    uptimeSeconds: number;
+    activeThreads: number;
+    heapUsedMb: number;
+    heapMaxMb: number;
+    usersTotal: number;
+    tasksTotal: number;
+    tasksFailed: number;
+    taskFailureRatePct: number;
+    checkedAt: string;
+  } | null>(null);
   const [cacheUserIdRaw, setCacheUserIdRaw] = useState("");
   const [cacheClearLoading, setCacheClearLoading] = useState(false);
   const [cacheClearResult, setCacheClearResult] = useState<string | null>(null);
@@ -127,8 +160,8 @@ export function AdminDashboardView({ section }: AdminDashboardViewProps) {
   const isUserSection = section === "user";
   const isNotificationsSection = section === "notifications";
 
-  const actorRole = auth.user?.role?.toUpperCase();
-  const targetRole = selectedDetails?.role?.toUpperCase();
+  const actorRole = normalizeRole(auth.user?.role);
+  const targetRole = normalizeRole(selectedDetails?.role);
   const isSelfTarget = selectedDetails?.id === auth.user?.id;
   const canMutateTarget = Boolean(selectedDetails) && !isSelfTarget && (actorRole === "OWNER" || targetRole !== "OWNER");
   const hasActiveBan = Boolean(selectedDetails?.activePunishments.some((item) => item.type === "BAN" && !item.expired));
@@ -213,6 +246,44 @@ export function AdminDashboardView({ section }: AdminDashboardViewProps) {
       active = false;
     };
   }, [auth.token, isUserSection, selectedUserId, setError]);
+
+  useEffect(() => {
+    if (!auth.token) {
+      return;
+    }
+
+    let active = true;
+    const load = async () => {
+      setServiceHealthLoading(true);
+      setRuntimeLoading(true);
+      setRuntimeError(null);
+      try {
+        const [health, metrics] = await Promise.all([
+          getAdminServiceHealth({ token: auth.token }),
+          getAdminRuntimeMetrics({ token: auth.token })
+        ]);
+        if (active) {
+          setServiceHealth(health);
+          setRuntimeMetrics(metrics);
+        }
+      } catch (error) {
+        if (active) {
+          setRuntimeError(error instanceof ApiClientError ? error.message : "Failed to load runtime metrics");
+          setError(error instanceof ApiClientError ? error.message : "Failed to load service health", "admin");
+        }
+      } finally {
+        if (active) {
+          setServiceHealthLoading(false);
+          setRuntimeLoading(false);
+        }
+      }
+    };
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [auth.token, section, setError]);
 
   useEffect(() => {
     if (!auth.token || !isNotificationsSection) {
@@ -496,6 +567,30 @@ export function AdminDashboardView({ section }: AdminDashboardViewProps) {
     }
   }
 
+  async function handleRefreshServiceHealth() {
+    if (!auth.token) {
+      return;
+    }
+
+    setServiceHealthLoading(true);
+    setRuntimeLoading(true);
+    setRuntimeError(null);
+    try {
+      const [health, metrics] = await Promise.all([
+        getAdminServiceHealth({ token: auth.token }),
+        getAdminRuntimeMetrics({ token: auth.token })
+      ]);
+      setServiceHealth(health);
+      setRuntimeMetrics(metrics);
+    } catch (error) {
+      setRuntimeError(error instanceof ApiClientError ? error.message : "Failed to load runtime metrics");
+      setError(error instanceof ApiClientError ? error.message : "Failed to refresh service health", "admin");
+    } finally {
+      setServiceHealthLoading(false);
+      setRuntimeLoading(false);
+    }
+  }
+
   async function handleClearUserCache() {
     if (!auth.token) {
       return;
@@ -541,8 +636,60 @@ export function AdminDashboardView({ section }: AdminDashboardViewProps) {
           </div>
           <div className="rounded-lg border border-border bg-background/40 p-3">
             <p className="text-xs uppercase text-muted-foreground">{t(locale, "common.status")}</p>
-            <p className="mt-1 text-sm font-semibold text-foreground">{loading ? t(locale, "common.loading") : t(locale, "common.ready")}</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">
+              {serviceHealthLoading
+                ? t(locale, "common.loading")
+                : serviceHealth?.status ?? (loading ? t(locale, "common.loading") : t(locale, "common.ready"))}
+            </p>
+            {serviceHealth ? (
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                DB: {serviceHealth.database} | Redis: {serviceHealth.redis}
+              </p>
+            ) : null}
+            <div className="mt-2">
+              <Button variant="outline" size="sm" onClick={() => void handleRefreshServiceHealth()} disabled={serviceHealthLoading || runtimeLoading}>
+                {serviceHealthLoading || runtimeLoading ? t(locale, "admin.refreshing") : t(locale, "admin.refreshService")}
+              </Button>
+            </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t(locale, "admin.runtimeMetrics")}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {runtimeLoading && !runtimeMetrics ? (
+            <p className="text-xs text-muted-foreground">{t(locale, "common.loading")}</p>
+          ) : runtimeMetrics ? (
+            <div className="grid gap-3 md:grid-cols-4">
+              <div className="rounded-lg border border-border bg-background/40 p-3">
+                <p className="text-xs uppercase text-muted-foreground">{t(locale, "admin.stability")}</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">{runtimeMetrics.stability}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-background/40 p-3">
+                <p className="text-xs uppercase text-muted-foreground">{t(locale, "admin.heap")}</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">{runtimeMetrics.heapUsedMb} / {runtimeMetrics.heapMaxMb} MB</p>
+              </div>
+              <div className="rounded-lg border border-border bg-background/40 p-3">
+                <p className="text-xs uppercase text-muted-foreground">{t(locale, "admin.tasksStats")}</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">
+                  {runtimeMetrics.tasksFailed}/{runtimeMetrics.tasksTotal} ({runtimeMetrics.taskFailureRatePct}%)
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-background/40 p-3">
+                <p className="text-xs uppercase text-muted-foreground">{t(locale, "admin.runtime")}</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">
+                  {runtimeMetrics.uptimeSeconds}s | {runtimeMetrics.activeThreads} th
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Runtime metrics are not available yet.</p>
+          )}
+
+          {runtimeError ? <p className="text-xs text-red-300">{runtimeError}</p> : null}
         </CardContent>
       </Card>
 

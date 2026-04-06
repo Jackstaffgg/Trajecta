@@ -3,8 +3,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: trajecta_worker
     restart: unless-stopped
+    cpus: ${WORKER_CPU_LIMIT:-1.0}
+    mem_limit: ${WORKER_MEM_LIMIT:-1024m}
     environment:
       RABBITMQ_URL: ${RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672/%2F}
       REQUEST_EXCHANGE: ${REQUEST_EXCHANGE:-telemetry.exchange}

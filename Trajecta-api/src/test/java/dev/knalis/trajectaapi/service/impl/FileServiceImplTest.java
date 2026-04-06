@@ -142,7 +142,7 @@ class FileServiceImplTest {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getOriginalFilename()).thenReturn("source.bin");
-        when(file.getSize()).thenReturn(5001L * 1024L * 1024L);
+        when(file.getSize()).thenReturn(51L * 1024L * 1024L);
 
         assertThatThrownBy(() -> service.uploadToKey("tasks/1/1/raw/source.bin", file))
                 .isInstanceOf(BadRequestException.class);

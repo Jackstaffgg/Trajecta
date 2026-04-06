@@ -36,31 +36,37 @@ public class SecurityConfig {
     private final UserDetailsService userDetailsService;
     
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
+                        
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/swagger-ui", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api-docs", "/api-docs/**").permitAll()
+                        
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers("/actuator/info").permitAll()
+                        .requestMatchers("/api/public/**").permitAll()
+                        
                         .requestMatchers("/api/internal/**").hasRole("INTERNAL_WORKER")
+                        .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "OWNER")
+                        
                         .requestMatchers("/api/v1/users/**").authenticated()
                         .requestMatchers("/api/v1/notifications/**").authenticated()
                         .requestMatchers("/api/v1/tasks/**").authenticated()
+                        
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         
-                        .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "OWNER")
-                        
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .authenticationProvider(
-                        authenticationProvider()
-                )
+                .authenticationProvider(authenticationProvider())
                 .addFilterBefore(requestLoggingFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(internalWorkerTokenFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
