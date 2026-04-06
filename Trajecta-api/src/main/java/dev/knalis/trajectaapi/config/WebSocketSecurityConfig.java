@@ -10,12 +10,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.config.ChannelRegistration;
-import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -27,33 +25,18 @@ import java.time.Instant;
 @Configuration
 @RequiredArgsConstructor
 public class WebSocketSecurityConfig implements WebSocketMessageBrokerConfigurer {
-
+    
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
     private final PunishmentRepository punishmentRepository;
-
+    
     /**
-     * Configures message broker with optimized thread pool for 20-30 concurrent users.
-     */
-    @Override
-    public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/queue", "/topic");
-        config.setApplicationDestinationPrefixes("/app");
-    }
-
-    /**
-     * Configures client inbound channel with optimized thread pool.
+     * Applies JWT authentication during STOMP CONNECT command processing.
+     *
+     * Expected native header: Authorization: Bearer <JWT_TOKEN>
      */
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(10);
-        executor.setMaxPoolSize(50);
-        executor.setQueueCapacity(100);
-        executor.setThreadNamePrefix("ws-inbound-");
-        executor.initialize();
-        registration.taskExecutor(executor);
-        
         registration.interceptors(new ChannelInterceptor() {
             @Override
             public Message<?> preSend(@NonNull Message<?> message, @NonNull MessageChannel channel) {
@@ -76,7 +59,7 @@ public class WebSocketSecurityConfig implements WebSocketMessageBrokerConfigurer
                                         && punishmentRepository.existsActivePunishment(user, PunishmentType.BAN, Instant.now())) {
                                     throw new AccessDeniedException("Banned users cannot connect to WebSocket");
                                 }
-
+                                
                                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                                         userDetails, null, userDetails.getAuthorities()
                                 );
@@ -88,20 +71,6 @@ public class WebSocketSecurityConfig implements WebSocketMessageBrokerConfigurer
                 return message;
             }
         });
-    }
-
-    /**
-     * Configures client outbound channel for optimal message distribution.
-     */
-    @Override
-    public void configureClientOutboundChannel(ChannelRegistration registration) {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(10);
-        executor.setMaxPoolSize(50);
-        executor.setQueueCapacity(100);
-        executor.setThreadNamePrefix("ws-outbound-");
-        executor.initialize();
-        registration.taskExecutor(executor);
     }
 }
 
