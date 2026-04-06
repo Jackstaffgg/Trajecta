@@ -7,6 +7,7 @@ import dev.knalis.trajectaapi.model.user.User;
 import dev.knalis.trajectaapi.model.user.punishment.PunishmentType;
 import dev.knalis.trajectaapi.model.user.punishment.UserPunishment;
 import dev.knalis.trajectaapi.repo.PunishmentRepository;
+import dev.knalis.trajectaapi.service.impl.cache.PunishmentCacheService;
 import dev.knalis.trajectaapi.service.impl.user.PunishmentServiceImpl;
 import dev.knalis.trajectaapi.service.intrf.user.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,14 +15,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
 import org.springframework.security.core.Authentication;
 
 import java.time.Instant;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -35,9 +35,7 @@ class PunishmentServiceImplTest {
     @Mock
     private EventPublisher eventPublisher;
     @Mock
-    private CacheManager cacheManager;
-    @Mock
-    private Cache cache;
+    private PunishmentCacheService punishmentCacheService;
     @Mock
     private Authentication authentication;
 
@@ -45,8 +43,7 @@ class PunishmentServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new PunishmentServiceImpl(userService, punishmentRepository, eventPublisher, cacheManager);
-        when(cacheManager.getCache("punishmentBanFlagByUserV1")).thenReturn(cache);
+        service = new PunishmentServiceImpl(userService, punishmentRepository, eventPublisher, punishmentCacheService);
     }
 
     @Test
@@ -80,7 +77,7 @@ class PunishmentServiceImplTest {
 
         service.ban(request, authentication);
 
-        verify(cache).evict(2L);
+        verify(punishmentCacheService).evictBanFlag(2L);
     }
 
     @Test
@@ -108,7 +105,7 @@ class PunishmentServiceImplTest {
 
         service.unban(101L, authentication);
 
-        verify(cache).evict(2L);
+        verify(punishmentCacheService).evictBanFlag(2L);
     }
 
     @Test
@@ -136,7 +133,17 @@ class PunishmentServiceImplTest {
 
         service.unbanByUserId(3L, authentication);
 
-        verify(cache).evict(3L);
+        verify(punishmentCacheService).evictBanFlag(3L);
+    }
+
+    @Test
+    void isUserBanned_returnsCachedValue_withoutRepositoryCall() {
+        when(punishmentCacheService.getBanFlag(9L)).thenReturn(true);
+
+        boolean result = service.isUserBanned(9L);
+
+        org.assertj.core.api.Assertions.assertThat(result).isTrue();
+        verify(punishmentRepository, never()).existsActivePunishment(any(), any(), any());
+        verify(punishmentCacheService, never()).putBanFlag(any(Long.class), any(Boolean.class));
     }
 }
-

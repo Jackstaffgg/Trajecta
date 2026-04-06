@@ -1,5 +1,6 @@
 package dev.knalis.trajectaapi.service.impl.cache;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.knalis.trajectaapi.model.user.User;
 import lombok.RequiredArgsConstructor;
@@ -85,7 +86,11 @@ public class UserCacheService {
             return user;
         }
         if (value instanceof Map<?, ?> mapValue) {
-            return objectMapper.convertValue(mapValue, User.class);
+            User converted = convertUserMap(mapValue);
+            if (converted == null) {
+                evictCacheKey(cacheName, key);
+            }
+            return converted;
         }
         return null;
     }
@@ -111,12 +116,29 @@ public class UserCacheService {
             if (item instanceof User user) {
                 users.add(user);
             } else if (item instanceof Map<?, ?> mapValue) {
-                users.add(objectMapper.convertValue(mapValue, User.class));
+                User converted = convertUserMap(mapValue);
+                if (converted == null) {
+                    evictCacheKey(USER_PAGE_CACHE, key);
+                    return null;
+                }
+                users.add(converted);
             } else {
+                evictCacheKey(USER_PAGE_CACHE, key);
                 return null;
             }
         }
         return users;
+    }
+
+    private User convertUserMap(Map<?, ?> mapValue) {
+        try {
+            return objectMapper
+                    .copy()
+                    .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                    .convertValue(mapValue, User.class);
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
     }
 
     private void putCacheValue(String cacheName, Object key, Object value) {

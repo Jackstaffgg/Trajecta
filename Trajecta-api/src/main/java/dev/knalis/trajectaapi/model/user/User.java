@@ -1,6 +1,7 @@
 package dev.knalis.trajectaapi.model.user;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import dev.knalis.trajectaapi.model.user.punishment.UserPunishment;
 import jakarta.persistence.*;
 import lombok.*;
@@ -16,6 +17,7 @@ import java.util.List;
 @Entity
 @Table(name = "users")
 @NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class User implements UserDetails {
     
     @Id
@@ -66,5 +68,3 @@ public class User implements UserDetails {
     }
     
 }
-
-

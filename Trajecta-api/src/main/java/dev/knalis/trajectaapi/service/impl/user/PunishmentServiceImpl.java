@@ -10,12 +10,10 @@ import dev.knalis.trajectaapi.model.user.User;
 import dev.knalis.trajectaapi.model.user.punishment.PunishmentType;
 import dev.knalis.trajectaapi.model.user.punishment.UserPunishment;
 import dev.knalis.trajectaapi.repo.PunishmentRepository;
+import dev.knalis.trajectaapi.service.impl.cache.PunishmentCacheService;
 import dev.knalis.trajectaapi.service.intrf.user.PunishmentService;
 import dev.knalis.trajectaapi.service.intrf.user.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,7 +30,7 @@ public class PunishmentServiceImpl implements PunishmentService {
     private final UserService userService;
     private final PunishmentRepository punishmentRepository;
     private final EventPublisher eventPublisher;
-    private final CacheManager cacheManager;
+    private final PunishmentCacheService punishmentCacheService;
     
     @Override
     @Transactional
@@ -131,10 +129,16 @@ public class PunishmentServiceImpl implements PunishmentService {
     }
     
     @Override
-    @Cacheable(cacheNames = "punishmentBanFlagByUserV1", key = "#userId")
     public boolean isUserBanned(long userId) {
+        Boolean cached = punishmentCacheService.getBanFlag(userId);
+        if (cached != null) {
+            return cached;
+        }
+
         User user = userService.findById(userId);
-        return punishmentRepository.existsActivePunishment(user, PunishmentType.BAN, Instant.now());
+        boolean isBanned = punishmentRepository.existsActivePunishment(user, PunishmentType.BAN, Instant.now());
+        punishmentCacheService.putBanFlag(userId, isBanned);
+        return isBanned;
     }
 
     private void deactivateBan(UserPunishment punishment) {
@@ -174,10 +178,6 @@ public class PunishmentServiceImpl implements PunishmentService {
     }
 
     private void evictBanStateCache(Long userId) {
-        Cache cache = cacheManager.getCache("punishmentBanFlagByUserV1");
-        if (cache != null && userId != null) {
-            cache.evict(userId);
-        }
+        punishmentCacheService.evictBanFlag(userId);
     }
 }
-

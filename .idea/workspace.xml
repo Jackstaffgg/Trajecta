@@ -4,9 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ead05c28-5888-4bfd-aa2d-b5db12a27391" name="Changes" comment="add caching for punishment ban flag and improve cache eviction logic">
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/user/UserServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/user/UserServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/UserServiceImplTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/UserServiceImplTest.java" afterDir="false" />
+    <list default="true" id="ead05c28-5888-4bfd-aa2d-b5db12a27391" name="Changes" comment="add caching for user retrieval and improve cache eviction logic">
+      <change afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/cache/PunishmentCacheService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/model/user/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/model/user/User.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/repo/PunishmentRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/repo/PunishmentRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/cache/UserCacheService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/cache/UserCacheService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/user/PunishmentServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/user/PunishmentServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/PunishmentServiceImplTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/PunishmentServiceImplTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -40,7 +45,6 @@
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
-    <option name="UPDATE_TYPE" value="REBASE" />
   </component>
   <component name="GitHubPullRequestSearchHistory"><![CDATA[{
   "lastFilter": {
@@ -148,7 +152,15 @@
       <option name="project" value="LOCAL" />
       <updated>1775465239535</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="add caching for user retrieval and improve cache eviction logic">
+      <option name="closed" value="true" />
+      <created>1775465973027</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1775465973027</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -166,9 +178,9 @@
     <MESSAGE value="add task creation endpoint with authorization and throttling for unauthorized requests" />
     <MESSAGE value="add bad data message limit to log parser and update related configurations" />
     <MESSAGE value="update environment configuration and enhance WebSocket security with JWT authentication" />
-    <MESSAGE value="add caching for user retrieval and improve cache eviction logic" />
     <MESSAGE value="add caching for punishment ban flag and improve cache eviction logic" />
-    <option name="LAST_COMMIT_MESSAGE" value="add caching for punishment ban flag and improve cache eviction logic" />
+    <MESSAGE value="add caching for user retrieval and improve cache eviction logic" />
+    <option name="LAST_COMMIT_MESSAGE" value="add caching for user retrieval and improve cache eviction logic" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>

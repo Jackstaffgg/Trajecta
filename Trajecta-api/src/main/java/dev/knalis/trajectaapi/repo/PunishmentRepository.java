@@ -29,6 +29,8 @@ public interface PunishmentRepository extends JpaRepository<UserPunishment, Long
     @Query("""
         select p
         from UserPunishment p
+        join fetch p.user
+        join fetch p.punishedBy
         where p.user = :user
           and (p.expiredAt is null or p.expiredAt > :now)
         order by p.createdAt desc
@@ -41,6 +43,8 @@ public interface PunishmentRepository extends JpaRepository<UserPunishment, Long
     @Query("""
         select p
         from UserPunishment p
+        join fetch p.user
+        join fetch p.punishedBy
         where p.user = :user
           and p.type = :type
           and (p.expiredAt is null or p.expiredAt > :now)
@@ -52,5 +56,13 @@ public interface PunishmentRepository extends JpaRepository<UserPunishment, Long
             @Param("now") Instant now
     );
 
-    List<UserPunishment> findByUserOrderByCreatedAtDesc(User user);
+    @Query("""
+        select p
+        from UserPunishment p
+        join fetch p.user
+        join fetch p.punishedBy
+        where p.user = :user
+        order by p.createdAt desc
+    """)
+    List<UserPunishment> findByUserOrderByCreatedAtDesc(@Param("user") User user);
 }
