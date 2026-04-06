@@ -38,7 +38,9 @@ class ParserTests(TestCase):
             _FakeMessage("BAD_DATA", {}),
         ]
 
-        with patch("trajecta_worker.parser.mavutil.mavlink_connection", return_value=_FakeLog(messages)):
+        with patch("trajecta_worker.parser.validate_dataflash_signature"), patch(
+            "trajecta_worker.parser.mavutil.mavlink_connection", return_value=_FakeLog(messages)
+        ):
             with self.assertRaises(WorkerError) as error:
                 parse_log("broken.bin", max_bad_data_messages=2)
 
@@ -60,7 +62,9 @@ class ParserTests(TestCase):
             ),
         ]
 
-        with patch("trajecta_worker.parser.mavutil.mavlink_connection", return_value=_FakeLog(messages)):
+        with patch("trajecta_worker.parser.validate_dataflash_signature"), patch(
+            "trajecta_worker.parser.mavutil.mavlink_connection", return_value=_FakeLog(messages)
+        ):
             parsed = parse_log("mostly-ok.bin", max_bad_data_messages=5)
 
         self.assertEqual(len(parsed["gps"]["t"]), 1)

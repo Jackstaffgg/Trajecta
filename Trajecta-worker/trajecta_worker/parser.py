@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -191,11 +192,28 @@ def safe_json_value(value: Any) -> Any:
     return str(value)
 
 
+def validate_dataflash_signature(bin_path: str, sample_bytes: int = 64 * 1024, min_sync_headers: int = 2) -> None:
+    path = Path(bin_path)
+    if not path.exists() or not path.is_file():
+        raise WorkerError("BIN file is missing or not readable.")
+
+    blob = path.read_bytes()[:sample_bytes]
+    if len(blob) < 8:
+        raise WorkerError("Unsupported or corrupted BIN file: file is too small.")
+
+    sync_count = sum(1 for i in range(len(blob) - 1) if blob[i] == 0xA3 and blob[i + 1] == 0x95)
+    if sync_count < min_sync_headers:
+        raise WorkerError(
+            "Unsupported or corrupted BIN file: DataFlash sync headers are missing or heavily damaged."
+        )
+
+
 def parse_log(
     bin_path: str,
     max_messages: int | None = None,
     max_bad_data_messages: int | None = DEFAULT_MAX_BAD_DATA_MESSAGES,
 ) -> dict[str, Any]:
+    validate_dataflash_signature(bin_path)
     log = mavutil.mavlink_connection(bin_path)
 
     data = {

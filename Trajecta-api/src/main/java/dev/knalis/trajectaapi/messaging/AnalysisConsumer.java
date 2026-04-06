@@ -2,6 +2,7 @@ package dev.knalis.trajectaapi.messaging;
 
 import dev.knalis.trajectaapi.dto.messaging.AnalysisResult;
 import dev.knalis.trajectaapi.exception.NotFoundException;
+import dev.knalis.trajectaapi.model.task.AnalysisStatus;
 import dev.knalis.trajectaapi.service.intrf.task.FlightTaskService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,8 +27,18 @@ public class AnalysisConsumer {
         try {
             taskService.completeTask(result);
         } catch (NotFoundException ex) {
-            // Task can be deleted before delayed worker result arrives; treat as stale message.
             log.warn("Skipping stale analysis result for missing task {}", result.getTaskId());
+        } catch (Exception ex) {
+            log.error("Unexpected error while applying analysis result for task {}", result.getTaskId(), ex);
+            try {
+                AnalysisResult fallback = new AnalysisResult();
+                fallback.setTaskId(result.getTaskId());
+                fallback.setStatus(AnalysisStatus.FAILED);
+                fallback.setErrorMessage("Failed to finalize analysis result: " + ex.getClass().getSimpleName());
+                taskService.completeTask(fallback);
+            } catch (Exception fallbackEx) {
+                log.error("Fallback task failure marking failed for task {}", result.getTaskId(), fallbackEx);
+            }
         }
     }
 }

@@ -2,6 +2,8 @@ package dev.knalis.trajectaapi.messaging;
 
 import dev.knalis.trajectaapi.dto.messaging.AnalysisResult;
 import dev.knalis.trajectaapi.exception.NotFoundException;
+import dev.knalis.trajectaapi.model.task.AnalysisStatus;
+import org.mockito.ArgumentCaptor;
 import dev.knalis.trajectaapi.service.intrf.task.FlightTaskService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,6 +14,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
+import static org.mockito.ArgumentMatchers.any;
 
 @ExtendWith(MockitoExtension.class)
 class AnalysisConsumerTest {
@@ -61,5 +65,24 @@ class AnalysisConsumerTest {
         consumer.handleAnalysisResult(result);
 
         verify(taskService).completeTask(result);
+    }
+
+    @Test
+    void handleAnalysisResult_marksFailedWhenUnexpectedErrorOccurs() {
+        AnalysisResult result = new AnalysisResult();
+        result.setTaskId(55L);
+
+        doThrow(new RuntimeException("boom"))
+                .doReturn(null)
+                .when(taskService)
+                .completeTask(any(AnalysisResult.class));
+
+        consumer.handleAnalysisResult(result);
+
+        ArgumentCaptor<AnalysisResult> captor = ArgumentCaptor.forClass(AnalysisResult.class);
+        verify(taskService, times(2)).completeTask(captor.capture());
+        AnalysisResult fallback = captor.getAllValues().get(1);
+        org.junit.jupiter.api.Assertions.assertEquals(55L, fallback.getTaskId());
+        org.junit.jupiter.api.Assertions.assertEquals(AnalysisStatus.FAILED, fallback.getStatus());
     }
 }

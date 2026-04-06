@@ -41,6 +41,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -458,6 +459,51 @@ class FlightTaskServiceImplTest {
 
         assertThat(task.getStatus()).isEqualTo(TaskStatus.FAILED);
         assertThat(task.getErrorMessage()).isEqualTo("worker error");
+    }
+
+    @Test
+    void completeTask_marksFailedWhenStatusMissing() {
+        FlightTask task = new FlightTask();
+        task.setId(460L);
+        task.setUserId(1L);
+        task.setStatus(TaskStatus.PROCESSING);
+        task.setTitle("missing-status");
+
+        AnalysisResult result = new AnalysisResult();
+        result.setTaskId(460L);
+        result.setStatus(null);
+
+        when(taskRepository.findById(460L)).thenReturn(Optional.of(task));
+        when(taskRepository.save(task)).thenReturn(task);
+
+        service.completeTask(result);
+
+        assertThat(task.getStatus()).isEqualTo(TaskStatus.FAILED);
+        assertThat(task.getErrorMessage()).contains("status is missing");
+    }
+
+    @Test
+    void getTask_marksStaleProcessingTaskAsFailed() {
+        User current = new User();
+        current.setId(50L);
+        current.setRole(Role.USER);
+
+        FlightTask task = new FlightTask();
+        task.setId(501L);
+        task.setUserId(50L);
+        task.setTitle("stale");
+        task.setStatus(TaskStatus.PROCESSING);
+        task.setCreatedAt(Instant.now().minusSeconds(2000));
+
+        when(authentication.getPrincipal()).thenReturn(current);
+        when(taskRepository.findById(501L)).thenReturn(Optional.of(task));
+        when(taskRepository.save(task)).thenReturn(task);
+
+        FlightTask result = service.getTask(501L, authentication);
+
+        assertThat(result.getStatus()).isEqualTo(TaskStatus.FAILED);
+        assertThat(result.getErrorMessage()).contains("timed out");
+        verify(eventPublisher).publishTaskStatusChanged(eq(501L), eq(50L), eq("stale"), eq(TaskStatus.FAILED), contains("timed out"));
     }
 
     @Test
