@@ -5,17 +5,37 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ead05c28-5888-4bfd-aa2d-b5db12a27391" name="Changes" comment="update environment configuration and enhance WebSocket security with JWT authentication">
-      <change beforePath="$PROJECT_DIR$/.env.vps.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.vps.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules/Trajecta-api.main.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules/Trajecta-api.main.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules/Trajecta-api.test.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules/Trajecta-api.test.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DEPLOY_VPS.md" beforeDir="false" afterPath="$PROJECT_DIR$/DEPLOY_VPS.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deploy-vps.sh" beforeDir="false" afterPath="$PROJECT_DIR$/deploy-vps.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker-compose.vps.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.vps.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/CacheConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/CacheConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/user/UserServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/user/UserServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/UserServiceImplTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/UserServiceImplTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CopilotPersistence">
+    <persistenceIdMap>
+      <entry key="_/Users/knaliz/IdeaProjects/Trajecta" value="3ByLfDd0ZeBLigqhrq3FL3waDo2" />
+    </persistenceIdMap>
+  </component>
+  <component name="CopilotUserSelectedModel">
+    <selectedModels>
+      <entry key="chat-panel" value="Auto" />
+      <entry key="agent-panel" value="Auto" />
+    </selectedModels>
+  </component>
+  <component name="EmbeddingIndexingInfo">
+    <option name="cachedIndexableFilesCount" value="176" />
+    <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
+  </component>
+  <component name="ExternalProjectsData">
+    <projectState path="$PROJECT_DIR$/Trajecta-api">
+      <ProjectState />
+    </projectState>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
@@ -24,17 +44,66 @@
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="UPDATE_TYPE" value="REBASE" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "knliiss"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/Jackstaffgg/Trajecta.git",
+    "accountId": "476a8ad0-c782-44ef-8ba1-a91d38e74431"
+  }
+}]]></component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
   </component>
   <component name="ProblemsViewState">
     <option name="selectedTabId" value="CurrentFile" />
   </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 8
+}]]></component>
+  <component name="ProjectId" id="3ByLfDd0ZeBLigqhrq3FL3waDo2" />
+  <component name="ProjectViewState">
+    <option name="showLibraryContents" value="true" />
+  </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
     "git-widget-placeholder": "main",
+    "junie.onboarding.icon.badge.shown": "true",
+    "kotlin-language-version-configured": "true",
+    "to.speed.mode.migration.done": "true",
     "ts.external.directory.path": "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2024.3.1.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external"
   }
 }]]></component>
+  <component name="RunManager">
+    <configuration default="true" type="JetRunConfigurationType">
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <option name="filePath" />
+      <method v="2" />
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-30f59d01ecdd-2fc7cc6b9a17-intellij.indexing.shared.core-IU-253.31033.145" />
+      </set>
+    </attachedChunks>
+  </component>
   <component name="TaskManager">
     <task id="LOCAL-00001" summary="add task creation endpoint with authorization and throttling for unauthorized requests">
       <option name="closed" value="true" />
@@ -60,6 +129,13 @@
       <option name="project" value="LOCAL" />
       <updated>1775439232332</updated>
     </task>
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="ead05c28-5888-4bfd-aa2d-b5db12a27391" name="Changes" comment="update environment configuration and enhance WebSocket security with JWT authentication" />
+      <created>1775456464938</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1775456464938</updated>
+    </task>
     <option name="localTasksCounter" value="4" />
     <servers />
   </component>
@@ -68,5 +144,13 @@
     <MESSAGE value="add bad data message limit to log parser and update related configurations" />
     <MESSAGE value="update environment configuration and enhance WebSocket security with JWT authentication" />
     <option name="LAST_COMMIT_MESSAGE" value="update environment configuration and enhance WebSocket security with JWT authentication" />
+  </component>
+  <component name="github-copilot-workspace">
+    <instructionFileLocations>
+      <option value=".github/instructions" />
+    </instructionFileLocations>
+    <promptFileLocations>
+      <option value=".github/prompts" />
+    </promptFileLocations>
   </component>
 </project>

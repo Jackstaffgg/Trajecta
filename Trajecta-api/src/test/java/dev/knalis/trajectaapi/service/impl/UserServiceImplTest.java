@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.CacheManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
@@ -35,13 +36,15 @@ class UserServiceImplTest {
     @Mock
     private UserMapper userMapper;
     @Mock
+    private CacheManager cacheManager;
+    @Mock
     private Authentication authentication;
 
     private UserServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new UserServiceImpl(userRepository, passwordEncoder, userMapper);
+        service = new UserServiceImpl(userRepository, passwordEncoder, userMapper, cacheManager);
     }
 
     @Test
@@ -168,4 +171,3 @@ class UserServiceImplTest {
                 .isInstanceOf(BadRequestException.class);
     }
 }
-
