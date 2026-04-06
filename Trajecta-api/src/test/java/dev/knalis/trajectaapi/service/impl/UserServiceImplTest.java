@@ -9,13 +9,13 @@ import dev.knalis.trajectaapi.mapper.UserMapper;
 import dev.knalis.trajectaapi.model.user.Role;
 import dev.knalis.trajectaapi.model.user.User;
 import dev.knalis.trajectaapi.repo.UserRepository;
+import dev.knalis.trajectaapi.service.impl.cache.UserCacheService;
 import dev.knalis.trajectaapi.service.impl.user.UserServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.cache.CacheManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
@@ -36,7 +36,7 @@ class UserServiceImplTest {
     @Mock
     private UserMapper userMapper;
     @Mock
-    private CacheManager cacheManager;
+    private UserCacheService userCacheService;
     @Mock
     private Authentication authentication;
 
@@ -44,7 +44,7 @@ class UserServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new UserServiceImpl(userRepository, passwordEncoder, userMapper, cacheManager);
+        service = new UserServiceImpl(userRepository, passwordEncoder, userMapper, userCacheService);
     }
 
     @Test

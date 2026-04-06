@@ -10,12 +10,10 @@ import dev.knalis.trajectaapi.mapper.UserMapper;
 import dev.knalis.trajectaapi.model.user.Role;
 import dev.knalis.trajectaapi.model.user.User;
 import dev.knalis.trajectaapi.repo.UserRepository;
+import dev.knalis.trajectaapi.service.impl.cache.UserCacheService;
 import dev.knalis.trajectaapi.service.intrf.user.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,7 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Locale;
 
 @Slf4j
 @Service
@@ -34,7 +31,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
-    private final CacheManager cacheManager;
+    private final UserCacheService userCacheService;
     
     @Override
     @Transactional
@@ -55,7 +52,7 @@ public class UserServiceImpl implements UserService {
         user.setName(request.getName());
         
         User savedUser = userRepository.save(user);
-        evictUserPageCache();
+        userCacheService.evictUserPage();
         return savedUser;
     }
     
@@ -85,21 +82,35 @@ public class UserServiceImpl implements UserService {
         
         targetUser.setRole(targetRole);
         User savedUser = userRepository.save(targetUser);
-        evictUserCache(savedUser.getId(), savedUser.getUsername());
-        evictUserPageCache();
+        userCacheService.evictUser(savedUser.getId(), savedUser.getUsername());
+        userCacheService.evictUserPage();
         return savedUser;
     }
     
     @Override
-    @Cacheable(cacheNames = "userByUsernameV1", key = "#username.toLowerCase()")
     public User findByUsername(String username) {
-        return userRepository.findByUsername(username).orElseThrow(() -> new NotFoundException("User not found with username: " + username));
+        User cached = userCacheService.getByUsername(username);
+        if (cached != null) {
+            return cached;
+        }
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("User not found with username: " + username));
+        userCacheService.putUser(user);
+        return user;
     }
     
     @Override
-    @Cacheable(cacheNames = "userByIdV1", key = "#id")
     public User findById(long id) {
-        return userRepository.findById(id).orElseThrow(() -> new NotFoundException("User not found with id: " + id));
+        User cached = userCacheService.getById(id);
+        if (cached != null) {
+            return cached;
+        }
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
+        userCacheService.putUser(user);
+        return user;
     }
     
     @Override
@@ -108,11 +119,17 @@ public class UserServiceImpl implements UserService {
     }
     
     @Override
-    @Cacheable(cacheNames = "userPageV1", key = "#page + ':' + #size")
     public List<User> findAll(int page, int size) {
-        return userRepository
+        List<User> cached = userCacheService.getPage(page, size);
+        if (cached != null) {
+            return cached;
+        }
+
+        List<User> users = userRepository
                 .findAll(PageRequest.of(page, size))
                 .getContent();
+        userCacheService.putPage(page, size, users);
+        return users;
     }
     
     @Override
@@ -134,8 +151,8 @@ public class UserServiceImpl implements UserService {
         }
         
         userRepository.delete(target);
-        evictUserCache(target.getId(), target.getUsername());
-        evictUserPageCache();
+        userCacheService.evictUser(target.getId(), target.getUsername());
+        userCacheService.evictUserPage();
     }
     
     @Override
@@ -165,35 +182,14 @@ public class UserServiceImpl implements UserService {
         userMapper.updateUserFromDto(userUpdateRequest, currentUser);
         
         User savedUser = userRepository.save(currentUser);
-        evictUserCache(savedUser.getId(), oldUsername);
-        evictUserCache(savedUser.getId(), savedUser.getUsername());
-        evictUserPageCache();
+        userCacheService.evictUser(savedUser.getId(), oldUsername);
+        userCacheService.evictUser(savedUser.getId(), savedUser.getUsername());
+        userCacheService.evictUserPage();
         return savedUser;
     }
     
     private User getCurrentUser(Authentication auth) {
         return findByUsername(auth.getName());
-    }
-    
-    private void evictUserCache(Long userId, String username) {
-        evictCacheKey("userByIdV1", userId);
-        if (username != null && !username.isBlank()) {
-            evictCacheKey("userByUsernameV1", username.toLowerCase(Locale.ROOT));
-        }
-    }
-
-    private void evictUserPageCache() {
-        Cache userPageCache = cacheManager.getCache("userPageV1");
-        if (userPageCache != null) {
-            userPageCache.clear();
-        }
-    }
-
-    private void evictCacheKey(String cacheName, Object key) {
-        Cache cache = cacheManager.getCache(cacheName);
-        if (cache != null) {
-            cache.evict(key);
-        }
     }
     
 }
