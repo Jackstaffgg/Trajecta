@@ -21,7 +21,7 @@ export function LandingScreen({
   const setLocale = useLocaleStore((s) => s.setLocale);
 
   return (
-    <div className="relative flex min-h-[100svh] flex-col overflow-hidden bg-background text-foreground">
+    <div className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-background text-foreground">
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.12),transparent_28%),radial-gradient(circle_at_80%_15%,rgba(212,212,216,0.09),transparent_32%),radial-gradient(circle_at_50%_85%,rgba(161,161,170,0.1),transparent_36%)]" />
 
       <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 md:px-8">
@@ -54,7 +54,7 @@ export function LandingScreen({
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto flex min-h-0 w-full max-w-7xl flex-1 items-center justify-center px-4 pb-8 pt-6 sm:pb-16 sm:pt-0 md:px-8">
+      <main className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 items-center justify-center px-4 pb-8 pt-4 sm:pb-16 sm:pt-0 md:px-8">
         <section className="w-full max-w-3xl text-center">
           <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-3xl border border-zinc-300/25 bg-zinc-900/35 backdrop-blur-md animate-rise sm:mb-6 sm:h-20 sm:w-20">
             <BrandLogo className="h-10 w-10 sm:h-12 sm:w-12" />
@@ -79,7 +79,7 @@ export function LandingScreen({
         </section>
       </main>
 
-      <footer className="pointer-events-none relative z-10 mt-auto flex justify-center px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-6">
+      <footer className="pointer-events-none relative z-10 mt-auto flex justify-center px-4 pb-3 sm:pb-6">
         <p className="landing-team-footer text-[11px] tracking-[0.14em] text-zinc-500 sm:text-xs">
           <span className="landing-team-typing">{t(locale, "landing.teamTagline")}</span>
         </p>
