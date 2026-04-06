@@ -154,6 +154,14 @@ Useful logs command:
 ./deploy-vps.sh down
 ```
 
+If you manage the stack from Windows, you can reset selected VPS compose volumes with:
+
+```powershell
+.\reset-vps-volumes.ps1 all -Down -Yes
+.\reset-vps-volumes.ps1 db redis -Down -Yes
+.\reset-vps-volumes.ps1 edge -DryRun
+```
+
 Direct compose equivalents:
 
 ```bash

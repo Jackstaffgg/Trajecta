@@ -259,6 +259,15 @@ npm run build
 ./deploy-vps.sh wipe --yes
 ```
 
+Windows volume reset helper:
+
+```powershell
+.\reset-vps-volumes.ps1 all -Down -Yes
+.\reset-vps-volumes.ps1 db redis -Down -Yes
+.\reset-vps-volumes.ps1 minio -ProjectName trajecta -Yes
+.\reset-vps-volumes.ps1 edge -DryRun
+```
+
 Direct compose equivalents:
 
 ```bash
