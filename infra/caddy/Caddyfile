@@ -10,6 +10,15 @@
     }
 }
 
+localhost {
+    tls internal
+
+    route {
+        reverse_proxy /api/* trajecta_backend:8080
+        reverse_proxy /* trajecta_frontend:80
+    }
+}
+
 {$DOMAIN} {
     tls {$ACME_EMAIL}
     encode gzip zstd
