@@ -3,19 +3,16 @@ package dev.knalis.trajectaapi.messaging;
 import dev.knalis.trajectaapi.dto.messaging.AnalysisResult;
 import dev.knalis.trajectaapi.exception.NotFoundException;
 import dev.knalis.trajectaapi.model.task.AnalysisStatus;
-import org.mockito.ArgumentCaptor;
 import dev.knalis.trajectaapi.service.intrf.task.FlightTaskService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.times;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AnalysisConsumerTest {

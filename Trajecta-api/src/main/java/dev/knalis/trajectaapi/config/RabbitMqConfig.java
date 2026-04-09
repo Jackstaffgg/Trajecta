@@ -9,11 +9,7 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import static dev.knalis.trajectaapi.messaging.RabbitTopology.EXCHANGE;
-import static dev.knalis.trajectaapi.messaging.RabbitTopology.PARSE_QUEUE;
-import static dev.knalis.trajectaapi.messaging.RabbitTopology.PARSE_ROUTING_KEY;
-import static dev.knalis.trajectaapi.messaging.RabbitTopology.RESULTS_QUEUE;
-import static dev.knalis.trajectaapi.messaging.RabbitTopology.RESULTS_ROUTING_KEY;
+import static dev.knalis.trajectaapi.messaging.RabbitTopology.*;
 
 @Configuration
 public class RabbitMqConfig {

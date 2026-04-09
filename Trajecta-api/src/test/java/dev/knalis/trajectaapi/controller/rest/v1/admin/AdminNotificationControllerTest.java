@@ -3,9 +3,9 @@ package dev.knalis.trajectaapi.controller.rest.v1.admin;
 import dev.knalis.trajectaapi.controller.rest.v1.support.CurrentUserResolver;
 import dev.knalis.trajectaapi.dto.notification.NotificationBroadcastRequest;
 import dev.knalis.trajectaapi.mapper.NotificationMapper;
-import dev.knalis.trajectaapi.model.user.User;
 import dev.knalis.trajectaapi.model.notiffication.Notification;
 import dev.knalis.trajectaapi.model.notiffication.NotificationType;
+import dev.knalis.trajectaapi.model.user.User;
 import dev.knalis.trajectaapi.service.intrf.NotificationService;
 import dev.knalis.trajectaapi.service.intrf.user.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,9 +19,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AdminNotificationControllerTest {

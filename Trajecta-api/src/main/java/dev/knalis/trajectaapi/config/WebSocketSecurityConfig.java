@@ -1,9 +1,9 @@
 package dev.knalis.trajectaapi.config;
 
-import dev.knalis.trajectaapi.service.intrf.auth.JwtService;
 import dev.knalis.trajectaapi.model.user.User;
 import dev.knalis.trajectaapi.model.user.punishment.PunishmentType;
 import dev.knalis.trajectaapi.repo.PunishmentRepository;
+import dev.knalis.trajectaapi.service.intrf.auth.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.context.annotation.Configuration;
@@ -14,8 +14,8 @@ import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;

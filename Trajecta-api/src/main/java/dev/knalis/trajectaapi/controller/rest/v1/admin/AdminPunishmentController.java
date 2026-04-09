@@ -4,7 +4,6 @@ import dev.knalis.trajectaapi.dto.common.ApiResponse;
 import dev.knalis.trajectaapi.dto.user.BanUserRequest;
 import dev.knalis.trajectaapi.dto.user.UserPunishmentResponse;
 import dev.knalis.trajectaapi.mapper.UserPunishmentMapper;
-import dev.knalis.trajectaapi.model.user.punishment.UserPunishment;
 import dev.knalis.trajectaapi.service.intrf.user.PunishmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

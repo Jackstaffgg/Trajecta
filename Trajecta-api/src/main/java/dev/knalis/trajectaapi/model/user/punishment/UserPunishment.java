@@ -3,7 +3,6 @@ package dev.knalis.trajectaapi.model.user.punishment;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import dev.knalis.trajectaapi.model.user.User;
 import jakarta.persistence.*;
-import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;

@@ -4,14 +4,39 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ead05c28-5888-4bfd-aa2d-b5db12a27391" name="Changes" comment="refactor JwtAuthenticationFilter to use PunishmentService for ban checks">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/repo/PunishmentRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/repo/PunishmentRepository.java" afterDir="false" />
+    <list default="true" id="ead05c28-5888-4bfd-aa2d-b5db12a27391" name="Changes" comment="refactor JwtAuthenticationFilter to use PunishmentCacheService for ban checks">
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/OpenApiConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/OpenApiConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/RabbitMqConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/WebSocketSecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/config/WebSocketSecurityConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/FlightTaskController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/FlightTaskController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/admin/AdminCacheController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/admin/AdminCacheController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/admin/AdminNotificationController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/admin/AdminNotificationController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/admin/AdminPunishmentController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/controller/rest/v1/admin/AdminPunishmentController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/auth/AuthRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/auth/AuthRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/auth/RegisterRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/auth/RegisterRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/task/TaskCreateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/task/TaskCreateRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/user/UserCreateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/user/UserCreateRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/user/UserUpdateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/dto/user/UserUpdateRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/model/user/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/model/user/User.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/model/user/punishment/UserPunishment.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/model/user/punishment/UserPunishment.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/security/JwtAuthenticationFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/security/JwtAuthenticationFilter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/cache/PunishmentCacheService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/cache/PunishmentCacheService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/user/PunishmentServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/user/PunishmentServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/security/LoginRateLimiter.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/security/LoginRateLimiter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/security/TaskCreationRateLimiter.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/security/TaskCreationRateLimiter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/NotificationServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/NotificationServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/auth/AuthServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/auth/AuthServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/task/AiConclusionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/task/AiConclusionServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/task/FlightTaskServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/task/FlightTaskServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/controller/rest/v1/FlightTaskControllerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/controller/rest/v1/FlightTaskControllerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/controller/rest/v1/admin/AdminCacheControllerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/controller/rest/v1/admin/AdminCacheControllerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/controller/rest/v1/admin/AdminNotificationControllerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/controller/rest/v1/admin/AdminNotificationControllerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/messaging/AnalysisConsumerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/messaging/AnalysisConsumerTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/security/JwtAuthenticationFilterTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/security/JwtAuthenticationFilterTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/FileServiceImplTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/FileServiceImplTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/FlightTaskServiceImplTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/FlightTaskServiceImplTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/PunishmentServiceImplTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/PunishmentServiceImplTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/UserServiceImplTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/UserServiceImplTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/WsEventDispatcherImplTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/WsEventDispatcherImplTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/auth/AuthServiceImplTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/auth/AuthServiceImplTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -170,7 +195,15 @@
       <option name="project" value="LOCAL" />
       <updated>1775742464569</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="refactor JwtAuthenticationFilter to use PunishmentCacheService for ban checks">
+      <option name="closed" value="true" />
+      <created>1775743026443</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1775743026444</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -194,7 +227,8 @@
     <MESSAGE value="add caching for punishment ban flag and improve cache eviction logic" />
     <MESSAGE value="add caching for user retrieval and improve cache eviction logic" />
     <MESSAGE value="refactor JwtAuthenticationFilter to use PunishmentService for ban checks" />
-    <option name="LAST_COMMIT_MESSAGE" value="refactor JwtAuthenticationFilter to use PunishmentService for ban checks" />
+    <MESSAGE value="refactor JwtAuthenticationFilter to use PunishmentCacheService for ban checks" />
+    <option name="LAST_COMMIT_MESSAGE" value="refactor JwtAuthenticationFilter to use PunishmentCacheService for ban checks" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>

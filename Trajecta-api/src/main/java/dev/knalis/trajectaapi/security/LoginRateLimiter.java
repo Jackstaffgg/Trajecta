@@ -4,6 +4,7 @@ import dev.knalis.trajectaapi.config.props.RateLimitProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
+
 import java.time.Duration;
 
 

@@ -3,7 +3,6 @@ package dev.knalis.trajectaapi.controller.rest.v1.admin;
 import dev.knalis.trajectaapi.dto.admin.CacheClearResponse;
 import dev.knalis.trajectaapi.dto.admin.CacheHealthResponse;
 import dev.knalis.trajectaapi.dto.admin.ServiceHealthResponse;
-import dev.knalis.trajectaapi.dto.admin.ServiceRuntimeMetricsResponse;
 import dev.knalis.trajectaapi.service.intrf.user.CacheAdminService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

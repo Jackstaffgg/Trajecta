@@ -12,10 +12,10 @@ import dev.knalis.trajectaapi.model.notiffication.NotificationType;
 import dev.knalis.trajectaapi.repo.NotificationRepository;
 import dev.knalis.trajectaapi.service.intrf.NotificationService;
 import dev.knalis.trajectaapi.service.intrf.WsEventDispatcher;
-import lombok.RequiredArgsConstructor;
 import io.micrometer.core.instrument.MeterRegistry;
-import org.springframework.data.domain.PageRequest;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
