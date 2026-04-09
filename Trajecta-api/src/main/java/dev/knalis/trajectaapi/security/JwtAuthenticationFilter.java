@@ -4,9 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.knalis.trajectaapi.dto.common.ApiResponse;
 import dev.knalis.trajectaapi.exception.ApiErrorCodes;
 import dev.knalis.trajectaapi.service.intrf.auth.JwtService;
+import dev.knalis.trajectaapi.service.intrf.user.PunishmentService;
 import dev.knalis.trajectaapi.model.user.User;
-import dev.knalis.trajectaapi.model.user.punishment.PunishmentType;
-import dev.knalis.trajectaapi.repo.PunishmentRepository;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -26,7 +25,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.time.Instant;
 
 @Component
 @RequiredArgsConstructor
@@ -34,7 +32,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
-    private final PunishmentRepository punishmentRepository;
+    private final PunishmentService punishmentService;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -129,8 +127,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return false;
         }
 
-        return punishmentRepository.existsActivePunishment(user, PunishmentType.BAN, Instant.now());
+        return punishmentService.isUserBanned(user.getId());
     }
 }
-
-

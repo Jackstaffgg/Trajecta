@@ -2,9 +2,8 @@ package dev.knalis.trajectaapi.security;
 
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import dev.knalis.trajectaapi.model.user.User;
-import dev.knalis.trajectaapi.model.user.punishment.PunishmentType;
-import dev.knalis.trajectaapi.repo.PunishmentRepository;
 import dev.knalis.trajectaapi.service.intrf.auth.JwtService;
+import dev.knalis.trajectaapi.service.intrf.user.PunishmentService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,11 +15,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 
 import jakarta.servlet.FilterChain;
 
-import java.time.Instant;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -33,7 +29,7 @@ class JwtAuthenticationFilterTest {
     @Mock
     private UserDetailsService userDetailsService;
     @Mock
-    private PunishmentRepository punishmentRepository;
+    private PunishmentService punishmentService;
     @Mock
     private FilterChain filterChain;
 
@@ -44,7 +40,7 @@ class JwtAuthenticationFilterTest {
         filter = new JwtAuthenticationFilter(
                 jwtService,
                 userDetailsService,
-                punishmentRepository,
+                punishmentService,
                 JsonMapper.builder().findAndAddModules().build()
         );
     }
@@ -62,7 +58,7 @@ class JwtAuthenticationFilterTest {
         when(jwtService.extractUsername("token-1")).thenReturn("pilot");
         when(userDetailsService.loadUserByUsername("pilot")).thenReturn(user);
         when(jwtService.isTokenValid("token-1", user)).thenReturn(true);
-        when(punishmentRepository.existsActivePunishment(eq(user), eq(PunishmentType.BAN), any(Instant.class))).thenReturn(true);
+        when(punishmentService.isUserBanned(42L)).thenReturn(true);
 
         filter.doFilter(request, response, filterChain);
 
@@ -89,8 +85,6 @@ class JwtAuthenticationFilterTest {
         filter.doFilter(request, response, filterChain);
 
         verify(filterChain).doFilter(any(), any());
-        verify(punishmentRepository, never()).existsActivePunishment(any(), any(), any());
+        verify(punishmentService, never()).isUserBanned(any(Long.class));
     }
 }
-
-
