@@ -137,13 +137,13 @@ class PunishmentServiceImplTest {
     }
 
     @Test
-    void isUserBanned_returnsCachedValue_withoutRepositoryCall() {
-        when(punishmentCacheService.getBanFlag(9L)).thenReturn(true);
+    void isUserBanned_delegatesToPunishmentCacheService() {
+        when(punishmentCacheService.isUserBanned(9L)).thenReturn(true);
 
         boolean result = service.isUserBanned(9L);
 
         org.assertj.core.api.Assertions.assertThat(result).isTrue();
+        verify(punishmentCacheService).isUserBanned(9L);
         verify(punishmentRepository, never()).existsActivePunishment(any(), any(), any());
-        verify(punishmentCacheService, never()).putBanFlag(any(Long.class), any(Boolean.class));
     }
 }

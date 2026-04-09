@@ -3,8 +3,8 @@ package dev.knalis.trajectaapi.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.knalis.trajectaapi.dto.common.ApiResponse;
 import dev.knalis.trajectaapi.exception.ApiErrorCodes;
+import dev.knalis.trajectaapi.service.impl.cache.PunishmentCacheService;
 import dev.knalis.trajectaapi.service.intrf.auth.JwtService;
-import dev.knalis.trajectaapi.service.intrf.user.PunishmentService;
 import dev.knalis.trajectaapi.model.user.User;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -32,7 +32,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
-    private final PunishmentService punishmentService;
+    private final PunishmentCacheService punishmentCacheService;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -127,6 +127,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return false;
         }
 
-        return punishmentService.isUserBanned(user.getId());
+        return punishmentCacheService.isUserBanned(user.getId());
     }
 }

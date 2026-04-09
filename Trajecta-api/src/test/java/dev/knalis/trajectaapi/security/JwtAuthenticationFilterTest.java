@@ -2,8 +2,8 @@ package dev.knalis.trajectaapi.security;
 
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import dev.knalis.trajectaapi.model.user.User;
+import dev.knalis.trajectaapi.service.impl.cache.PunishmentCacheService;
 import dev.knalis.trajectaapi.service.intrf.auth.JwtService;
-import dev.knalis.trajectaapi.service.intrf.user.PunishmentService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,7 +29,7 @@ class JwtAuthenticationFilterTest {
     @Mock
     private UserDetailsService userDetailsService;
     @Mock
-    private PunishmentService punishmentService;
+    private PunishmentCacheService punishmentCacheService;
     @Mock
     private FilterChain filterChain;
 
@@ -40,7 +40,7 @@ class JwtAuthenticationFilterTest {
         filter = new JwtAuthenticationFilter(
                 jwtService,
                 userDetailsService,
-                punishmentService,
+                punishmentCacheService,
                 JsonMapper.builder().findAndAddModules().build()
         );
     }
@@ -58,7 +58,7 @@ class JwtAuthenticationFilterTest {
         when(jwtService.extractUsername("token-1")).thenReturn("pilot");
         when(userDetailsService.loadUserByUsername("pilot")).thenReturn(user);
         when(jwtService.isTokenValid("token-1", user)).thenReturn(true);
-        when(punishmentService.isUserBanned(42L)).thenReturn(true);
+        when(punishmentCacheService.isUserBanned(42L)).thenReturn(true);
 
         filter.doFilter(request, response, filterChain);
 
@@ -85,6 +85,6 @@ class JwtAuthenticationFilterTest {
         filter.doFilter(request, response, filterChain);
 
         verify(filterChain).doFilter(any(), any());
-        verify(punishmentService, never()).isUserBanned(any(Long.class));
+        verify(punishmentCacheService, never()).isUserBanned(any(Long.class));
     }
 }

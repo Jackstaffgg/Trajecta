@@ -65,4 +65,17 @@ public interface PunishmentRepository extends JpaRepository<UserPunishment, Long
         order by p.createdAt desc
     """)
     List<UserPunishment> findByUserOrderByCreatedAtDesc(@Param("user") User user);
+
+    @Query("""
+        select case when count(p) > 0 then true else false end
+        from UserPunishment p
+        where p.user.id = :userId
+          and p.type = :type
+          and (p.expiredAt is null or p.expiredAt > :now)
+    """)
+    boolean existsActivePunishmentByUserId(
+            @Param("userId") long userId,
+            @Param("type") PunishmentType type,
+            @Param("now") Instant now
+    );
 }

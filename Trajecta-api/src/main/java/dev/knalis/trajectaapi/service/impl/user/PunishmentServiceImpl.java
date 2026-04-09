@@ -130,15 +130,7 @@ public class PunishmentServiceImpl implements PunishmentService {
     
     @Override
     public boolean isUserBanned(long userId) {
-        Boolean cached = punishmentCacheService.getBanFlag(userId);
-        if (cached != null) {
-            return cached;
-        }
-
-        User user = userService.findById(userId);
-        boolean isBanned = punishmentRepository.existsActivePunishment(user, PunishmentType.BAN, Instant.now());
-        punishmentCacheService.putBanFlag(userId, isBanned);
-        return isBanned;
+        return punishmentCacheService.isUserBanned(userId);
     }
 
     private void deactivateBan(UserPunishment punishment) {

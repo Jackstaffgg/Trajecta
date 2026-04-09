@@ -4,11 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ead05c28-5888-4bfd-aa2d-b5db12a27391" name="Changes" comment="add caching for user retrieval and improve cache eviction logic">
-      <change afterPath="$PROJECT_DIR$/reset-vps-volumes.ps1" afterDir="false" />
+    <list default="true" id="ead05c28-5888-4bfd-aa2d-b5db12a27391" name="Changes" comment="refactor JwtAuthenticationFilter to use PunishmentService for ban checks">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DEPLOY_VPS.md" beforeDir="false" afterPath="$PROJECT_DIR$/DEPLOY_VPS.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/repo/PunishmentRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/repo/PunishmentRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/security/JwtAuthenticationFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/security/JwtAuthenticationFilter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/cache/PunishmentCacheService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/cache/PunishmentCacheService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/user/PunishmentServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/main/java/dev/knalis/trajectaapi/service/impl/user/PunishmentServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/security/JwtAuthenticationFilterTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/security/JwtAuthenticationFilterTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/PunishmentServiceImplTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Trajecta-api/src/test/java/dev/knalis/trajectaapi/service/impl/PunishmentServiceImplTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -69,22 +72,22 @@
   <component name="ProjectViewState">
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "main",
-    "junie.onboarding.icon.badge.shown": "true",
-    "kotlin-language-version-configured": "true",
-    "node.js.detected.package.eslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "to.speed.mode.migration.done": "true",
-    "ts.external.directory.path": "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2024.3.1.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\Program Files\\JetBrains\\IntelliJ IDEA 2024.3.1.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration default="true" type="JetRunConfigurationType">
       <method v="2">
@@ -159,7 +162,15 @@
       <option name="project" value="LOCAL" />
       <updated>1775465973027</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="refactor JwtAuthenticationFilter to use PunishmentService for ban checks">
+      <option name="closed" value="true" />
+      <created>1775742464569</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1775742464569</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -182,7 +193,8 @@
     <MESSAGE value="update environment configuration and enhance WebSocket security with JWT authentication" />
     <MESSAGE value="add caching for punishment ban flag and improve cache eviction logic" />
     <MESSAGE value="add caching for user retrieval and improve cache eviction logic" />
-    <option name="LAST_COMMIT_MESSAGE" value="add caching for user retrieval and improve cache eviction logic" />
+    <MESSAGE value="refactor JwtAuthenticationFilter to use PunishmentService for ban checks" />
+    <option name="LAST_COMMIT_MESSAGE" value="refactor JwtAuthenticationFilter to use PunishmentService for ban checks" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>

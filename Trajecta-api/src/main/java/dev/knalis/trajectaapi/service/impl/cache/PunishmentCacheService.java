@@ -1,8 +1,12 @@
 package dev.knalis.trajectaapi.service.impl.cache;
 
+import dev.knalis.trajectaapi.model.user.punishment.PunishmentType;
+import dev.knalis.trajectaapi.repo.PunishmentRepository;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
+
+import java.time.Instant;
 
 @Service
 public class PunishmentCacheService {
@@ -10,9 +14,22 @@ public class PunishmentCacheService {
     private static final String BAN_FLAG_CACHE = "punishmentBanFlagByUserV1";
 
     private final CacheManager cacheManager;
+    private final PunishmentRepository punishmentRepository;
 
-    public PunishmentCacheService(CacheManager cacheManager) {
+    public PunishmentCacheService(CacheManager cacheManager, PunishmentRepository punishmentRepository) {
         this.cacheManager = cacheManager;
+        this.punishmentRepository = punishmentRepository;
+    }
+
+    public boolean isUserBanned(long userId) {
+        Boolean cached = getBanFlag(userId);
+        if (cached != null) {
+            return cached;
+        }
+
+        boolean isBanned = punishmentRepository.existsActivePunishmentByUserId(userId, PunishmentType.BAN, Instant.now());
+        putBanFlag(userId, isBanned);
+        return isBanned;
     }
 
     public Boolean getBanFlag(long userId) {
@@ -63,4 +80,3 @@ public class PunishmentCacheService {
         }
     }
 }
-
