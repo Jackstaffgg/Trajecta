@@ -19,7 +19,7 @@ localhost {
     }
 }
 
-{$DOMAIN} {
+incore.best, {$DOMAIN} {
     tls {$ACME_EMAIL}
     encode gzip zstd
 
